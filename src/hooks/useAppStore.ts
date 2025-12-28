@@ -161,3 +161,110 @@ export function useUIState() {
     setCurrentPage,
   };
 }
+
+/**
+ * Hook to use navigation state
+ */
+export function useNavigation() {
+  const [state, setState] = useAppStore();
+
+  const openTool = useCallback((toolId: string) => {
+    setState((currentState) => ({
+      uiState: {
+        ...currentState.uiState,
+        activeView: 'tool-detail',
+        activeToolId: toolId,
+      },
+    }));
+  }, [setState]);
+
+  const closeTool = useCallback(() => {
+    setState((currentState) => ({
+      uiState: {
+        ...currentState.uiState,
+        activeView: 'tool-list',
+        activeToolId: null,
+      },
+    }));
+  }, [setState]);
+
+  return {
+    activeView: state.uiState.activeView,
+    activeToolId: state.uiState.activeToolId,
+    openTool,
+    closeTool,
+  };
+}
+
+/**
+ * Hook to use JSON Formatter state
+ */
+export function useJSONFormatter() {
+  const [state, setState] = useAppStore();
+
+  const setInputJSON = useCallback((input: string) => {
+    setState((currentState) => ({
+      jsonFormatterState: {
+        ...currentState.jsonFormatterState,
+        inputJSON: input,
+      },
+    }));
+  }, [setState]);
+
+  const setFormattedJSON = useCallback((formatted: string) => {
+    setState((currentState) => ({
+      jsonFormatterState: {
+        ...currentState.jsonFormatterState,
+        formattedJSON: formatted,
+      },
+    }));
+  }, [setState]);
+
+  const setIndentSize = useCallback((size: number) => {
+    setState((currentState) => ({
+      jsonFormatterState: {
+        ...currentState.jsonFormatterState,
+        indentSize: size,
+      },
+    }));
+  }, [setState]);
+
+  const setSortKeys = useCallback((sort: boolean) => {
+    setState((currentState) => ({
+      jsonFormatterState: {
+        ...currentState.jsonFormatterState,
+        sortKeys: sort,
+      },
+    }));
+  }, [setState]);
+
+  const setError = useCallback((error: string | null) => {
+    setState((currentState) => ({
+      jsonFormatterState: {
+        ...currentState.jsonFormatterState,
+        error,
+      },
+    }));
+  }, [setState]);
+
+  const clearAll = useCallback(() => {
+    setState((currentState) => ({
+      jsonFormatterState: {
+        ...currentState.jsonFormatterState,
+        inputJSON: '',
+        formattedJSON: '',
+        error: null,
+      },
+    }));
+  }, [setState]);
+
+  return {
+    jsonFormatterState: state.jsonFormatterState,
+    setInputJSON,
+    setFormattedJSON,
+    setIndentSize,
+    setSortKeys,
+    setError,
+    clearAll,
+  };
+}

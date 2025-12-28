@@ -23,6 +23,16 @@ export interface UIState {
   showFavoritesOnly: boolean;
   currentPage: number;
   itemsPerPage: number;
+  activeView: 'tool-list' | 'tool-detail';
+  activeToolId: string | null;
+}
+
+export interface JSONFormatterState {
+  inputJSON: string;
+  formattedJSON: string;
+  indentSize: number;
+  sortKeys: boolean;
+  error: string | null;
 }
 
 export interface AppState {
@@ -30,6 +40,7 @@ export interface AppState {
   settings: AppSettings;
   toolState: ToolState;
   uiState: UIState;
+  jsonFormatterState: JSONFormatterState;
   lastActiveTimestamp: number;
   sessionId: string;
   crashRecoveryData?: {
@@ -55,6 +66,15 @@ const DEFAULT_STATE: AppState = {
     showFavoritesOnly: false,
     currentPage: 1,
     itemsPerPage: 5,
+    activeView: 'tool-list',
+    activeToolId: null,
+  },
+  jsonFormatterState: {
+    inputJSON: '',
+    formattedJSON: '',
+    indentSize: 2,
+    sortKeys: false,
+    error: null,
   },
   lastActiveTimestamp: Date.now(),
   sessionId: generateSessionId(),
@@ -117,6 +137,11 @@ class AppStore {
           settings: {
             ...DEFAULT_STATE.settings,
             ...(savedState.settings || {}),
+          },
+          // Ensure jsonFormatterState exists
+          jsonFormatterState: {
+            ...DEFAULT_STATE.jsonFormatterState,
+            ...(savedState.jsonFormatterState || {}),
           },
           sessionId: generateSessionId(),
           lastActiveTimestamp: Date.now(),

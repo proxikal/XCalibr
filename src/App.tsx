@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { TabNavigation } from '@/components/layout/TabNavigation';
 import { Footer } from '@/components/layout/Footer';
@@ -6,7 +6,8 @@ import { ToolCard } from '@/components/ui/ToolCard';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { Pagination } from '@/components/ui/Pagination';
 import { CrashRecoveryNotification } from '@/components/CrashRecoveryNotification';
-import { useActiveTab, useToolState, useUIState } from '@/hooks/useAppStore';
+import { ToolView } from '@/components/ToolView';
+import { useActiveTab, useToolState, useUIState, useNavigation } from '@/hooks/useAppStore';
 import { tools } from '@/data/tools';
 import type { TabCategory } from '@/types';
 
@@ -14,7 +15,7 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useActiveTab();
   const { toolState, recordToolUsage, toggleFavorite } = useToolState();
   const { uiState, setCurrentPage } = useUIState();
-  const [notification, setNotification] = useState<string | null>(null);
+  const { activeView, openTool } = useNavigation();
 
   // Auto-switch tab when searching if no results in current tab
   useEffect(() => {
@@ -58,13 +59,8 @@ export const App: React.FC = () => {
     // Record tool usage in persistent store
     recordToolUsage(toolId);
 
-    // Show notification
-    setNotification(`${toolName} coming soon!`);
-
-    // Hide notification after 2 seconds
-    setTimeout(() => {
-      setNotification(null);
-    }, 2000);
+    // Open tool view
+    openTool(toolId);
   };
 
   const handleToggleFavorite = (e: React.MouseEvent, toolId: string) => {
@@ -109,6 +105,19 @@ export const App: React.FC = () => {
     };
   }, [activeTab, uiState, toolState.favoriteTools]);
 
+  // Render tool view if a tool is active
+  if (activeView === 'tool-detail') {
+    return (
+      <div className="h-full w-full flex flex-col bg-dev-dark text-slate-300 antialiased selection:bg-dev-green selection:text-black">
+        <CrashRecoveryNotification />
+        <Header />
+        <ToolView />
+        <Footer />
+      </div>
+    );
+  }
+
+  // Render tool list
   return (
     <div className="h-full w-full flex flex-col bg-dev-dark text-slate-300 antialiased selection:bg-dev-green selection:text-black">
       {/* Crash Recovery Notification */}
@@ -164,17 +173,6 @@ export const App: React.FC = () => {
           )}
         </div>
 
-        {/* Notification */}
-        {notification && (
-          <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-dev-card border border-dev-green/40 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm animate-fade-in">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-dev-green rounded-full animate-pulse"></span>
-              <span>
-                <strong>{notification.split(' ')[0]}</strong> {notification.split(' ').slice(1).join(' ')}
-              </span>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Pagination */}
