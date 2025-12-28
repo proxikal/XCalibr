@@ -17,29 +17,7 @@ A unified developer tools hub for Chrome/Edge/Brave browsers built with **React 
 - ✅ Chrome Storage integration with React hooks
 - ✅ Custom hooks for Chrome APIs
 
-### Planned Tools
-
-**Front End:**
-- Component Inspector (React/Vue analysis)
-- CSS Debugger (live styling playground)
-- Element Metadata Overlay
-- CSS Source Jump
-- Live CSS Scratchpad
-- DOM Diff Tool
-- Design Token Inspector
-
-**Back End:**
-- API Tester
-- JSON Formatter
-
-**Other:**
-- Regex Tester
-- Color Picker
-
-See `# Extension Ideas.md` for the complete roadmap.
-
 ## Tech Stack
-
 - **Frontend:** React 19.2 + TypeScript 5.9
 - **Build Tool:** Vite 7.3 with @crxjs/vite-plugin
 - **Styling:** Tailwind CSS v4 with PostCSS
@@ -130,7 +108,7 @@ npm run clean
 
 ### Menu Options
 - Click the hamburger menu (top-right) for:
-  - Settings (coming soon)
+  - Settings
   - Documentation (coming soon)
   - Support (coming soon)
 
@@ -178,10 +156,6 @@ XCalibr/
 ├── .gitignore                    # Git ignore rules
 ├── README.md                     # This file
 └── CLAUDE.md                     # Development guidance for Claude Code
-
-Documentation:
-├── # Extension Ideas.md          # Feature roadmap
-└── Gemini-UI-Prompt.md          # Original UI design prompt
 ```
 
 ## Custom Hooks
@@ -257,9 +231,6 @@ The extension requests the following permissions:
 - Load the `dist/` folder in the browser
 - Check Vite console for errors
 
-## Contributing
-
-This is currently a personal project. If you'd like to contribute or suggest features, please check the `# Extension Ideas.md` file for the roadmap.
 
 ## License
 
@@ -276,7 +247,3 @@ Currently unlicensed personal project.
 - ✅ Type-safe development experience
 - ✅ Optimized production builds
 - ✅ Service worker and content script in TypeScript
-
----
-
-**Note**: This extension is built with modern web technologies (React, TypeScript, Vite) for a scalable and maintainable codebase. See `CLAUDE.md` for development guidance when working with Claude Code.
