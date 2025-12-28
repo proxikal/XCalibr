@@ -29,6 +29,8 @@
     inspectorDataOverlay: HTMLElement | null;
     colorPickerActive: boolean;
     colorPickerTooltip: HTMLElement | null;
+    embeddedToolPanel: HTMLElement | null;
+    embeddedPickedColors: any[];
   }
 
   const state: State = {
@@ -43,6 +45,8 @@
     inspectorDataOverlay: null,
     colorPickerActive: false,
     colorPickerTooltip: null,
+    embeddedToolPanel: null,
+    embeddedPickedColors: [],
   };
 
   /**
@@ -137,6 +141,11 @@
 
         case 'TOGGLE_COLOR_PICKER':
           toggleColorPicker(message.data?.isActive);
+          sendResponse({ success: true });
+          break;
+
+        case 'EMBED_TOOL':
+          embedTool(message.data?.toolId);
           sendResponse({ success: true });
           break;
 
@@ -1141,8 +1150,9 @@
   function handleColorPickerHover(e: MouseEvent) {
     const element = e.target as HTMLElement;
 
-    // Ignore our own tooltip
-    if (element.id === 'xcalibr-color-picker-tooltip') {
+    // Ignore our own tooltip and embedded panel
+    if (element.id === 'xcalibr-color-picker-tooltip' ||
+        element.closest('#xcalibr-embedded-panel')) {
       return;
     }
 
@@ -1160,15 +1170,16 @@
    * Handle color picker click
    */
   function handleColorPickerClick(e: MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
     const element = e.target as HTMLElement;
 
-    // Ignore our own tooltip
-    if (element.id === 'xcalibr-color-picker-tooltip') {
+    // Ignore our own tooltip and embedded panel
+    if (element.id === 'xcalibr-color-picker-tooltip' ||
+        element.closest('#xcalibr-embedded-panel')) {
       return;
     }
+
+    e.preventDefault();
+    e.stopPropagation();
 
     const computed = window.getComputedStyle(element);
     const color = computed.color;
@@ -1195,6 +1206,12 @@
     });
 
     console.log('Color picked:', colorData);
+
+    // Add to embedded panel if active
+    if (state.embeddedToolPanel) {
+      state.embeddedPickedColors.push(colorData);
+      updateEmbeddedUI();
+    }
 
     // Deactivate color picker after picking
     deactivateColorPicker();
@@ -1294,6 +1311,326 @@
       rgba: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
       hsl,
     };
+  }
+
+  /**
+   * Embed tool to site
+   */
+  function embedTool(toolId: string) {
+    if (toolId === 'color-picker') {
+      embedColorPicker();
+    }
+  }
+
+  /**
+   * Embed color picker tool
+   */
+  function embedColorPicker() {
+    // Remove existing panel if any
+    if (state.embeddedToolPanel) {
+      state.embeddedToolPanel.remove();
+      state.embeddedToolPanel = null;
+    }
+
+    // Create embedded panel
+    const panel = document.createElement('div');
+    panel.id = 'xcalibr-embedded-panel';
+    panel.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 2147483645;
+      width: 380px;
+      max-height: 600px;
+      background: #0f172a;
+      border: 2px solid #00e600;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(0, 230, 0, 0.4);
+      overflow: hidden;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      color: #cbd5e1;
+    `;
+
+    // Create header (draggable)
+    const header = document.createElement('div');
+    header.style.cssText = `
+      background: #020617;
+      padding: 12px 16px;
+      border-bottom: 2px solid #00e600;
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    `;
+
+    const title = document.createElement('div');
+    title.style.cssText = `
+      color: #00e600;
+      font-weight: 700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    `;
+    title.textContent = 'XCalibr - Color Picker';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.style.cssText = `
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    `;
+    closeBtn.innerHTML = `<svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`;
+    closeBtn.onmouseover = () => {
+      closeBtn.style.borderColor = '#00e600';
+      closeBtn.style.color = '#00e600';
+    };
+    closeBtn.onmouseout = () => {
+      closeBtn.style.borderColor = '#334155';
+      closeBtn.style.color = '#94a3b8';
+    };
+    closeBtn.onclick = () => {
+      panel.remove();
+      state.embeddedToolPanel = null;
+      if (state.colorPickerActive) {
+        deactivateColorPicker();
+        state.colorPickerActive = false;
+      }
+    };
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
+    // Create content area
+    const content = document.createElement('div');
+    content.style.cssText = `
+      padding: 16px;
+      max-height: 540px;
+      overflow-y: auto;
+    `;
+
+    // Add custom scrollbar
+    const scrollbarStyle = document.createElement('style');
+    scrollbarStyle.textContent = `
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar {
+        width: 6px;
+      }
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar-track {
+        background: #020617;
+      }
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 3px;
+      }
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar-thumb:hover {
+        background: #00e600;
+      }
+    `;
+    document.head.appendChild(scrollbarStyle);
+
+    // Add color picker controls
+    content.innerHTML = createColorPickerUI();
+
+    panel.appendChild(header);
+    panel.appendChild(content);
+    document.body.appendChild(panel);
+
+    state.embeddedToolPanel = panel;
+
+    // Make draggable
+    makeDraggable(panel, header);
+
+    // Setup color picker functionality for embedded panel
+    setupEmbeddedColorPicker(content);
+
+    console.log('Color Picker embedded to site');
+  }
+
+  /**
+   * Create color picker UI HTML
+   */
+  function createColorPickerUI(): string {
+    const isActive = state.colorPickerActive;
+    const pickedColors = state.embeddedPickedColors;
+
+    return `
+      <div style="margin-bottom: 16px;">
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px;">
+          <div style="display: flex; align-items: center; justify-between; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="width: 8px; height: 8px; border-radius: 50%; background: ${isActive ? '#00e600' : '#64748b'};"></div>
+              <span style="font-size: 12px; font-weight: 600;">${isActive ? 'Active' : 'Inactive'}</span>
+            </div>
+          </div>
+          <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;">
+            Hover to preview, <strong style="color: #00e600;">click</strong> to pick colors
+          </p>
+          <button
+            id="xcalibr-toggle-picker"
+            style="width: 100%; background: ${isActive ? 'transparent' : '#00e600'}; border: ${isActive ? '1px solid #64748b' : 'none'}; color: ${isActive ? '#cbd5e1' : '#000'}; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+          >
+            ${isActive ? 'Deactivate' : 'Activate'} Color Picker
+          </button>
+        </div>
+      </div>
+
+      <div id="xcalibr-colors-list" style="display: ${pickedColors.length > 0 ? 'block' : 'none'};">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Picked Colors (${pickedColors.length})</span>
+          <button id="xcalibr-clear-colors" style="font-size: 10px; color: #64748b; background: none; border: none; cursor: pointer;">Clear</button>
+        </div>
+        <div id="xcalibr-colors-container">
+          ${pickedColors.map((color, idx) => `
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 10px; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <div style="width: 36px; height: 36px; border-radius: 4px; border: 1px solid #334155; background: ${color.hex}; flex-shrink: 0;"></div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12px; font-weight: 600; color: #cbd5e1; font-family: monospace;">${color.hex}</div>
+                </div>
+                <button data-remove-idx="${idx}" style="color: #64748b; background: none; border: none; cursor: pointer; padding: 4px;">
+                  <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 10px;">
+                <div data-copy="${color.hex}" style="background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 6px; cursor: pointer;">
+                  <div style="color: #64748b; margin-bottom: 2px;">HEX</div>
+                  <div style="color: #cbd5e1; font-family: monospace;">${color.hex}</div>
+                </div>
+                <div data-copy="${color.rgb}" style="background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 6px; cursor: pointer;">
+                  <div style="color: #64748b; margin-bottom: 2px;">RGB</div>
+                  <div style="color: #cbd5e1; font-family: monospace; font-size: 9px;">${color.rgb}</div>
+                </div>
+                <div data-copy="${color.rgba}" style="background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 6px; cursor: pointer;">
+                  <div style="color: #64748b; margin-bottom: 2px;">RGBA</div>
+                  <div style="color: #cbd5e1; font-family: monospace; font-size: 9px;">${color.rgba}</div>
+                </div>
+                <div data-copy="${color.hsl}" style="background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 6px; cursor: pointer;">
+                  <div style="color: #64748b; margin-bottom: 2px;">HSL</div>
+                  <div style="color: #cbd5e1; font-family: monospace; font-size: 9px;">${color.hsl}</div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      ${pickedColors.length === 0 ? `
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; text-align: center;">
+          <div style="width: 40px; height: 40px; margin: 0 auto 8px; border-radius: 50%; background: rgba(0, 230, 0, 0.1); border: 1px solid rgba(0, 230, 0, 0.2); display: flex; align-items: center; justify-content: center;">
+            <svg style="width: 20px; height: 20px; color: #00e600;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a16.001 16.001 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
+            </svg>
+          </div>
+          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;"><strong style="color: #00e600;">Click</strong> on colors to pick</p>
+          <p style="font-size: 10px; color: #64748b;">Picked colors will appear here</p>
+        </div>
+      ` : ''}
+    `;
+  }
+
+  /**
+   * Setup embedded color picker functionality
+   */
+  function setupEmbeddedColorPicker(content: HTMLElement) {
+    const toggleBtn = content.querySelector('#xcalibr-toggle-picker') as HTMLButtonElement;
+    const clearBtn = content.querySelector('#xcalibr-clear-colors') as HTMLButtonElement;
+
+    if (toggleBtn) {
+      toggleBtn.onclick = () => {
+        if (state.colorPickerActive) {
+          deactivateColorPicker();
+          state.colorPickerActive = false;
+        } else {
+          activateColorPicker();
+          state.colorPickerActive = true;
+        }
+        updateEmbeddedUI();
+      };
+    }
+
+    if (clearBtn) {
+      clearBtn.onclick = () => {
+        state.embeddedPickedColors = [];
+        updateEmbeddedUI();
+      };
+    }
+
+    // Setup copy buttons
+    content.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const value = btn.getAttribute('data-copy');
+        if (value) {
+          navigator.clipboard.writeText(value);
+          const originalText = btn.innerHTML;
+          (btn as HTMLElement).innerHTML = '<div style="color: #00e600; font-weight: 600;">✓ Copied!</div>';
+          setTimeout(() => {
+            (btn as HTMLElement).innerHTML = originalText;
+          }, 1500);
+        }
+      });
+    });
+
+    // Setup remove buttons
+    content.querySelectorAll('[data-remove-idx]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-remove-idx') || '0');
+        state.embeddedPickedColors.splice(idx, 1);
+        updateEmbeddedUI();
+      });
+    });
+  }
+
+  /**
+   * Update embedded UI
+   */
+  function updateEmbeddedUI() {
+    if (!state.embeddedToolPanel) return;
+    const content = state.embeddedToolPanel.querySelector('div:last-child');
+    if (content) {
+      content.innerHTML = createColorPickerUI();
+      setupEmbeddedColorPicker(content as HTMLElement);
+    }
+  }
+
+  /**
+   * Make element draggable
+   */
+  function makeDraggable(element: HTMLElement, handle: HTMLElement) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+    handle.onmousedown = dragMouseDown;
+
+    function dragMouseDown(e: MouseEvent) {
+      e.preventDefault();
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+    }
+
+    function elementDrag(e: MouseEvent) {
+      e.preventDefault();
+      pos1 = pos3 - e.clientX;
+      pos2 = pos4 - e.clientY;
+      pos3 = e.clientX;
+      pos4 = e.clientY;
+      element.style.top = (element.offsetTop - pos2) + 'px';
+      element.style.left = (element.offsetLeft - pos1) + 'px';
+      element.style.right = 'auto';
+    }
+
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+    }
   }
 
   /**
