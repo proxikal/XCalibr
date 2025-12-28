@@ -12,7 +12,16 @@ export interface Settings {
   notifications: boolean;
 }
 
-export type TabCategory = 'frontend' | 'backend' | 'other';
+export type TabCategory = 'frontend' | 'backend' | 'other' | 'features';
+
+export interface Feature {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  enabled: boolean;
+  category?: 'productivity' | 'development' | 'ui';
+}
 
 export interface ElementInfo {
   tagName: string;

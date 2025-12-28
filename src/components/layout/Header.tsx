@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { SettingsModal } from '@/components/SettingsModal';
 
 export const Header: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -25,7 +27,14 @@ export const Header: React.FC = () => {
   const handleMenuClick = (action: string) => {
     console.log(`Menu action: ${action}`);
     setMenuOpen(false);
-    // TODO: Implement menu actions
+
+    if (action === 'settings') {
+      setSettingsOpen(true);
+    } else if (action === 'docs') {
+      chrome.tabs.create({ url: 'https://github.com/proxikal/XCalibr' });
+    } else if (action === 'support') {
+      chrome.tabs.create({ url: 'https://github.com/proxikal/XCalibr/issues' });
+    }
   };
 
   return (
@@ -155,6 +164,9 @@ export const Header: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Settings Modal */}
+      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </header>
   );
 };

@@ -11,6 +11,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabCh
     { id: 'frontend', label: 'Front End' },
     { id: 'backend', label: 'Back End' },
     { id: 'other', label: 'Other' },
+    { id: 'features', label: 'Features' },
   ];
 
   return (

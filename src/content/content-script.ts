@@ -23,6 +23,9 @@
     overlay: HTMLElement | null;
     metadataOverlayActive: boolean;
     metadataTooltip: HTMLElement | null;
+    linkPreviewActive: boolean;
+    linkPreviewElement: HTMLElement | null;
+    currentHoveredLink: HTMLAnchorElement | null;
   }
 
   const state: State = {
@@ -31,6 +34,9 @@
     overlay: null,
     metadataOverlayActive: false,
     metadataTooltip: null,
+    linkPreviewActive: false,
+    linkPreviewElement: null,
+    currentHoveredLink: null,
   };
 
   /**
@@ -39,6 +45,7 @@
   function init() {
     createOverlay();
     createMetadataTooltip();
+    createLinkPreviewElement();
     setupMessageListener();
     setupKeyboardShortcuts();
     console.log('XCalibr initialized on:', window.location.href);
@@ -100,8 +107,22 @@
           break;
 
         case 'INJECT_CSS':
-          if (message.css) {
-            injectCSS(message.css);
+          if (message.data?.css) {
+            injectCSS(message.data.css, message.data.id);
+            sendResponse({ success: true });
+          }
+          break;
+
+        case 'REMOVE_CSS':
+          if (message.data?.id) {
+            removeCSS(message.data.id);
+            sendResponse({ success: true });
+          }
+          break;
+
+        case 'TOGGLE_FEATURE':
+          if (message.data?.featureId === 'link-preview') {
+            toggleLinkPreview(message.data.enabled);
             sendResponse({ success: true });
           }
           break;
@@ -259,11 +280,213 @@
   /**
    * Inject CSS into the page
    */
-  function injectCSS(css: string) {
+  function injectCSS(css: string, id?: string) {
+    // Remove existing style with same ID if it exists
+    if (id) {
+      const existing = document.getElementById(id);
+      if (existing) {
+        existing.remove();
+      }
+    }
+
     const style = document.createElement('style');
     style.textContent = css;
     style.setAttribute('data-xcalibr', 'true');
+    if (id) {
+      style.id = id;
+    }
     document.head.appendChild(style);
+  }
+
+  /**
+   * Remove injected CSS from the page
+   */
+  function removeCSS(id: string) {
+    const style = document.getElementById(id);
+    if (style && style.getAttribute('data-xcalibr') === 'true') {
+      style.remove();
+    }
+  }
+
+  /**
+   * Create link preview element
+   */
+  function createLinkPreviewElement() {
+    const preview = document.createElement('div');
+    preview.id = 'xcalibr-link-preview';
+    preview.style.cssText = `
+      position: fixed;
+      z-index: 2147483646;
+      display: none;
+      background: #0f172a;
+      border: 2px solid #00e600;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(0, 230, 0, 0.4);
+      overflow: hidden;
+      pointer-events: none;
+      width: 400px;
+      height: 300px;
+    `;
+
+    // Create loading indicator
+    const loading = document.createElement('div');
+    loading.className = 'xcalibr-preview-loading';
+    loading.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #00e600;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 14px;
+    `;
+    loading.textContent = 'Loading preview...';
+    preview.appendChild(loading);
+
+    document.body.appendChild(preview);
+    state.linkPreviewElement = preview;
+  }
+
+  /**
+   * Toggle link preview feature
+   */
+  function toggleLinkPreview(enabled: boolean) {
+    state.linkPreviewActive = enabled;
+
+    if (enabled) {
+      activateLinkPreview();
+    } else {
+      deactivateLinkPreview();
+    }
+
+    console.log('Link preview:', enabled ? 'activated' : 'deactivated');
+  }
+
+  /**
+   * Activate link preview
+   */
+  function activateLinkPreview() {
+    document.addEventListener('mouseover', handleLinkHover);
+    document.addEventListener('mouseout', handleLinkMouseOut);
+  }
+
+  /**
+   * Deactivate link preview
+   */
+  function deactivateLinkPreview() {
+    document.removeEventListener('mouseover', handleLinkHover);
+    document.removeEventListener('mouseout', handleLinkMouseOut);
+    if (state.linkPreviewElement) {
+      state.linkPreviewElement.style.display = 'none';
+    }
+    state.currentHoveredLink = null;
+  }
+
+  /**
+   * Handle link hover
+   */
+  function handleLinkHover(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    const link = target.closest('a') as HTMLAnchorElement | null;
+
+    if (!link || !link.href) {
+      return;
+    }
+
+    // Ignore same-page anchors and javascript: links
+    if (
+      link.href.startsWith('javascript:') ||
+      link.href.startsWith('#') ||
+      link.href === window.location.href
+    ) {
+      return;
+    }
+
+    state.currentHoveredLink = link;
+    displayLinkPreview(link, e.clientX, e.clientY);
+  }
+
+  /**
+   * Handle link mouse out
+   */
+  function handleLinkMouseOut(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    const link = target.closest('a') as HTMLAnchorElement | null;
+
+    if (link === state.currentHoveredLink) {
+      if (state.linkPreviewElement) {
+        state.linkPreviewElement.style.display = 'none';
+      }
+      state.currentHoveredLink = null;
+    }
+  }
+
+  /**
+   * Display link preview
+   */
+  function displayLinkPreview(link: HTMLAnchorElement, x: number, y: number) {
+    if (!state.linkPreviewElement) return;
+
+    const preview = state.linkPreviewElement;
+    const url = link.href;
+
+    // Clear previous content
+    preview.innerHTML = '';
+
+    // Create iframe for preview
+    const iframe = document.createElement('iframe');
+    iframe.src = url;
+    iframe.style.cssText = `
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+    `;
+    iframe.sandbox.add('allow-same-origin');
+
+    // Create header with URL
+    const header = document.createElement('div');
+    header.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.95);
+      padding: 8px 12px;
+      border-bottom: 1px solid #00e600;
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 1;
+    `;
+    header.textContent = url;
+
+    preview.appendChild(iframe);
+    preview.appendChild(header);
+
+    // Position preview near cursor
+    const previewWidth = 400;
+    const previewHeight = 300;
+    const offsetX = 15;
+    const offsetY = 15;
+
+    let posX = x + offsetX;
+    let posY = y + offsetY;
+
+    // Adjust if preview goes off-screen
+    if (posX + previewWidth > window.innerWidth) {
+      posX = x - previewWidth - offsetX;
+    }
+    if (posY + previewHeight > window.innerHeight) {
+      posY = y - previewHeight - offsetY;
+    }
+
+    preview.style.left = `${posX}px`;
+    preview.style.top = `${posY}px`;
+    preview.style.display = 'block';
   }
 
   /**
@@ -325,6 +548,7 @@
   function activateMetadataOverlay() {
     document.addEventListener('mousemove', handleMetadataHover);
     document.addEventListener('mouseout', handleMetadataMouseOut);
+    document.addEventListener('click', handleMetadataClick, true);
   }
 
   /**
@@ -333,6 +557,7 @@
   function deactivateMetadataOverlay() {
     document.removeEventListener('mousemove', handleMetadataHover);
     document.removeEventListener('mouseout', handleMetadataMouseOut);
+    document.removeEventListener('click', handleMetadataClick, true);
     if (state.metadataTooltip) {
       state.metadataTooltip.style.display = 'none';
     }
@@ -351,12 +576,6 @@
 
     const metadata = getElementMetadata(element);
     displayMetadataTooltip(metadata, e.clientX, e.clientY);
-
-    // Send to popup
-    chrome.runtime.sendMessage({
-      type: 'ELEMENT_METADATA',
-      data: metadata,
-    });
   }
 
   /**
@@ -364,6 +583,39 @@
    */
   function handleMetadataMouseOut() {
     // We don't hide the tooltip on mouseout anymore, it updates on every hover
+  }
+
+  /**
+   * Handle click for metadata capture
+   */
+  function handleMetadataClick(e: MouseEvent) {
+    const element = e.target as HTMLElement;
+
+    // Ignore our own tooltip and overlay
+    if (element.id === 'xcalibr-metadata-tooltip' || element.id === 'xcalibr-overlay') {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const metadata = getElementMetadata(element);
+
+    // Store in chrome.storage for popup to retrieve
+    chrome.storage.local.set({
+      xcalibr_element_metadata_pending: metadata,
+    });
+
+    // Also send message in case popup is open
+    chrome.runtime.sendMessage({
+      type: 'ELEMENT_METADATA_CLICKED',
+      data: metadata,
+    }).catch(() => {
+      // Ignore error if popup is not open
+      console.log('Element metadata stored (popup not open)');
+    });
+
+    console.log('Element metadata captured:', metadata);
   }
 
   /**
@@ -379,14 +631,25 @@
       computed.backgroundColor
     );
 
+    // Generate selector for the element
+    const selector = element.id
+      ? `#${element.id}`
+      : element.classList.length > 0
+      ? `.${Array.from(element.classList).join('.')}`
+      : element.tagName.toLowerCase();
+
     return {
+      timestamp: Date.now(),
+      selector,
       tagName: element.tagName.toLowerCase(),
       id: element.id || null,
       classes: Array.from(element.classList),
       fontFamily: computed.fontFamily,
       fontSize: computed.fontSize,
       color: computed.color,
+      colorHex: rgbToHex(computed.color),
       backgroundColor: computed.backgroundColor,
+      backgroundColorHex: rgbToHex(computed.backgroundColor),
       contrastRatio,
       boxModel: {
         margin: computed.margin,
@@ -435,6 +698,21 @@
       };
     }
     return null;
+  }
+
+  /**
+   * Convert RGB color to hex format
+   */
+  function rgbToHex(rgbString: string): string {
+    const rgb = parseRgbColor(rgbString);
+    if (!rgb) return '#000000';
+
+    const toHex = (n: number) => {
+      const hex = n.toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+
+    return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
   }
 
   /**

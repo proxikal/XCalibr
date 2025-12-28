@@ -56,32 +56,62 @@ export interface RegexTesterState {
   replaceResult: string;
 }
 
+export interface ElementInspection {
+  timestamp: number;
+  selector: string;
+  tagName: string;
+  id: string | null;
+  classes: string[];
+  fontFamily: string;
+  fontSize: string;
+  color: string;
+  colorHex: string;
+  backgroundColor: string;
+  backgroundColorHex: string;
+  contrastRatio: number | null;
+  boxModel: {
+    margin: string;
+    padding: string;
+    border: string;
+    width: string;
+    height: string;
+  };
+  zIndex: string;
+  position: string;
+}
+
 export interface ElementMetadataState {
   isActive: boolean;
-  lastInspectedElement: {
-    tagName: string;
-    id: string | null;
-    classes: string[];
-    fontFamily: string;
-    fontSize: string;
-    color: string;
-    backgroundColor: string;
-    contrastRatio: number | null;
-    boxModel: {
-      margin: string;
-      padding: string;
-      border: string;
-      width: string;
-      height: string;
-    };
-    zIndex: string;
-    position: string;
-  } | null;
-  inspectionHistory: Array<{
-    timestamp: number;
-    tagName: string;
-    selector: string;
+  lastInspectedElement: ElementInspection | null;
+  inspectionHistory: ElementInspection[];
+}
+
+export interface FeatureItem {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  enabled: boolean;
+  category: 'productivity' | 'development' | 'ui';
+}
+
+export interface FeaturesState {
+  features: FeatureItem[];
+  currentPage: number;
+}
+
+export interface CSSScratchpadState {
+  domains: Record<string, {
+    css: string;
+    enabled: boolean;
+    lastModified: number;
   }>;
+}
+
+export interface LiveCSSState {
+  input: string;
+  currentDomain: string | null;
+  isInjected: boolean;
 }
 
 export interface AppState {
@@ -92,6 +122,9 @@ export interface AppState {
   jsonFormatterState: JSONFormatterState;
   regexTesterState: RegexTesterState;
   elementMetadataState: ElementMetadataState;
+  featuresState: FeaturesState;
+  cssScratchpadState: CSSScratchpadState;
+  liveCSSState: LiveCSSState;
   lastActiveTimestamp: number;
   sessionId: string;
   crashRecoveryData?: {
@@ -147,6 +180,29 @@ const DEFAULT_STATE: AppState = {
     isActive: false,
     lastInspectedElement: null,
     inspectionHistory: [],
+  },
+  featuresState: {
+    features: [
+      {
+        id: 'link-preview',
+        name: 'Link Preview on Hover',
+        description: 'Preview links without opening tabs',
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+        </svg>`,
+        enabled: false,
+        category: 'productivity',
+      },
+    ],
+    currentPage: 1,
+  },
+  cssScratchpadState: {
+    domains: {},
+  },
+  liveCSSState: {
+    input: '',
+    currentDomain: null,
+    isInjected: false,
   },
   lastActiveTimestamp: Date.now(),
   sessionId: generateSessionId(),
@@ -224,6 +280,21 @@ class AppStore {
           elementMetadataState: {
             ...DEFAULT_STATE.elementMetadataState,
             ...(savedState.elementMetadataState || {}),
+          },
+          // Ensure featuresState exists
+          featuresState: {
+            ...DEFAULT_STATE.featuresState,
+            ...(savedState.featuresState || {}),
+          },
+          // Ensure cssScratchpadState exists
+          cssScratchpadState: {
+            ...DEFAULT_STATE.cssScratchpadState,
+            ...(savedState.cssScratchpadState || {}),
+          },
+          // Ensure liveCSSState exists
+          liveCSSState: {
+            ...DEFAULT_STATE.liveCSSState,
+            ...(savedState.liveCSSState || {}),
           },
           sessionId: generateSessionId(),
           lastActiveTimestamp: Date.now(),

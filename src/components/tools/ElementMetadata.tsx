@@ -11,8 +11,8 @@ export const ElementMetadata: React.FC = () => {
   const {
     elementMetadataState,
     setActive,
-    setLastInspectedElement,
-    addToHistory,
+    addInspection,
+    loadInspection,
     clearHistory,
   } = useElementMetadata();
 
@@ -37,26 +37,30 @@ export const ElementMetadata: React.FC = () => {
     });
   }, []);
 
+  // Check for pending metadata on mount
+  useEffect(() => {
+    chrome.storage.local.get(['xcalibr_element_metadata_pending'], (result) => {
+      const pendingData = result.xcalibr_element_metadata_pending;
+      if (pendingData && typeof pendingData === 'object') {
+        console.log('Loading pending metadata:', pendingData);
+        addInspection(pendingData as any);
+        // Clear the pending data
+        chrome.storage.local.remove('xcalibr_element_metadata_pending');
+      }
+    });
+  }, [addInspection]);
+
   // Listen for element inspection data from content script
   useEffect(() => {
     const handleMessage = (
       message: any,
       _sender: chrome.runtime.MessageSender
     ) => {
-      if (message.type === 'ELEMENT_METADATA') {
-        setLastInspectedElement(message.data);
-
-        // Add to history
-        const selector = message.data.id
-          ? `#${message.data.id}`
-          : message.data.classes.length > 0
-          ? `.${message.data.classes[0]}`
-          : message.data.tagName;
-
-        addToHistory({
-          tagName: message.data.tagName,
-          selector,
-        });
+      if (message.type === 'ELEMENT_METADATA_CLICKED') {
+        console.log('Received metadata message:', message.data);
+        addInspection(message.data);
+        // Clear pending data since we got it via message
+        chrome.storage.local.remove('xcalibr_element_metadata_pending');
       }
     };
 
@@ -65,7 +69,7 @@ export const ElementMetadata: React.FC = () => {
     return () => {
       chrome.runtime.onMessage.removeListener(handleMessage);
     };
-  }, [setLastInspectedElement, addToHistory]);
+  }, [addInspection]);
 
   // Sync state with content script when toggling
   useEffect(() => {
@@ -130,7 +134,7 @@ export const ElementMetadata: React.FC = () => {
               </kbd>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              Hover over elements on the page to see detailed metadata in a tooltip overlay.
+              Hover to preview, <strong className="text-dev-green">click to capture</strong> element metadata. Captured elements appear in Recent Inspections below.
             </p>
             <div className="flex gap-2">
               {!elementMetadataState.isActive ? (
@@ -161,7 +165,7 @@ export const ElementMetadata: React.FC = () => {
         </section>
 
         {/* Last Inspected Element */}
-        {elem && (
+        {elem ? (
           <>
             <div className="h-px bg-slate-800"></div>
 
@@ -260,29 +264,47 @@ export const ElementMetadata: React.FC = () => {
                     </span>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-500">Text Color</span>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded border border-slate-600"
-                          style={{ backgroundColor: elem.color }}
-                        ></div>
-                        <span className="text-xs text-slate-300 font-mono">
-                          {elem.color}
-                        </span>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-slate-500">Text Color</span>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded border border-slate-600"
+                            style={{ backgroundColor: elem.color }}
+                          ></div>
+                          <span className="text-xs text-slate-300 font-mono">
+                            {elem.color}
+                          </span>
+                        </div>
                       </div>
+                      {elem.colorHex && (
+                        <div className="flex justify-end">
+                          <span className="text-[10px] text-slate-600 font-mono">
+                            {elem.colorHex}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-500">Background</span>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded border border-slate-600"
-                          style={{ backgroundColor: elem.backgroundColor }}
-                        ></div>
-                        <span className="text-xs text-slate-300 font-mono">
-                          {elem.backgroundColor}
-                        </span>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-slate-500">Background</span>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded border border-slate-600"
+                            style={{ backgroundColor: elem.backgroundColor }}
+                          ></div>
+                          <span className="text-xs text-slate-300 font-mono">
+                            {elem.backgroundColor}
+                          </span>
+                        </div>
                       </div>
+                      {elem.backgroundColorHex && (
+                        <div className="flex justify-end">
+                          <span className="text-[10px] text-slate-600 font-mono">
+                            {elem.backgroundColorHex}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     {elem.contrastRatio !== null && contrastRating && (
                       <div className="flex justify-between items-center pt-2 border-t border-slate-700/50">
@@ -413,15 +435,16 @@ export const ElementMetadata: React.FC = () => {
                     {elementMetadataState.inspectionHistory.map((item, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-2 border-b border-slate-700/50 last:border-b-0 hover:bg-slate-800/50 transition-colors"
+                        onClick={() => loadInspection(item)}
+                        className="flex items-center justify-between p-2 border-b border-slate-700/50 last:border-b-0 hover:bg-slate-800/50 hover:border-dev-green/40 transition-colors cursor-pointer group"
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-dev-green"></div>
-                          <code className="text-xs text-slate-300 font-mono">
+                          <div className="w-1.5 h-1.5 rounded-full bg-dev-green group-hover:shadow-[0_0_6px_rgba(0,230,0,0.6)] transition-shadow"></div>
+                          <code className="text-xs text-slate-300 group-hover:text-dev-green font-mono transition-colors">
                             {item.selector}
                           </code>
                         </div>
-                        <span className="text-xs text-slate-600">
+                        <span className="text-xs text-slate-600 group-hover:text-slate-500 transition-colors">
                           {new Date(item.timestamp).toLocaleTimeString()}
                         </span>
                       </div>
@@ -431,6 +454,36 @@ export const ElementMetadata: React.FC = () => {
               </>
             )}
           </>
+        ) : (
+          elementMetadataState.isActive && (
+            <>
+              <div className="h-px bg-slate-800"></div>
+              <div className="bg-dev-card/30 border border-slate-700 rounded-lg p-6 text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-dev-green/10 border border-dev-green/20 mb-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                    stroke="currentColor"
+                    className="w-6 h-6 text-dev-green"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59"
+                    />
+                  </svg>
+                </div>
+                <p className="text-sm text-slate-400 mb-1">
+                  <strong className="text-dev-green">Click</strong> on any element to inspect it
+                </p>
+                <p className="text-xs text-slate-600">
+                  Typography, Colors, Box Model & Position data will appear here
+                </p>
+              </div>
+            </>
+          )
         )}
       </main>
     </div>

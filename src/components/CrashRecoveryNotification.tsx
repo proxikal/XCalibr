@@ -1,6 +1,7 @@
 /**
  * Crash Recovery Notification Component
  * Shows a notification when the app recovers from a crash
+ * Auto-dismisses after 5 seconds
  */
 
 import React, { useEffect, useState } from 'react';
@@ -13,15 +14,18 @@ export const CrashRecoveryNotification: React.FC = () => {
   useEffect(() => {
     if (hasCrashRecoveryData) {
       setIsVisible(true);
-    }
-  }, [hasCrashRecoveryData]);
 
-  const handleDismiss = () => {
-    setIsVisible(false);
-    setTimeout(() => {
-      clearCrashRecoveryData();
-    }, 300);
-  };
+      // Auto-dismiss after 5 seconds
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        setTimeout(() => {
+          clearCrashRecoveryData();
+        }, 300);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [hasCrashRecoveryData, clearCrashRecoveryData]);
 
   if (!isVisible || !crashRecoveryData) {
     return null;
@@ -32,18 +36,18 @@ export const CrashRecoveryNotification: React.FC = () => {
   const timeText = minutesAgo < 1 ? 'just now' : `${minutesAgo} minute${minutesAgo > 1 ? 's' : ''} ago`;
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
-      <div className="bg-dev-card border border-yellow-500/40 rounded-lg shadow-xl p-4 max-w-sm">
-        <div className="flex items-start gap-3">
+    <div className="fixed bottom-14 left-0 right-0 z-40 px-4 animate-fade-in">
+      <div className="w-full bg-dev-card border-t border-yellow-500/40 shadow-xl py-3 px-4">
+        <div className="flex items-center gap-3">
           {/* Warning Icon */}
-          <div className="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center shrink-0">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth="2"
               stroke="currentColor"
-              className="w-5 h-5 text-yellow-500"
+              className="w-4 h-4 text-yellow-500"
             >
               <path
                 strokeLinecap="round"
@@ -54,28 +58,12 @@ export const CrashRecoveryNotification: React.FC = () => {
           </div>
 
           {/* Content */}
-          <div className="flex-1 space-y-2">
-            <div>
-              <h3 className="text-sm font-semibold text-white">Session Restored</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Your previous session ended unexpectedly {timeText}. Your work has been recovered.
-              </p>
-            </div>
-
-            {/* Restored State Info */}
-            <div className="bg-dev-darker border border-slate-700 rounded p-2">
-              <p className="text-xs text-slate-500">
-                <span className="text-dev-green font-medium">✓ Restored:</span> {crashRecoveryData.activeTab} tab
-              </p>
-            </div>
-
-            {/* Dismiss Button */}
-            <button
-              onClick={handleDismiss}
-              className="w-full bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 text-xs font-medium py-1.5 px-3 rounded transition-colors border border-yellow-500/30"
-            >
-              Got it
-            </button>
+          <div className="flex-1">
+            <p className="text-xs text-slate-300">
+              <span className="font-semibold text-white">Session Restored</span> —
+              Your previous session ended unexpectedly {timeText}.
+              <span className="text-dev-green ml-1">✓ {crashRecoveryData.activeTab} tab restored</span>
+            </p>
           </div>
         </div>
       </div>

@@ -392,30 +392,50 @@ export function useElementMetadata() {
     }));
   }, [setState]);
 
-  const setLastInspectedElement = useCallback(
-    (element: AppState['elementMetadataState']['lastInspectedElement']) => {
-      setState((currentState) => ({
-        elementMetadataState: {
-          ...currentState.elementMetadataState,
-          lastInspectedElement: element,
-        },
-      }));
+  const addInspection = useCallback(
+    (inspection: AppState['elementMetadataState']['lastInspectedElement']) => {
+      if (!inspection) return;
+
+      setState((currentState) => {
+        // Remove expired inspections (older than 30 minutes)
+        const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000;
+        let validHistory = currentState.elementMetadataState.inspectionHistory.filter(
+          (item) => item.timestamp > thirtyMinutesAgo
+        );
+
+        // Check for duplicates (same selector)
+        const isDuplicate = validHistory.some(
+          (item) => item.selector === inspection.selector
+        );
+
+        // If not duplicate, add to history
+        if (!isDuplicate) {
+          validHistory = [inspection, ...validHistory];
+
+          // Limit to 100 inspections
+          if (validHistory.length > 100) {
+            validHistory = validHistory.slice(0, 100);
+          }
+        }
+
+        return {
+          elementMetadataState: {
+            ...currentState.elementMetadataState,
+            lastInspectedElement: inspection,
+            inspectionHistory: validHistory,
+          },
+        };
+      });
     },
     [setState]
   );
 
-  const addToHistory = useCallback(
-    (item: { tagName: string; selector: string }) => {
+  const loadInspection = useCallback(
+    (inspection: AppState['elementMetadataState']['lastInspectedElement']) => {
       setState((currentState) => ({
         elementMetadataState: {
           ...currentState.elementMetadataState,
-          inspectionHistory: [
-            {
-              timestamp: Date.now(),
-              ...item,
-            },
-            ...currentState.elementMetadataState.inspectionHistory.slice(0, 19), // Keep last 20
-          ],
+          lastInspectedElement: inspection,
         },
       }));
     },
@@ -435,8 +455,8 @@ export function useElementMetadata() {
     elementMetadataState: state.elementMetadataState,
     toggleActive,
     setActive,
-    setLastInspectedElement,
-    addToHistory,
+    addInspection,
+    loadInspection,
     clearHistory,
   };
 }
