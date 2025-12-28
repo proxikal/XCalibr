@@ -367,3 +367,76 @@ export function useRegexTester() {
     clearAll,
   };
 }
+
+/**
+ * Hook to use Element Metadata Overlay state
+ */
+export function useElementMetadata() {
+  const [state, setState] = useAppStore();
+
+  const toggleActive = useCallback(() => {
+    setState((currentState) => ({
+      elementMetadataState: {
+        ...currentState.elementMetadataState,
+        isActive: !currentState.elementMetadataState.isActive,
+      },
+    }));
+  }, [setState]);
+
+  const setActive = useCallback((active: boolean) => {
+    setState((currentState) => ({
+      elementMetadataState: {
+        ...currentState.elementMetadataState,
+        isActive: active,
+      },
+    }));
+  }, [setState]);
+
+  const setLastInspectedElement = useCallback(
+    (element: AppState['elementMetadataState']['lastInspectedElement']) => {
+      setState((currentState) => ({
+        elementMetadataState: {
+          ...currentState.elementMetadataState,
+          lastInspectedElement: element,
+        },
+      }));
+    },
+    [setState]
+  );
+
+  const addToHistory = useCallback(
+    (item: { tagName: string; selector: string }) => {
+      setState((currentState) => ({
+        elementMetadataState: {
+          ...currentState.elementMetadataState,
+          inspectionHistory: [
+            {
+              timestamp: Date.now(),
+              ...item,
+            },
+            ...currentState.elementMetadataState.inspectionHistory.slice(0, 19), // Keep last 20
+          ],
+        },
+      }));
+    },
+    [setState]
+  );
+
+  const clearHistory = useCallback(() => {
+    setState((currentState) => ({
+      elementMetadataState: {
+        ...currentState.elementMetadataState,
+        inspectionHistory: [],
+      },
+    }));
+  }, [setState]);
+
+  return {
+    elementMetadataState: state.elementMetadataState,
+    toggleActive,
+    setActive,
+    setLastInspectedElement,
+    addToHistory,
+    clearHistory,
+  };
+}

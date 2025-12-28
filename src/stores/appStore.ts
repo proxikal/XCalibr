@@ -56,6 +56,34 @@ export interface RegexTesterState {
   replaceResult: string;
 }
 
+export interface ElementMetadataState {
+  isActive: boolean;
+  lastInspectedElement: {
+    tagName: string;
+    id: string | null;
+    classes: string[];
+    fontFamily: string;
+    fontSize: string;
+    color: string;
+    backgroundColor: string;
+    contrastRatio: number | null;
+    boxModel: {
+      margin: string;
+      padding: string;
+      border: string;
+      width: string;
+      height: string;
+    };
+    zIndex: string;
+    position: string;
+  } | null;
+  inspectionHistory: Array<{
+    timestamp: number;
+    tagName: string;
+    selector: string;
+  }>;
+}
+
 export interface AppState {
   activeTab: TabCategory;
   settings: AppSettings;
@@ -63,6 +91,7 @@ export interface AppState {
   uiState: UIState;
   jsonFormatterState: JSONFormatterState;
   regexTesterState: RegexTesterState;
+  elementMetadataState: ElementMetadataState;
   lastActiveTimestamp: number;
   sessionId: string;
   crashRecoveryData?: {
@@ -113,6 +142,11 @@ const DEFAULT_STATE: AppState = {
     error: null,
     replacePattern: '',
     replaceResult: '',
+  },
+  elementMetadataState: {
+    isActive: false,
+    lastInspectedElement: null,
+    inspectionHistory: [],
   },
   lastActiveTimestamp: Date.now(),
   sessionId: generateSessionId(),
@@ -185,6 +219,11 @@ class AppStore {
           regexTesterState: {
             ...DEFAULT_STATE.regexTesterState,
             ...(savedState.regexTesterState || {}),
+          },
+          // Ensure elementMetadataState exists
+          elementMetadataState: {
+            ...DEFAULT_STATE.elementMetadataState,
+            ...(savedState.elementMetadataState || {}),
           },
           sessionId: generateSessionId(),
           lastActiveTimestamp: Date.now(),

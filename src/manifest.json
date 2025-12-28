@@ -37,5 +37,22 @@
       "js": ["src/content/content-script.ts"],
       "run_at": "document_idle"
     }
-  ]
+  ],
+
+  "commands": {
+    "toggle-metadata-overlay": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Period",
+        "mac": "Command+Shift+Period"
+      },
+      "description": "Toggle Element Metadata Overlay"
+    },
+    "toggle-inspector": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+I",
+        "mac": "Command+Shift+I"
+      },
+      "description": "Toggle Element Inspector"
+    }
+  }
 }

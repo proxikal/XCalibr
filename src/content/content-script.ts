@@ -21,12 +21,16 @@
     inspectorActive: boolean;
     selectedElement: HTMLElement | null;
     overlay: HTMLElement | null;
+    metadataOverlayActive: boolean;
+    metadataTooltip: HTMLElement | null;
   }
 
   const state: State = {
     inspectorActive: false,
     selectedElement: null,
     overlay: null,
+    metadataOverlayActive: false,
+    metadataTooltip: null,
   };
 
   /**
@@ -34,7 +38,9 @@
    */
   function init() {
     createOverlay();
+    createMetadataTooltip();
     setupMessageListener();
+    setupKeyboardShortcuts();
     console.log('XCalibr initialized on:', window.location.href);
   }
 
@@ -65,6 +71,10 @@
       console.log('Content script received message:', message);
 
       switch (message.type) {
+        case 'PING':
+          sendResponse({ success: true });
+          break;
+
         case 'TOGGLE_INSPECTOR':
           toggleInspector();
           sendResponse({ success: true });
@@ -77,6 +87,11 @@
 
         case 'DEACTIVATE_INSPECTOR':
           deactivateInspector();
+          sendResponse({ success: true });
+          break;
+
+        case 'TOGGLE_METADATA_OVERLAY':
+          toggleMetadataOverlay(message.data?.isActive);
           sendResponse({ success: true });
           break;
 
@@ -249,6 +264,268 @@
     style.textContent = css;
     style.setAttribute('data-xcalibr', 'true');
     document.head.appendChild(style);
+  }
+
+  /**
+   * Create metadata tooltip element
+   */
+  function createMetadataTooltip() {
+    const tooltip = document.createElement('div');
+    tooltip.id = 'xcalibr-metadata-tooltip';
+    tooltip.style.cssText = `
+      position: fixed;
+      z-index: 2147483647;
+      display: none;
+      background: #0f172a;
+      border: 1px solid #00e600;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 12px;
+      color: #cbd5e1;
+      box-shadow: 0 0 20px rgba(0, 230, 0, 0.3);
+      max-width: 350px;
+      pointer-events: none;
+    `;
+    document.body.appendChild(tooltip);
+    state.metadataTooltip = tooltip;
+  }
+
+  /**
+   * Setup keyboard shortcuts
+   */
+  function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      // Cmd+Shift+. or Ctrl+Shift+.
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '.') {
+        e.preventDefault();
+        toggleMetadataOverlay();
+      }
+    });
+  }
+
+  /**
+   * Toggle metadata overlay
+   */
+  function toggleMetadataOverlay(forceState?: boolean) {
+    state.metadataOverlayActive = forceState !== undefined ? forceState : !state.metadataOverlayActive;
+
+    if (state.metadataOverlayActive) {
+      activateMetadataOverlay();
+    } else {
+      deactivateMetadataOverlay();
+    }
+
+    console.log('Metadata overlay:', state.metadataOverlayActive ? 'activated' : 'deactivated');
+  }
+
+  /**
+   * Activate metadata overlay
+   */
+  function activateMetadataOverlay() {
+    document.addEventListener('mousemove', handleMetadataHover);
+    document.addEventListener('mouseout', handleMetadataMouseOut);
+  }
+
+  /**
+   * Deactivate metadata overlay
+   */
+  function deactivateMetadataOverlay() {
+    document.removeEventListener('mousemove', handleMetadataHover);
+    document.removeEventListener('mouseout', handleMetadataMouseOut);
+    if (state.metadataTooltip) {
+      state.metadataTooltip.style.display = 'none';
+    }
+  }
+
+  /**
+   * Handle mouse hover for metadata display
+   */
+  function handleMetadataHover(e: MouseEvent) {
+    const element = e.target as HTMLElement;
+
+    // Ignore our own tooltip and overlay
+    if (element.id === 'xcalibr-metadata-tooltip' || element.id === 'xcalibr-overlay') {
+      return;
+    }
+
+    const metadata = getElementMetadata(element);
+    displayMetadataTooltip(metadata, e.clientX, e.clientY);
+
+    // Send to popup
+    chrome.runtime.sendMessage({
+      type: 'ELEMENT_METADATA',
+      data: metadata,
+    });
+  }
+
+  /**
+   * Handle mouse out
+   */
+  function handleMetadataMouseOut() {
+    // We don't hide the tooltip on mouseout anymore, it updates on every hover
+  }
+
+  /**
+   * Get element metadata
+   */
+  function getElementMetadata(element: HTMLElement) {
+    const computed = window.getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+
+    // Calculate contrast ratio
+    const contrastRatio = calculateContrastRatio(
+      computed.color,
+      computed.backgroundColor
+    );
+
+    return {
+      tagName: element.tagName.toLowerCase(),
+      id: element.id || null,
+      classes: Array.from(element.classList),
+      fontFamily: computed.fontFamily,
+      fontSize: computed.fontSize,
+      color: computed.color,
+      backgroundColor: computed.backgroundColor,
+      contrastRatio,
+      boxModel: {
+        margin: computed.margin,
+        padding: computed.padding,
+        border: computed.border,
+        width: `${rect.width.toFixed(2)}px`,
+        height: `${rect.height.toFixed(2)}px`,
+      },
+      zIndex: computed.zIndex,
+      position: computed.position,
+    };
+  }
+
+  /**
+   * Calculate contrast ratio between two colors
+   */
+  function calculateContrastRatio(color1: string, color2: string): number | null {
+    try {
+      const rgb1 = parseRgbColor(color1);
+      const rgb2 = parseRgbColor(color2);
+
+      if (!rgb1 || !rgb2) return null;
+
+      const l1 = getRelativeLuminance(rgb1);
+      const l2 = getRelativeLuminance(rgb2);
+
+      const lighter = Math.max(l1, l2);
+      const darker = Math.min(l1, l2);
+
+      return (lighter + 0.05) / (darker + 0.05);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Parse RGB color string
+   */
+  function parseRgbColor(color: string): { r: number; g: number; b: number } | null {
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+      return {
+        r: parseInt(match[1]),
+        g: parseInt(match[2]),
+        b: parseInt(match[3]),
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Get relative luminance
+   */
+  function getRelativeLuminance(rgb: { r: number; g: number; b: number }): number {
+    const rsRGB = rgb.r / 255;
+    const gsRGB = rgb.g / 255;
+    const bsRGB = rgb.b / 255;
+
+    const r = rsRGB <= 0.03928 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
+    const g = gsRGB <= 0.03928 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
+    const b = bsRGB <= 0.03928 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
+
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  /**
+   * Display metadata tooltip
+   */
+  function displayMetadataTooltip(metadata: any, x: number, y: number) {
+    if (!state.metadataTooltip) return;
+
+    const contrastRating = metadata.contrastRatio
+      ? metadata.contrastRatio >= 7
+        ? '<span style="color: #4ade80">AAA</span>'
+        : metadata.contrastRatio >= 4.5
+        ? '<span style="color: #facc15">AA</span>'
+        : '<span style="color: #f87171">Fail</span>'
+      : '<span style="color: #64748b">N/A</span>';
+
+    const selector = metadata.id
+      ? `#${metadata.id}`
+      : metadata.classes.length > 0
+      ? `.${metadata.classes[0]}`
+      : metadata.tagName;
+
+    state.metadataTooltip.innerHTML = `
+      <div style="margin-bottom: 8px;">
+        <div style="color: #00e600; font-weight: 600; font-family: monospace; margin-bottom: 4px;">
+          ${selector}
+        </div>
+      </div>
+      <div style="display: grid; gap: 6px; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+          <span style="color: #94a3b8;">Font</span>
+          <span style="font-family: monospace;">${metadata.fontFamily.split(',')[0].replace(/['"]/g, '')} ${metadata.fontSize}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+          <span style="color: #94a3b8;">Contrast</span>
+          <span>${metadata.contrastRatio ? metadata.contrastRatio.toFixed(2) + ':1' : 'N/A'} ${contrastRating}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+          <span style="color: #94a3b8;">Margin</span>
+          <span style="font-family: monospace; font-size: 10px;">${metadata.boxModel.margin}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+          <span style="color: #94a3b8;">Padding</span>
+          <span style="font-family: monospace; font-size: 10px;">${metadata.boxModel.padding}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #334155;">
+          <span style="color: #94a3b8;">Z-Index</span>
+          <span style="font-family: monospace;">${metadata.zIndex}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+          <span style="color: #94a3b8;">Position</span>
+          <span style="font-family: monospace;">${metadata.position}</span>
+        </div>
+      </div>
+    `;
+
+    // Position tooltip near cursor but keep it on screen
+    const tooltipWidth = 350;
+    const tooltipHeight = 300;
+    const offsetX = 15;
+    const offsetY = 15;
+
+    let posX = x + offsetX;
+    let posY = y + offsetY;
+
+    // Adjust if tooltip goes off-screen
+    if (posX + tooltipWidth > window.innerWidth) {
+      posX = x - tooltipWidth - offsetX;
+    }
+    if (posY + tooltipHeight > window.innerHeight) {
+      posY = y - tooltipHeight - offsetY;
+    }
+
+    state.metadataTooltip.style.left = `${posX}px`;
+    state.metadataTooltip.style.top = `${posY}px`;
+    state.metadataTooltip.style.display = 'block';
   }
 
   // Initialize when DOM is ready

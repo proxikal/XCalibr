@@ -93,6 +93,17 @@ chrome.commands.onCommand.addListener((command) => {
   console.log('Command received:', command);
 
   switch (command) {
+    case 'toggle-metadata-overlay':
+      // Toggle metadata overlay
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]?.id) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            type: 'TOGGLE_METADATA_OVERLAY',
+          });
+        }
+      });
+      break;
+
     case 'toggle-inspector':
       // Toggle element inspector
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
