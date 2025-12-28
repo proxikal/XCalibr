@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XCalibr - Tool Example</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'dev-green': '#00e600',
+                        'dev-dark': '#0f172a', /* slate-900 */
+                        'dev-darker': '#020617', /* slate-950 */
+                        'dev-card': '#1e293b', /* slate-800 */
+                    },
+                    fontFamily: {
+                        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+        /* Extension Popup Dimensions */
+        body {
+            width: 400px;
+            height: 600px; 
+        }
+        /* Checkbox custom style */
+        .checkbox-wrapper input:checked + div {
+            background-color: #00e600;
+            border-color: #00e600;
+        }
+        .checkbox-wrapper input:checked + div svg {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-dev-dark text-slate-300 antialiased flex flex-col overflow-hidden selection:bg-dev-green selection:text-black">
+
+    <!-- Top Banner -->
+    <header class="flex items-center justify-between px-5 py-4 bg-dev-darker border-b border-slate-800 shadow-sm shrink-0 z-30 relative">
+        <div class="flex items-center gap-2.5">
+            <!-- Logo Icon -->
+            <div class="w-7 h-7 rounded-md bg-dev-green/10 border border-dev-green/20 flex items-center justify-center text-dev-green shadow-[0_0_10px_rgba(0,230,0,0.1)]">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+            </div>
+            <h1 class="text-lg font-bold text-white tracking-tight">XCalibr <span class="text-dev-green">Hub</span></h1>
+        </div>
+        
+        <!-- Menu Container (Reused) -->
+        <div class="relative">
+            <button id="menu-btn" class="text-slate-500 hover:text-white transition-colors p-1 rounded hover:bg-slate-800 focus:outline-none focus:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+            </button>
+
+             <!-- Dropdown Menu -->
+             <div id="menu-dropdown" class="hidden absolute right-0 top-full mt-2 w-48 bg-dev-card border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden transform origin-top-right transition-all duration-200">
+                <div class="py-1">
+                    <a href="#" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-slate-500">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+        <script>
+            const menuBtn = document.getElementById('menu-btn');
+            const menuDropdown = document.getElementById('menu-dropdown');
+            menuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menuDropdown.classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                if (!menuDropdown.classList.contains('hidden') && !menuBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
+                    menuDropdown.classList.add('hidden');
+                }
+            });
+        </script>
+    </header>
+
+    <!-- Tool Navigation Bar -->
+    <nav class="flex items-center px-4 py-3 bg-dev-dark border-b border-slate-800/50 shrink-0 gap-3">
+        <button class="flex items-center gap-1.5 text-slate-400 hover:text-dev-green transition-colors group">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+            <span class="text-xs font-bold uppercase tracking-widest">Back</span>
+        </button>
+        <div class="h-4 w-px bg-slate-700 mx-1"></div>
+        <h2 class="text-sm font-semibold text-slate-200">Example Tool</h2>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar relative">
+        <div class="fixed top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-dev-green/5 blur-3xl rounded-full pointer-events-none"></div>
+
+        <!-- 1. Text Inputs -->
+        <section class="space-y-3 relative z-0">
+            <h2 class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">Configuration</h2>
+            
+            <div class="space-y-1">
+                <label class="block text-sm font-medium text-slate-300">Project Name</label>
+                <input type="text" placeholder="My Awesome Project" class="w-full bg-dev-card border border-slate-700 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-dev-green/50 focus:ring-1 focus:ring-dev-green/50 transition-all">
+            </div>
+
+            <div class="space-y-1">
+                <label class="block text-sm font-medium text-slate-300">API Endpoint</label>
+                <div class="flex gap-2">
+                    <select class="bg-dev-card border border-slate-700 rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-dev-green/50">
+                        <option>GET</option>
+                        <option>POST</option>
+                    </select>
+                    <input type="text" placeholder="https://api.example.com/v1" class="flex-1 bg-dev-card border border-slate-700 rounded-md px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-dev-green/50 focus:ring-1 focus:ring-dev-green/50 transition-all">
+                </div>
+            </div>
+        </section>
+
+        <div class="h-px bg-slate-800"></div>
+
+        <!-- 2. Checkboxes (Custom Styled) -->
+        <section class="space-y-3 relative z-0">
+            <h2 class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">Options</h2>
+            
+            <label class="checkbox-wrapper flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" class="hidden">
+                <div class="w-5 h-5 rounded border border-slate-600 bg-slate-800 flex items-center justify-center transition-colors group-hover:border-slate-500">
+                    <svg class="w-3.5 h-3.5 text-black hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <span class="text-sm text-slate-300 group-hover:text-white transition-colors">Enable Dark Mode Analysis</span>
+            </label>
+
+            <label class="checkbox-wrapper flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" checked class="hidden">
+                <div class="w-5 h-5 rounded border border-slate-600 bg-slate-800 flex items-center justify-center transition-colors group-hover:border-slate-500">
+                    <svg class="w-3.5 h-3.5 text-black hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <span class="text-sm text-slate-300 group-hover:text-white transition-colors">Auto-save results</span>
+            </label>
+        </section>
+
+        <div class="h-px bg-slate-800"></div>
+
+        <!-- 3. Collapsible Section (Accordion) -->
+        <section class="space-y-2 relative z-0">
+             <div class="border border-slate-700 bg-dev-card/30 rounded-lg overflow-hidden">
+                <button onclick="document.getElementById('adv-content').classList.toggle('hidden'); document.getElementById('adv-icon').classList.toggle('rotate-180')" class="w-full flex items-center justify-between p-3 hover:bg-slate-800/50 transition-colors text-left">
+                    <span class="text-sm font-semibold text-slate-200">Advanced Settings</span>
+                    <svg id="adv-icon" class="w-4 h-4 text-slate-500 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="adv-content" class="hidden p-3 border-t border-slate-700/50 bg-slate-900/50 space-y-3">
+                    <p class="text-xs text-slate-500">These settings are for power users.</p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-slate-400">Timeout (ms)</span>
+                        <input type="number" value="5000" class="w-20 bg-dev-dark border border-slate-700 rounded px-2 py-1 text-xs text-right focus:border-dev-green/50 focus:outline-none">
+                    </div>
+                </div>
+             </div>
+        </section>
+
+        <!-- 4. List View -->
+        <section class="space-y-2 relative z-0">
+            <h2 class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">Recent Items</h2>
+            <div class="bg-dev-card/30 border border-slate-700 rounded-lg overflow-hidden">
+                <!-- List Item 1 -->
+                <div class="flex items-center justify-between p-3 border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors group cursor-pointer">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-dev-green"></div>
+                        <span class="text-sm text-slate-300 group-hover:text-white">config.json</span>
+                    </div>
+                    <span class="text-xs text-slate-500">2m ago</span>
+                </div>
+                <!-- List Item 2 -->
+                <div class="flex items-center justify-between p-3 border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors group cursor-pointer">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                        <span class="text-sm text-slate-300 group-hover:text-white">user_data.xml</span>
+                    </div>
+                    <span class="text-xs text-slate-500">1h ago</span>
+                </div>
+                <!-- List Item 3 -->
+                <div class="flex items-center justify-between p-3 hover:bg-slate-800/50 transition-colors group cursor-pointer">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                        <span class="text-sm text-slate-300 group-hover:text-white">error.log</span>
+                    </div>
+                    <span class="text-xs text-slate-500">Yesterday</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Action Buttons -->
+        <section class="pt-2 flex gap-3 relative z-0">
+            <button class="flex-1 bg-transparent border border-slate-600 text-slate-300 hover:text-white hover:border-slate-400 py-2 rounded-md text-sm font-medium transition-colors">
+                Cancel
+            </button>
+            <button class="flex-1 bg-dev-green text-black hover:bg-[#00ff00] py-2 rounded-md text-sm font-bold shadow-[0_0_15px_rgba(0,230,0,0.3)] hover:shadow-[0_0_20px_rgba(0,230,0,0.5)] transition-all">
+                Save Changes
+            </button>
+        </section>
+
+    </main>
+
+</body>
+</html>

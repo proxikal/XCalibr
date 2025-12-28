@@ -1,0 +1,19 @@
+<svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark background -->
+  <rect width="128" height="128" fill="#0f172a" rx="24"/>
+
+  <!-- Green terminal icon -->
+  <g transform="translate(32, 32)">
+    <!-- Terminal window -->
+    <rect width="64" height="64" fill="#1e293b" stroke="#00e600" stroke-width="2" rx="6"/>
+
+    <!-- Terminal prompt symbol -->
+    <path d="M 12 20 L 20 28 L 12 36" stroke="#00e600" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Cursor line -->
+    <line x1="28" y1="28" x2="40" y2="28" stroke="#00e600" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Green glow effect -->
+    <circle cx="32" cy="32" r="28" fill="none" stroke="#00e600" stroke-width="1" opacity="0.2"/>
+  </g>
+</svg>
