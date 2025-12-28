@@ -268,3 +268,102 @@ export function useJSONFormatter() {
     clearAll,
   };
 }
+
+/**
+ * Hook to use Regex Tester state
+ */
+export function useRegexTester() {
+  const [state, setState] = useAppStore();
+
+  const setPattern = useCallback((pattern: string) => {
+    setState((currentState) => ({
+      regexTesterState: {
+        ...currentState.regexTesterState,
+        pattern,
+      },
+    }));
+  }, [setState]);
+
+  const setTestString = useCallback((testString: string) => {
+    setState((currentState) => ({
+      regexTesterState: {
+        ...currentState.regexTesterState,
+        testString,
+      },
+    }));
+  }, [setState]);
+
+  const setFlag = useCallback((flag: keyof AppState['regexTesterState']['flags'], value: boolean) => {
+    setState((currentState) => ({
+      regexTesterState: {
+        ...currentState.regexTesterState,
+        flags: {
+          ...currentState.regexTesterState.flags,
+          [flag]: value,
+        },
+      },
+    }));
+  }, [setState]);
+
+  const setMatches = useCallback((matches: AppState['regexTesterState']['matches']) => {
+    setState((currentState) => ({
+      regexTesterState: {
+        ...currentState.regexTesterState,
+        matches,
+      },
+    }));
+  }, [setState]);
+
+  const setError = useCallback((error: string | null) => {
+    setState((currentState) => ({
+      regexTesterState: {
+        ...currentState.regexTesterState,
+        error,
+      },
+    }));
+  }, [setState]);
+
+  const setReplacePattern = useCallback((replacePattern: string) => {
+    setState((currentState) => ({
+      regexTesterState: {
+        ...currentState.regexTesterState,
+        replacePattern,
+      },
+    }));
+  }, [setState]);
+
+  const setReplaceResult = useCallback((replaceResult: string) => {
+    setState((currentState) => ({
+      regexTesterState: {
+        ...currentState.regexTesterState,
+        replaceResult,
+      },
+    }));
+  }, [setState]);
+
+  const clearAll = useCallback(() => {
+    setState((currentState) => ({
+      regexTesterState: {
+        ...currentState.regexTesterState,
+        pattern: '',
+        testString: '',
+        matches: [],
+        error: null,
+        replacePattern: '',
+        replaceResult: '',
+      },
+    }));
+  }, [setState]);
+
+  return {
+    regexTesterState: state.regexTesterState,
+    setPattern,
+    setTestString,
+    setFlag,
+    setMatches,
+    setError,
+    setReplacePattern,
+    setReplaceResult,
+    clearAll,
+  };
+}

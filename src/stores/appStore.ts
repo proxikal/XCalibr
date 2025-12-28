@@ -35,12 +35,34 @@ export interface JSONFormatterState {
   error: string | null;
 }
 
+export interface RegexTesterState {
+  pattern: string;
+  testString: string;
+  flags: {
+    global: boolean;
+    multiline: boolean;
+    caseInsensitive: boolean;
+    dotAll: boolean;
+    unicode: boolean;
+    sticky: boolean;
+  };
+  matches: Array<{
+    fullMatch: string;
+    groups: string[];
+    index: number;
+  }>;
+  error: string | null;
+  replacePattern: string;
+  replaceResult: string;
+}
+
 export interface AppState {
   activeTab: TabCategory;
   settings: AppSettings;
   toolState: ToolState;
   uiState: UIState;
   jsonFormatterState: JSONFormatterState;
+  regexTesterState: RegexTesterState;
   lastActiveTimestamp: number;
   sessionId: string;
   crashRecoveryData?: {
@@ -75,6 +97,22 @@ const DEFAULT_STATE: AppState = {
     indentSize: 2,
     sortKeys: false,
     error: null,
+  },
+  regexTesterState: {
+    pattern: '',
+    testString: '',
+    flags: {
+      global: true,
+      multiline: false,
+      caseInsensitive: false,
+      dotAll: false,
+      unicode: false,
+      sticky: false,
+    },
+    matches: [],
+    error: null,
+    replacePattern: '',
+    replaceResult: '',
   },
   lastActiveTimestamp: Date.now(),
   sessionId: generateSessionId(),
@@ -142,6 +180,11 @@ class AppStore {
           jsonFormatterState: {
             ...DEFAULT_STATE.jsonFormatterState,
             ...(savedState.jsonFormatterState || {}),
+          },
+          // Ensure regexTesterState exists
+          regexTesterState: {
+            ...DEFAULT_STATE.regexTesterState,
+            ...(savedState.regexTesterState || {}),
           },
           sessionId: generateSessionId(),
           lastActiveTimestamp: Date.now(),

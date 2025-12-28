@@ -6,6 +6,7 @@
 import React from 'react';
 import { useNavigation } from '@/hooks/useAppStore';
 import { JSONFormatter } from '@/components/tools/JSONFormatter';
+import { RegexTester } from '@/components/tools/RegexTester';
 import { tools } from '@/data/tools';
 
 export const ToolView: React.FC = () => {
@@ -26,6 +27,8 @@ export const ToolView: React.FC = () => {
     switch (activeToolId) {
       case 'json-formatter':
         return <JSONFormatter />;
+      case 'regex-tester':
+        return <RegexTester />;
       // Future tools can be added here
       default:
         return (
