@@ -95,6 +95,17 @@ export const ElementMetadata: React.FC = () => {
     setActive(false);
   };
 
+  const handleEmbedToSite = () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: 'EMBED_TOOL',
+          data: { toolId: 'element-metadata' },
+        });
+      }
+    });
+  };
+
   const getContrastRating = (ratio: number | null) => {
     if (!ratio) return { text: 'Unknown', color: 'text-slate-500' };
     if (ratio >= 7) return { text: 'AAA', color: 'text-green-400' };
@@ -136,7 +147,7 @@ export const ElementMetadata: React.FC = () => {
             <p className="text-xs text-slate-500 mb-4">
               Hover to preview, <strong className="text-dev-green">click to capture</strong> element metadata. Captured elements appear in Recent Inspections below.
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-3">
               {!elementMetadataState.isActive ? (
                 <button
                   onClick={handleActivate}
@@ -153,6 +164,26 @@ export const ElementMetadata: React.FC = () => {
                 </button>
               )}
             </div>
+            <button
+              onClick={handleEmbedToSite}
+              className="w-full bg-slate-800 border border-dev-green/50 text-dev-green hover:bg-slate-700 hover:border-dev-green py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+                stroke="currentColor"
+                className="w-4 h-4"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3V15"
+                />
+              </svg>
+              Embed Tool to Site
+            </button>
 
             {!isConnected && (
               <div className="mt-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">

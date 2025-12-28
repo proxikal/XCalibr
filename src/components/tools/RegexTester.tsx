@@ -130,6 +130,17 @@ export const RegexTester: React.FC = () => {
     return flags || 'none';
   };
 
+  const handleEmbedToSite = () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: 'EMBED_TOOL',
+          data: { toolId: 'regex-tester' },
+        });
+      }
+    });
+  };
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <main className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar relative">
@@ -419,23 +430,45 @@ export const RegexTester: React.FC = () => {
         </section>
 
         {/* Action Buttons */}
-        <section className="pt-2 flex gap-3 relative z-0">
+        <section className="pt-2 space-y-2 relative z-0">
+          <div className="flex gap-3">
+            <button
+              onClick={clearAll}
+              className="flex-1 bg-transparent border border-slate-600 text-slate-300 hover:text-white hover:border-slate-400 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Clear All
+            </button>
+            <button
+              onClick={handleReplace}
+              disabled={
+                !regexTesterState.pattern ||
+                !regexTesterState.testString ||
+                !regexTesterState.replacePattern
+              }
+              className="flex-1 bg-dev-green text-black hover:bg-[#00ff00] disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed py-2 rounded-md text-sm font-bold shadow-[0_0_15px_rgba(0,230,0,0.3)] hover:shadow-[0_0_20px_rgba(0,230,0,0.5)] transition-all"
+            >
+              Replace
+            </button>
+          </div>
           <button
-            onClick={clearAll}
-            className="flex-1 bg-transparent border border-slate-600 text-slate-300 hover:text-white hover:border-slate-400 py-2 rounded-md text-sm font-medium transition-colors"
+            onClick={handleEmbedToSite}
+            className="w-full bg-slate-800 border border-dev-green/50 text-dev-green hover:bg-slate-700 hover:border-dev-green py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2"
           >
-            Clear All
-          </button>
-          <button
-            onClick={handleReplace}
-            disabled={
-              !regexTesterState.pattern ||
-              !regexTesterState.testString ||
-              !regexTesterState.replacePattern
-            }
-            className="flex-1 bg-dev-green text-black hover:bg-[#00ff00] disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed py-2 rounded-md text-sm font-bold shadow-[0_0_15px_rgba(0,230,0,0.3)] hover:shadow-[0_0_20px_rgba(0,230,0,0.5)] transition-all"
-          >
-            Replace
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+              stroke="currentColor"
+              className="w-4 h-4"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3V15"
+              />
+            </svg>
+            Embed Tool to Site
           </button>
         </section>
       </main>

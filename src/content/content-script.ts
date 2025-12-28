@@ -31,6 +31,22 @@
     colorPickerTooltip: HTMLElement | null;
     embeddedToolPanel: HTMLElement | null;
     embeddedPickedColors: any[];
+    embeddedMetadataHistory: any[];
+    embeddedLastInspected: any | null;
+    embeddedRegexPattern: string;
+    embeddedRegexTestString: string;
+    embeddedRegexFlags: {
+      global: boolean;
+      multiline: boolean;
+      caseInsensitive: boolean;
+      dotAll: boolean;
+      unicode: boolean;
+      sticky: boolean;
+    };
+    embeddedRegexMatches: any[];
+    embeddedRegexReplacePattern: string;
+    embeddedRegexReplaceResult: string;
+    embeddedRegexError: string | null;
   }
 
   const state: State = {
@@ -47,6 +63,22 @@
     colorPickerTooltip: null,
     embeddedToolPanel: null,
     embeddedPickedColors: [],
+    embeddedMetadataHistory: [],
+    embeddedLastInspected: null,
+    embeddedRegexPattern: '',
+    embeddedRegexTestString: '',
+    embeddedRegexFlags: {
+      global: true,
+      multiline: false,
+      caseInsensitive: false,
+      dotAll: false,
+      unicode: false,
+      sticky: false,
+    },
+    embeddedRegexMatches: [],
+    embeddedRegexReplacePattern: '',
+    embeddedRegexReplaceResult: '',
+    embeddedRegexError: null,
   };
 
   /**
@@ -846,8 +878,10 @@
   function handleMetadataHover(e: MouseEvent) {
     const element = e.target as HTMLElement;
 
-    // Ignore our own tooltip and overlay
-    if (element.id === 'xcalibr-metadata-tooltip' || element.id === 'xcalibr-overlay') {
+    // Ignore our own tooltip, overlay, and embedded panel
+    if (element.id === 'xcalibr-metadata-tooltip' ||
+        element.id === 'xcalibr-overlay' ||
+        element.closest('#xcalibr-embedded-panel')) {
       return;
     }
 
@@ -868,8 +902,10 @@
   function handleMetadataClick(e: MouseEvent) {
     const element = e.target as HTMLElement;
 
-    // Ignore our own tooltip and overlay
-    if (element.id === 'xcalibr-metadata-tooltip' || element.id === 'xcalibr-overlay') {
+    // Ignore our own tooltip, overlay, and embedded panel
+    if (element.id === 'xcalibr-metadata-tooltip' ||
+        element.id === 'xcalibr-overlay' ||
+        element.closest('#xcalibr-embedded-panel')) {
       return;
     }
 
@@ -891,6 +927,25 @@
       // Ignore error if popup is not open
       console.log('Element metadata stored (popup not open)');
     });
+
+    // Add to embedded panel if active
+    if (state.embeddedToolPanel) {
+      // Add to history if not duplicate
+      const isDuplicate = state.embeddedMetadataHistory.some(
+        (item) => item.selector === metadata.selector
+      );
+
+      if (!isDuplicate) {
+        state.embeddedMetadataHistory.unshift(metadata);
+        // Limit to 20 items
+        if (state.embeddedMetadataHistory.length > 20) {
+          state.embeddedMetadataHistory = state.embeddedMetadataHistory.slice(0, 20);
+        }
+      }
+
+      state.embeddedLastInspected = metadata;
+      updateEmbeddedMetadataUI();
+    }
 
     console.log('Element metadata captured:', metadata);
   }
@@ -1319,6 +1374,10 @@
   function embedTool(toolId: string) {
     if (toolId === 'color-picker') {
       embedColorPicker();
+    } else if (toolId === 'element-metadata') {
+      embedElementMetadata();
+    } else if (toolId === 'regex-tester') {
+      embedRegexTester();
     }
   }
 
@@ -1597,6 +1656,788 @@
     if (content) {
       content.innerHTML = createColorPickerUI();
       setupEmbeddedColorPicker(content as HTMLElement);
+    }
+  }
+
+  /**
+   * Embed element metadata tool
+   */
+  function embedElementMetadata() {
+    // Remove existing panel if any
+    if (state.embeddedToolPanel) {
+      state.embeddedToolPanel.remove();
+      state.embeddedToolPanel = null;
+    }
+
+    // Create embedded panel
+    const panel = document.createElement('div');
+    panel.id = 'xcalibr-embedded-panel';
+    panel.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 2147483645;
+      width: 380px;
+      max-height: 600px;
+      background: #0f172a;
+      border: 2px solid #00e600;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(0, 230, 0, 0.4);
+      overflow: hidden;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      color: #cbd5e1;
+    `;
+
+    // Create header (draggable)
+    const header = document.createElement('div');
+    header.style.cssText = `
+      background: #020617;
+      padding: 12px 16px;
+      border-bottom: 2px solid #00e600;
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    `;
+
+    const title = document.createElement('div');
+    title.style.cssText = `
+      color: #00e600;
+      font-weight: 700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    `;
+    title.textContent = 'XCalibr - Element Metadata';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.style.cssText = `
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    `;
+    closeBtn.innerHTML = `<svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`;
+    closeBtn.onmouseover = () => {
+      closeBtn.style.borderColor = '#00e600';
+      closeBtn.style.color = '#00e600';
+    };
+    closeBtn.onmouseout = () => {
+      closeBtn.style.borderColor = '#334155';
+      closeBtn.style.color = '#94a3b8';
+    };
+    closeBtn.onclick = () => {
+      panel.remove();
+      state.embeddedToolPanel = null;
+      if (state.metadataOverlayActive) {
+        toggleMetadataOverlay(false);
+        state.metadataOverlayActive = false;
+      }
+    };
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
+    // Create content area
+    const content = document.createElement('div');
+    content.style.cssText = `
+      padding: 16px;
+      max-height: 540px;
+      overflow-y: auto;
+    `;
+
+    // Add custom scrollbar
+    const scrollbarStyle = document.createElement('style');
+    scrollbarStyle.textContent = `
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar {
+        width: 6px;
+      }
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar-track {
+        background: #020617;
+      }
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 3px;
+      }
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar-thumb:hover {
+        background: #00e600;
+      }
+    `;
+    document.head.appendChild(scrollbarStyle);
+
+    // Add element metadata UI
+    content.innerHTML = createElementMetadataUI();
+
+    panel.appendChild(header);
+    panel.appendChild(content);
+    document.body.appendChild(panel);
+
+    state.embeddedToolPanel = panel;
+
+    // Make draggable
+    makeDraggable(panel, header);
+
+    // Setup element metadata functionality for embedded panel
+    setupEmbeddedElementMetadata(content);
+
+    console.log('Element Metadata embedded to site');
+  }
+
+  /**
+   * Create element metadata UI HTML
+   */
+  function createElementMetadataUI(): string {
+    const isActive = state.metadataOverlayActive;
+    const lastInspected = state.embeddedLastInspected;
+    const history = state.embeddedMetadataHistory;
+
+    return `
+      <div style="margin-bottom: 16px;">
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px;">
+          <div style="display: flex; align-items: center; justify-between; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="width: 8px; height: 8px; border-radius: 50%; background: ${isActive ? '#00e600' : '#64748b'};"></div>
+              <span style="font-size: 12px; font-weight: 600;">${isActive ? 'Active' : 'Inactive'}</span>
+            </div>
+          </div>
+          <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;">
+            Hover to preview, <strong style="color: #00e600;">click</strong> to inspect elements
+          </p>
+          <button
+            id="xcalibr-toggle-metadata"
+            style="width: 100%; background: ${isActive ? 'transparent' : '#00e600'}; border: ${isActive ? '1px solid #64748b' : 'none'}; color: ${isActive ? '#cbd5e1' : '#000'}; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+          >
+            ${isActive ? 'Deactivate' : 'Activate'} Metadata Overlay
+          </button>
+        </div>
+      </div>
+
+      ${lastInspected ? `
+        <div style="margin-bottom: 16px;">
+          <h3 style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; margin-bottom: 12px;">Last Inspected</h3>
+          <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px;">
+
+            <!-- Selector -->
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">SELECTOR</div>
+              <div style="font-size: 12px; color: #00e600; font-family: monospace; word-break: break-all;">${lastInspected.selector}</div>
+            </div>
+
+            <!-- Typography -->
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 6px; font-weight: 600;">TYPOGRAPHY</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                <div>
+                  <div style="color: #64748b;">Font Family</div>
+                  <div style="color: #cbd5e1; font-family: monospace; font-size: 10px;">${lastInspected.fontFamily.split(',')[0]}</div>
+                </div>
+                <div>
+                  <div style="color: #64748b;">Font Size</div>
+                  <div style="color: #cbd5e1; font-family: monospace;">${lastInspected.fontSize}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Colors -->
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 6px; font-weight: 600;">COLORS</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                <div>
+                  <div style="color: #64748b; margin-bottom: 4px;">Text</div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="width: 16px; height: 16px; border-radius: 3px; border: 1px solid #334155; background: ${lastInspected.color};"></div>
+                    <div style="color: #cbd5e1; font-family: monospace; font-size: 10px;">${lastInspected.colorHex}</div>
+                  </div>
+                </div>
+                <div>
+                  <div style="color: #64748b; margin-bottom: 4px;">Background</div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="width: 16px; height: 16px; border-radius: 3px; border: 1px solid #334155; background: ${lastInspected.backgroundColor};"></div>
+                    <div style="color: #cbd5e1; font-family: monospace; font-size: 10px;">${lastInspected.backgroundColorHex}</div>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top: 6px;">
+                <div style="color: #64748b;">Contrast Ratio</div>
+                <div style="color: #cbd5e1; font-family: monospace;">${lastInspected.contrastRatio}</div>
+              </div>
+            </div>
+
+            <!-- Box Model -->
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 6px; font-weight: 600;">BOX MODEL</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                <div>
+                  <div style="color: #64748b;">Width × Height</div>
+                  <div style="color: #cbd5e1; font-family: monospace;">${lastInspected.boxModel.width} × ${lastInspected.boxModel.height}</div>
+                </div>
+                <div>
+                  <div style="color: #64748b;">Padding</div>
+                  <div style="color: #cbd5e1; font-family: monospace; font-size: 10px;">${lastInspected.boxModel.padding}</div>
+                </div>
+                <div>
+                  <div style="color: #64748b;">Margin</div>
+                  <div style="color: #cbd5e1; font-family: monospace; font-size: 10px;">${lastInspected.boxModel.margin}</div>
+                </div>
+                <div>
+                  <div style="color: #64748b;">Border</div>
+                  <div style="color: #cbd5e1; font-family: monospace; font-size: 10px;">${lastInspected.boxModel.border}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Position -->
+            <div>
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 6px; font-weight: 600;">POSITION</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                <div>
+                  <div style="color: #64748b;">Position</div>
+                  <div style="color: #cbd5e1; font-family: monospace;">${lastInspected.position}</div>
+                </div>
+                <div>
+                  <div style="color: #64748b;">Z-Index</div>
+                  <div style="color: #cbd5e1; font-family: monospace;">${lastInspected.zIndex}</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      ` : ''}
+
+      ${history.length > 0 ? `
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">History (${history.length})</span>
+            <button id="xcalibr-clear-history" style="font-size: 10px; color: #64748b; background: none; border: none; cursor: pointer;">Clear</button>
+          </div>
+          <div id="xcalibr-history-container" style="display: flex; flex-direction: column; gap: 8px;">
+            ${history.map((item, idx) => `
+              <div data-history-idx="${idx}" style="background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 10px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#00e600'" onmouseout="this.style.borderColor='#334155'">
+                <div style="font-size: 11px; color: #00e600; font-family: monospace; margin-bottom: 4px; word-break: break-all;">${item.selector}</div>
+                <div style="font-size: 10px; color: #64748b;">${new Date(item.timestamp).toLocaleTimeString()}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      ${!lastInspected && history.length === 0 ? `
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; text-align: center;">
+          <div style="width: 40px; height: 40px; margin: 0 auto 8px; border-radius: 50%; background: rgba(0, 230, 0, 0.1); border: 1px solid rgba(0, 230, 0, 0.2); display: flex; align-items: center; justify-content: center;">
+            <svg style="width: 20px; height: 20px; color: #00e600;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </div>
+          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;"><strong style="color: #00e600;">Click</strong> on elements to inspect</p>
+          <p style="font-size: 10px; color: #64748b;">Element data will appear here</p>
+        </div>
+      ` : ''}
+    `;
+  }
+
+  /**
+   * Setup embedded element metadata functionality
+   */
+  function setupEmbeddedElementMetadata(content: HTMLElement) {
+    const toggleBtn = content.querySelector('#xcalibr-toggle-metadata') as HTMLButtonElement;
+    const clearBtn = content.querySelector('#xcalibr-clear-history') as HTMLButtonElement;
+
+    if (toggleBtn) {
+      toggleBtn.onclick = () => {
+        if (state.metadataOverlayActive) {
+          toggleMetadataOverlay(false);
+          state.metadataOverlayActive = false;
+        } else {
+          toggleMetadataOverlay(true);
+          state.metadataOverlayActive = true;
+        }
+        updateEmbeddedMetadataUI();
+      };
+    }
+
+    if (clearBtn) {
+      clearBtn.onclick = () => {
+        state.embeddedMetadataHistory = [];
+        state.embeddedLastInspected = null;
+        updateEmbeddedMetadataUI();
+      };
+    }
+
+    // Setup history item clicks
+    content.querySelectorAll('[data-history-idx]').forEach((item) => {
+      item.addEventListener('click', () => {
+        const idx = parseInt(item.getAttribute('data-history-idx') || '0');
+        const historyItem = state.embeddedMetadataHistory[idx];
+        if (historyItem) {
+          state.embeddedLastInspected = historyItem;
+          updateEmbeddedMetadataUI();
+        }
+      });
+    });
+  }
+
+  /**
+   * Update embedded metadata UI
+   */
+  function updateEmbeddedMetadataUI() {
+    if (!state.embeddedToolPanel) return;
+    const content = state.embeddedToolPanel.querySelector('div:last-child');
+    if (content) {
+      content.innerHTML = createElementMetadataUI();
+      setupEmbeddedElementMetadata(content as HTMLElement);
+    }
+  }
+
+  /**
+   * Embed regex tester tool
+   */
+  function embedRegexTester() {
+    // Remove existing panel if any
+    if (state.embeddedToolPanel) {
+      state.embeddedToolPanel.remove();
+      state.embeddedToolPanel = null;
+    }
+
+    // Create embedded panel
+    const panel = document.createElement('div');
+    panel.id = 'xcalibr-embedded-panel';
+    panel.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 2147483645;
+      width: 420px;
+      max-height: 650px;
+      background: #0f172a;
+      border: 2px solid #00e600;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(0, 230, 0, 0.4);
+      overflow: hidden;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      color: #cbd5e1;
+    `;
+
+    // Create header (draggable)
+    const header = document.createElement('div');
+    header.style.cssText = `
+      background: #020617;
+      padding: 12px 16px;
+      border-bottom: 2px solid #00e600;
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    `;
+
+    const title = document.createElement('div');
+    title.style.cssText = `
+      color: #00e600;
+      font-weight: 700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    `;
+    title.textContent = 'XCalibr - Regex Tester';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.style.cssText = `
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    `;
+    closeBtn.innerHTML = `<svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`;
+    closeBtn.onmouseover = () => {
+      closeBtn.style.borderColor = '#00e600';
+      closeBtn.style.color = '#00e600';
+    };
+    closeBtn.onmouseout = () => {
+      closeBtn.style.borderColor = '#334155';
+      closeBtn.style.color = '#94a3b8';
+    };
+    closeBtn.onclick = () => {
+      panel.remove();
+      state.embeddedToolPanel = null;
+    };
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
+    // Create content area
+    const content = document.createElement('div');
+    content.style.cssText = `
+      padding: 16px;
+      max-height: 590px;
+      overflow-y: auto;
+    `;
+
+    // Add custom scrollbar
+    const scrollbarStyle = document.createElement('style');
+    scrollbarStyle.textContent = `
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar {
+        width: 6px;
+      }
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar-track {
+        background: #020617;
+      }
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 3px;
+      }
+      #xcalibr-embedded-panel > div:last-child::-webkit-scrollbar-thumb:hover {
+        background: #00e600;
+      }
+    `;
+    document.head.appendChild(scrollbarStyle);
+
+    // Add regex tester UI
+    content.innerHTML = createRegexTesterUI();
+
+    panel.appendChild(header);
+    panel.appendChild(content);
+    document.body.appendChild(panel);
+
+    state.embeddedToolPanel = panel;
+
+    // Make draggable
+    makeDraggable(panel, header);
+
+    // Setup regex tester functionality for embedded panel
+    setupEmbeddedRegexTester(content);
+
+    console.log('Regex Tester embedded to site');
+  }
+
+  /**
+   * Create regex tester UI HTML
+   */
+  function createRegexTesterUI(): string {
+    const pattern = state.embeddedRegexPattern;
+    const testString = state.embeddedRegexTestString;
+    const flags = state.embeddedRegexFlags;
+    const matches = state.embeddedRegexMatches;
+    const error = state.embeddedRegexError;
+    const replacePattern = state.embeddedRegexReplacePattern;
+    const replaceResult = state.embeddedRegexReplaceResult;
+
+    const getFlagsString = () => {
+      let flagsStr = '';
+      if (flags.global) flagsStr += 'g';
+      if (flags.multiline) flagsStr += 'm';
+      if (flags.caseInsensitive) flagsStr += 'i';
+      if (flags.dotAll) flagsStr += 's';
+      if (flags.unicode) flagsStr += 'u';
+      if (flags.sticky) flagsStr += 'y';
+      return flagsStr || 'none';
+    };
+
+    const flagsList = [
+      { key: 'global', label: 'Global (g)' },
+      { key: 'multiline', label: 'Multiline (m)' },
+      { key: 'caseInsensitive', label: 'Case Insensitive (i)' },
+      { key: 'dotAll', label: 'Dot All (s)' },
+      { key: 'unicode', label: 'Unicode (u)' },
+      { key: 'sticky', label: 'Sticky (y)' },
+    ];
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+
+        <!-- Pattern Input -->
+        <div>
+          <div style="font-size: 10px; color: #64748b; margin-bottom: 6px; font-weight: 600; text-transform: uppercase;">Regular Expression</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+            <span style="color: #94a3b8; font-size: 16px; font-family: monospace;">/</span>
+            <input
+              id="xcalibr-regex-pattern"
+              type="text"
+              value="${pattern}"
+              placeholder="[A-Za-z0-9]+"
+              style="flex: 1; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 12px; font-family: monospace; outline: none;"
+            />
+            <span style="color: #94a3b8; font-size: 16px; font-family: monospace;">/${getFlagsString()}</span>
+          </div>
+
+          <!-- Flags -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            ${flagsList.map((flag) => `
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; color: #cbd5e1;">
+                <input
+                  type="checkbox"
+                  data-flag="${flag.key}"
+                  ${(flags as any)[flag.key] ? 'checked' : ''}
+                  style="width: 14px; height: 14px; accent-color: #00e600; cursor: pointer;"
+                />
+                ${flag.label}
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Test String -->
+        <div>
+          <div style="font-size: 10px; color: #64748b; margin-bottom: 6px; font-weight: 600; text-transform: uppercase;">Test String</div>
+          <textarea
+            id="xcalibr-regex-test-string"
+            placeholder="Enter text to test..."
+            style="width: 100%; height: 100px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 11px; font-family: monospace; resize: none; outline: none;"
+          >${testString}</textarea>
+        </div>
+
+        <!-- Error -->
+        ${error ? `
+          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 10px;">
+            <div style="font-size: 11px; font-weight: 600; color: rgb(248, 113, 113); margin-bottom: 4px;">Error</div>
+            <div style="font-size: 10px; color: rgba(248, 113, 113, 0.8);">${error}</div>
+          </div>
+        ` : ''}
+
+        <!-- Matches -->
+        ${matches.length > 0 ? `
+          <div>
+            <div style="font-size: 10px; color: #64748b; margin-bottom: 6px; font-weight: 600; text-transform: uppercase;">Matches (${matches.length})</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${matches.map((match, idx) => `
+                <div style="background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 10px;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                    <span style="font-size: 10px; font-weight: 600; color: #00e600;">Match ${idx + 1}</span>
+                    <span style="font-size: 10px; color: #64748b;">@ index ${match.index}</span>
+                  </div>
+                  <div style="background: #020617; border: 1px solid #334155; border-radius: 4px; padding: 6px;">
+                    <code style="font-size: 11px; color: #00e600; font-family: monospace; word-break: break-all;">${match.fullMatch}</code>
+                  </div>
+                  ${match.groups && match.groups.length > 0 ? `
+                    <div style="margin-top: 6px;">
+                      <div style="font-size: 9px; color: #64748b; margin-bottom: 4px;">Capture Groups:</div>
+                      ${match.groups.map((group: string, gIdx: number) => `
+                        <div style="font-size: 10px; color: #cbd5e1; margin-left: 8px;">
+                          <span style="color: #64748b;">$${gIdx + 1}:</span> ${group || '(empty)'}
+                        </div>
+                      `).join('')}
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${pattern && testString && !error && matches.length === 0 ? `
+          <div style="background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: #94a3b8;">No matches found</div>
+          </div>
+        ` : ''}
+
+        <!-- Replace -->
+        <div>
+          <div style="font-size: 10px; color: #64748b; margin-bottom: 6px; font-weight: 600; text-transform: uppercase;">Replace</div>
+          <input
+            id="xcalibr-regex-replace-pattern"
+            type="text"
+            value="${replacePattern}"
+            placeholder="Replacement pattern (use $1, $2 for groups)"
+            style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 11px; font-family: monospace; outline: none; margin-bottom: 8px;"
+          />
+
+          ${replaceResult ? `
+            <div>
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 6px;">Result:</div>
+              <pre style="background: #020617; border: 1px solid #334155; border-radius: 6px; padding: 8px; max-height: 120px; overflow-y: auto; color: #00e600; font-size: 10px; font-family: monospace; margin: 0; white-space: pre-wrap; word-break: break-all;">${replaceResult}</pre>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; gap: 8px;">
+          <button
+            id="xcalibr-regex-clear"
+            style="flex: 1; background: transparent; border: 1px solid #334155; color: #cbd5e1; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
+          >
+            Clear All
+          </button>
+          <button
+            id="xcalibr-regex-replace"
+            style="flex: 1; background: #00e600; border: none; color: #000; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; ${!pattern || !testString || !replacePattern ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
+            ${!pattern || !testString || !replacePattern ? 'disabled' : ''}
+          >
+            Replace
+          </button>
+        </div>
+
+      </div>
+    `;
+  }
+
+  /**
+   * Setup embedded regex tester functionality
+   */
+  function setupEmbeddedRegexTester(content: HTMLElement) {
+    const patternInput = content.querySelector('#xcalibr-regex-pattern') as HTMLInputElement;
+    const testStringInput = content.querySelector('#xcalibr-regex-test-string') as HTMLTextAreaElement;
+    const replacePatternInput = content.querySelector('#xcalibr-regex-replace-pattern') as HTMLInputElement;
+    const clearBtn = content.querySelector('#xcalibr-regex-clear') as HTMLButtonElement;
+    const replaceBtn = content.querySelector('#xcalibr-regex-replace') as HTMLButtonElement;
+    const flagCheckboxes = content.querySelectorAll('[data-flag]');
+
+    if (patternInput) {
+      patternInput.oninput = () => {
+        state.embeddedRegexPattern = patternInput.value;
+        testEmbeddedRegex();
+      };
+    }
+
+    if (testStringInput) {
+      testStringInput.oninput = () => {
+        state.embeddedRegexTestString = testStringInput.value;
+        testEmbeddedRegex();
+      };
+    }
+
+    if (replacePatternInput) {
+      replacePatternInput.oninput = () => {
+        state.embeddedRegexReplacePattern = replacePatternInput.value;
+        updateEmbeddedRegexUI();
+      };
+    }
+
+    flagCheckboxes.forEach((checkbox) => {
+      (checkbox as HTMLInputElement).onchange = () => {
+        const flagKey = checkbox.getAttribute('data-flag') as keyof typeof state.embeddedRegexFlags;
+        state.embeddedRegexFlags[flagKey] = (checkbox as HTMLInputElement).checked;
+        testEmbeddedRegex();
+      };
+    });
+
+    if (clearBtn) {
+      clearBtn.onclick = () => {
+        state.embeddedRegexPattern = '';
+        state.embeddedRegexTestString = '';
+        state.embeddedRegexReplacePattern = '';
+        state.embeddedRegexReplaceResult = '';
+        state.embeddedRegexMatches = [];
+        state.embeddedRegexError = null;
+        updateEmbeddedRegexUI();
+      };
+    }
+
+    if (replaceBtn) {
+      replaceBtn.onclick = () => {
+        handleEmbeddedReplace();
+      };
+    }
+  }
+
+  /**
+   * Test embedded regex
+   */
+  function testEmbeddedRegex() {
+    if (!state.embeddedRegexPattern || !state.embeddedRegexTestString) {
+      state.embeddedRegexMatches = [];
+      state.embeddedRegexError = null;
+      updateEmbeddedRegexUI();
+      return;
+    }
+
+    try {
+      let flagsString = '';
+      if (state.embeddedRegexFlags.global) flagsString += 'g';
+      if (state.embeddedRegexFlags.multiline) flagsString += 'm';
+      if (state.embeddedRegexFlags.caseInsensitive) flagsString += 'i';
+      if (state.embeddedRegexFlags.dotAll) flagsString += 's';
+      if (state.embeddedRegexFlags.unicode) flagsString += 'u';
+      if (state.embeddedRegexFlags.sticky) flagsString += 'y';
+
+      const regex = new RegExp(state.embeddedRegexPattern, flagsString);
+      const matches: any[] = [];
+
+      if (state.embeddedRegexFlags.global) {
+        const matchIterator = state.embeddedRegexTestString.matchAll(regex);
+        for (const match of matchIterator) {
+          matches.push({
+            fullMatch: match[0],
+            groups: match.slice(1),
+            index: match.index || 0,
+          });
+        }
+      } else {
+        const match = regex.exec(state.embeddedRegexTestString);
+        if (match) {
+          matches.push({
+            fullMatch: match[0],
+            groups: match.slice(1),
+            index: match.index,
+          });
+        }
+      }
+
+      state.embeddedRegexMatches = matches;
+      state.embeddedRegexError = null;
+    } catch (err) {
+      state.embeddedRegexError = err instanceof Error ? err.message : 'Invalid regular expression';
+      state.embeddedRegexMatches = [];
+    }
+
+    updateEmbeddedRegexUI();
+  }
+
+  /**
+   * Handle embedded replace
+   */
+  function handleEmbeddedReplace() {
+    if (!state.embeddedRegexPattern || !state.embeddedRegexTestString) {
+      return;
+    }
+
+    try {
+      let flagsString = '';
+      if (state.embeddedRegexFlags.global) flagsString += 'g';
+      if (state.embeddedRegexFlags.multiline) flagsString += 'm';
+      if (state.embeddedRegexFlags.caseInsensitive) flagsString += 'i';
+      if (state.embeddedRegexFlags.dotAll) flagsString += 's';
+      if (state.embeddedRegexFlags.unicode) flagsString += 'u';
+      if (state.embeddedRegexFlags.sticky) flagsString += 'y';
+
+      const regex = new RegExp(state.embeddedRegexPattern, flagsString);
+      const result = state.embeddedRegexTestString.replace(
+        regex,
+        state.embeddedRegexReplacePattern
+      );
+      state.embeddedRegexReplaceResult = result;
+      state.embeddedRegexError = null;
+    } catch (err) {
+      state.embeddedRegexError = err instanceof Error ? err.message : 'Replace failed';
+    }
+
+    updateEmbeddedRegexUI();
+  }
+
+  /**
+   * Update embedded regex UI
+   */
+  function updateEmbeddedRegexUI() {
+    if (!state.embeddedToolPanel) return;
+    const content = state.embeddedToolPanel.querySelector('div:last-child');
+    if (content) {
+      content.innerHTML = createRegexTesterUI();
+      setupEmbeddedRegexTester(content as HTMLElement);
     }
   }
 
