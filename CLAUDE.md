@@ -2,15 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# HIGH PRIORITY (IMPORTANT)
+# ⚠️ TOP PRIORITY: UI Style & CSS Persistence ⚠️
 - UI Directory holds the UI Style and Concept for future references
 - MainUI.html is the main concept of the extension
-- ToolUI.html is the main concept for any tools that will be added.
+- ToolUI.html has the examples for styling elements and how they should look.
 - This UI and Style must be maintained through the entire project unless stated otherwise.
 
 # ⚠️ TOP PRIORITY: STATE PERSISTENCE RULE ⚠️
 
-**CRITICAL REQUIREMENT**: All application state MUST be persisted to survive crashes, browser restarts, and extension reloads.
+**CRITICAL REQUIREMENT**: All application state MUST be persisted to survive crashes, browser restarts, and extension reloads. If the user clicks outside of the extension, when the user re-opens the extension it will open at is last state.
 
 ## State Persistence Requirements
 
@@ -159,23 +159,9 @@ Use gemini -p when:
 - Gemini's context window can handle entire codebases that would overflow Claude's context
 - When checking implementations, be specific about what you're looking for to get accurate results
 
-## Project Overview
+## Project Brief Summary
 
 **XCalibr** is a browser extension hub for developer tools. The extension provides a unified interface for common development utilities, organized into Front End, Back End, and Other categories.
-
-## Current State
-
-This is an early-stage project. Currently implemented:
-- UI prototype (`extension_ui.html`) using Tailwind CSS via CDN
-- Dark theme with `#00e600` accent color
-- Tab-based navigation system (Front End / Back End / Other)
-- Placeholder tools for visual reference
-
-**Not yet implemented:**
-- Browser extension manifest (manifest.json)
-- Background service workers or content scripts
-- Actual tool functionality
-- Build/bundling system
 
 ## Design System
 
@@ -187,30 +173,6 @@ The UI follows these conventions:
 - **Component pattern**: Tool cards with icon, title, description, and hover states
 - Each tool card transitions on hover with green accent glow effect
 
-## Planned Features
-
-Reference `# Extension Ideas.md` for the full feature roadmap. Key planned tools include:
-
-**Front End Tools:**
-- Component Inspector (React/Vue analysis)
-- CSS Debugger (live styling playground)
-- Element Metadata Overlay (hover to see font, colors, box model, z-index)
-- CSS Source Jump
-- Live CSS Scratchpad
-- DOM Diff Tool
-- Design Token Inspector
-
-**Back End Tools:**
-- API Tester
-- JSON Formatter
-
-**Other Tools:**
-- Regex Tester
-- Color Picker (extract colors in hex/RGB on hover)
-- Extension Permission Auditor
-- Extension Manifest Validator
-- Extension Message Passing Tracer
-
 ## Development Notes
 
 When implementing new features:
@@ -219,12 +181,3 @@ When implementing new features:
 - Each tool will likely need its own content script or panel implementation
 - Tools that interact with page elements (Element Metadata Overlay, Color Picker, CSS Source Jump) will require content script injection
 - Tools that are standalone utilities (JSON Formatter, Regex Tester) can run entirely in popup/panel context
-
-## Architecture Considerations
-
-When building out the extension:
-- Decide on Manifest V3 vs V2 (prefer V3 for future compatibility)
-- Determine which tools need host permissions and which can run sandboxed
-- Plan message passing architecture between popup, background worker, and content scripts
-- Consider state management for tool preferences and per-domain settings
-- Some features (Live CSS Scratchpad, URL Notes) need persistent storage strategy

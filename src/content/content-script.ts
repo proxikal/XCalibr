@@ -26,6 +26,7 @@
     linkPreviewActive: boolean;
     linkPreviewElement: HTMLElement | null;
     currentHoveredLink: HTMLAnchorElement | null;
+    inspectorDataOverlay: HTMLElement | null;
   }
 
   const state: State = {
@@ -37,6 +38,7 @@
     linkPreviewActive: false,
     linkPreviewElement: null,
     currentHoveredLink: null,
+    inspectorDataOverlay: null,
   };
 
   /**
@@ -46,6 +48,7 @@
     createOverlay();
     createMetadataTooltip();
     createLinkPreviewElement();
+    createInspectorDataOverlay();
     setupMessageListener();
     setupKeyboardShortcuts();
     console.log('XCalibr initialized on:', window.location.href);
@@ -196,7 +199,9 @@
 
     // Get element info
     const elementInfo = getElementInfo(element);
-    console.log('Element selected:', elementInfo);
+
+    // Display in overlay instead of console
+    displayInspectorData(elementInfo);
 
     // Send to popup or background
     chrome.runtime.sendMessage({
@@ -512,6 +517,259 @@
     `;
     document.body.appendChild(tooltip);
     state.metadataTooltip = tooltip;
+  }
+
+  /**
+   * Create inspector data overlay element (fixed position)
+   */
+  function createInspectorDataOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'xcalibr-inspector-data-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 2147483646;
+      display: none;
+      background: #0f172a;
+      border: 2px solid #00e600;
+      border-radius: 12px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 12px;
+      color: #cbd5e1;
+      box-shadow: 0 0 30px rgba(0, 230, 0, 0.4);
+      width: 450px;
+      max-height: 90vh;
+      overflow-y: auto;
+      pointer-events: auto;
+      backdrop-filter: blur(10px);
+    `;
+
+    // Custom scrollbar styles
+    const style = document.createElement('style');
+    style.textContent = `
+      #xcalibr-inspector-data-overlay::-webkit-scrollbar {
+        width: 8px;
+      }
+      #xcalibr-inspector-data-overlay::-webkit-scrollbar-track {
+        background: #020617;
+        border-radius: 4px;
+      }
+      #xcalibr-inspector-data-overlay::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+      }
+      #xcalibr-inspector-data-overlay::-webkit-scrollbar-thumb:hover {
+        background: #00e600;
+      }
+    `;
+    document.head.appendChild(style);
+
+    document.body.appendChild(overlay);
+    state.inspectorDataOverlay = overlay;
+  }
+
+  /**
+   * Display inspector data in overlay
+   */
+  function displayInspectorData(elementInfo: any) {
+    if (!state.inspectorDataOverlay) return;
+
+    const selector = elementInfo.id
+      ? `#${elementInfo.id}`
+      : elementInfo.classes.length > 0
+      ? `.${elementInfo.classes.join('.')}`
+      : elementInfo.tagName;
+
+    state.inspectorDataOverlay.innerHTML = `
+      <div style="position: sticky; top: 0; background: #020617; padding: 16px; border-bottom: 2px solid #00e600; z-index: 10; border-radius: 12px 12px 0 0;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+          <div style="flex: 1;">
+            <div style="color: #00e600; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+              XCalibr Inspector
+            </div>
+            <div style="color: #00e600; font-weight: 600; font-family: ui-monospace, monospace; font-size: 14px; word-break: break-all;">
+              ${selector}
+            </div>
+          </div>
+          <button
+            onclick="this.parentElement.parentElement.parentElement.style.display='none'"
+            style="background: transparent; border: 1px solid #334155; color: #94a3b8; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; margin-left: 12px;"
+            onmouseover="this.style.borderColor='#00e600'; this.style.color='#00e600';"
+            onmouseout="this.style.borderColor='#334155'; this.style.color='#94a3b8';"
+          >
+            <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div style="color: #64748b; font-size: 11px;">
+          Element information captured
+        </div>
+      </div>
+
+      <div style="padding: 20px;">
+        <!-- Element Info -->
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <svg style="width: 16px; height: 16px; color: #00e600;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 18" />
+            </svg>
+            <span style="color: #94a3b8; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+              Element
+            </span>
+          </div>
+          <div style="display: grid; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">Tag Name</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.tagName}
+              </span>
+            </div>
+            ${elementInfo.id ? `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">ID</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.id}
+              </span>
+            </div>
+            ` : ''}
+            ${elementInfo.classes.length > 0 ? `
+            <div>
+              <div style="color: #64748b; font-size: 11px; margin-bottom: 4px;">Classes</div>
+              <div style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px; word-break: break-all;">
+                ${elementInfo.classes.join(', ')}
+              </div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Dimensions -->
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <svg style="width: 16px; height: 16px; color: #00e600;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+            </svg>
+            <span style="color: #94a3b8; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+              Dimensions
+            </span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <div style="color: #64748b; font-size: 10px; margin-bottom: 4px;">Width</div>
+              <div style="background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 6px; color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 10px;">
+                ${elementInfo.dimensions.width.toFixed(2)}px
+              </div>
+            </div>
+            <div>
+              <div style="color: #64748b; font-size: 10px; margin-bottom: 4px;">Height</div>
+              <div style="background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 6px; color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 10px;">
+                ${elementInfo.dimensions.height.toFixed(2)}px
+              </div>
+            </div>
+            <div>
+              <div style="color: #64748b; font-size: 10px; margin-bottom: 4px;">Top</div>
+              <div style="background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 6px; color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 10px;">
+                ${elementInfo.dimensions.top.toFixed(2)}px
+              </div>
+            </div>
+            <div>
+              <div style="color: #64748b; font-size: 10px; margin-bottom: 4px;">Left</div>
+              <div style="background: #0f172a; border: 1px solid #334155; border-radius: 4px; padding: 6px; color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 10px;">
+                ${elementInfo.dimensions.left.toFixed(2)}px
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Styles -->
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <svg style="width: 16px; height: 16px; color: #00e600;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a16.001 16.001 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
+            </svg>
+            <span style="color: #94a3b8; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+              Styles
+            </span>
+          </div>
+          <div style="display: grid; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">Color</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.styles.color}
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">Background</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.styles.backgroundColor}
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">Font Size</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.styles.fontSize}
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">Font Family</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.styles.fontFamily.split(',')[0].replace(/['"]/g, '')}
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">Padding</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.styles.padding}
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">Margin</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.styles.margin}
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">Border</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.styles.border}
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #64748b; font-size: 11px;">Z-Index</span>
+              <span style="color: #cbd5e1; font-family: ui-monospace, monospace; font-size: 11px;">
+                ${elementInfo.styles.zIndex}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attributes -->
+        ${elementInfo.attributes.length > 0 ? `
+        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <svg style="width: 16px; height: 16px; color: #00e600;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+            <span style="color: #94a3b8; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+              Attributes
+            </span>
+          </div>
+          <div style="display: grid; gap: 6px; max-height: 200px; overflow-y: auto;">
+            ${elementInfo.attributes.map((attr: any) => `
+              <div style="display: flex; justify-content: space-between; align-items: start; padding: 6px; background: #0f172a; border: 1px solid #334155; border-radius: 4px;">
+                <span style="color: #94a3b8; font-size: 10px; font-family: ui-monospace, monospace; margin-right: 8px;">${attr.name}</span>
+                <span style="color: #cbd5e1; font-size: 10px; font-family: ui-monospace, monospace; word-break: break-all; text-align: right;">${attr.value}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+      </div>
+    `;
+
+    state.inspectorDataOverlay.style.display = 'block';
   }
 
   /**
