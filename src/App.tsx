@@ -3,16 +3,20 @@ import { Header } from '@/components/layout/Header';
 import { TabNavigation } from '@/components/layout/TabNavigation';
 import { Footer } from '@/components/layout/Footer';
 import { ToolCard } from '@/components/ui/ToolCard';
-import { useStorage } from '@/hooks/useStorage';
+import { CrashRecoveryNotification } from '@/components/CrashRecoveryNotification';
+import { useActiveTab, useToolState } from '@/hooks/useAppStore';
 import { tools } from '@/data/tools';
-import type { TabCategory } from '@/types';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useStorage<TabCategory>('activeTab', 'frontend');
+  const [activeTab, setActiveTab] = useActiveTab();
+  const { recordToolUsage } = useToolState();
   const [notification, setNotification] = useState<string | null>(null);
 
-  const handleToolClick = (toolName: string) => {
+  const handleToolClick = (toolId: string, toolName: string) => {
     console.log(`Tool clicked: ${toolName}`);
+
+    // Record tool usage in persistent store
+    recordToolUsage(toolId);
 
     // Show notification
     setNotification(`${toolName} coming soon!`);
@@ -27,6 +31,9 @@ export const App: React.FC = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-dev-dark text-slate-300 antialiased selection:bg-dev-green selection:text-black">
+      {/* Crash Recovery Notification */}
+      <CrashRecoveryNotification />
+
       <Header />
       <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -40,7 +47,7 @@ export const App: React.FC = () => {
             <ToolCard
               key={tool.id}
               tool={tool}
-              onClick={() => handleToolClick(tool.name)}
+              onClick={() => handleToolClick(tool.id, tool.name)}
             />
           ))}
         </div>
