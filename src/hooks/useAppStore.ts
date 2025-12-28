@@ -369,6 +369,78 @@ export function useRegexTester() {
 }
 
 /**
+ * Hook to use Color Picker state
+ */
+export function useColorPicker() {
+  const [state, setState] = useAppStore();
+
+  const setActive = useCallback((active: boolean) => {
+    setState((currentState) => ({
+      colorPickerState: {
+        ...currentState.colorPickerState,
+        isActive: active,
+      },
+    }));
+  }, [setState]);
+
+  const toggleActive = useCallback(() => {
+    setState((currentState) => ({
+      colorPickerState: {
+        ...currentState.colorPickerState,
+        isActive: !currentState.colorPickerState.isActive,
+      },
+    }));
+  }, [setState]);
+
+  const addColor = useCallback((colorData: Omit<AppState['colorPickerState']['pickedColors'][0], 'id' | 'timestamp'>) => {
+    setState((currentState) => {
+      const newColor = {
+        ...colorData,
+        id: `color-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        timestamp: Date.now(),
+      };
+
+      // Limit to 50 colors
+      const pickedColors = [newColor, ...currentState.colorPickerState.pickedColors].slice(0, 50);
+
+      return {
+        colorPickerState: {
+          ...currentState.colorPickerState,
+          pickedColors,
+        },
+      };
+    });
+  }, [setState]);
+
+  const removeColor = useCallback((id: string) => {
+    setState((currentState) => ({
+      colorPickerState: {
+        ...currentState.colorPickerState,
+        pickedColors: currentState.colorPickerState.pickedColors.filter((c) => c.id !== id),
+      },
+    }));
+  }, [setState]);
+
+  const clearColors = useCallback(() => {
+    setState((currentState) => ({
+      colorPickerState: {
+        ...currentState.colorPickerState,
+        pickedColors: [],
+      },
+    }));
+  }, [setState]);
+
+  return {
+    colorPickerState: state.colorPickerState,
+    setActive,
+    toggleActive,
+    addColor,
+    removeColor,
+    clearColors,
+  };
+}
+
+/**
  * Hook to use Element Metadata Overlay state
  */
 export function useElementMetadata() {

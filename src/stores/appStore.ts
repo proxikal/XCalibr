@@ -114,6 +114,19 @@ export interface LiveCSSState {
   isInjected: boolean;
 }
 
+export interface ColorPickerState {
+  isActive: boolean;
+  pickedColors: Array<{
+    id: string;
+    color: string;
+    hex: string;
+    rgb: string;
+    rgba: string;
+    hsl: string;
+    timestamp: number;
+  }>;
+}
+
 export interface AppState {
   activeTab: TabCategory;
   settings: AppSettings;
@@ -125,6 +138,7 @@ export interface AppState {
   featuresState: FeaturesState;
   cssScratchpadState: CSSScratchpadState;
   liveCSSState: LiveCSSState;
+  colorPickerState: ColorPickerState;
   lastActiveTimestamp: number;
   sessionId: string;
   crashRecoveryData?: {
@@ -203,6 +217,10 @@ const DEFAULT_STATE: AppState = {
     input: '',
     currentDomain: null,
     isInjected: false,
+  },
+  colorPickerState: {
+    isActive: false,
+    pickedColors: [],
   },
   lastActiveTimestamp: Date.now(),
   sessionId: generateSessionId(),
@@ -295,6 +313,11 @@ class AppStore {
           liveCSSState: {
             ...DEFAULT_STATE.liveCSSState,
             ...(savedState.liveCSSState || {}),
+          },
+          // Ensure colorPickerState exists
+          colorPickerState: {
+            ...DEFAULT_STATE.colorPickerState,
+            ...(savedState.colorPickerState || {}),
           },
           sessionId: generateSessionId(),
           lastActiveTimestamp: Date.now(),

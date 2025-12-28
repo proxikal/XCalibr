@@ -27,6 +27,8 @@
     linkPreviewElement: HTMLElement | null;
     currentHoveredLink: HTMLAnchorElement | null;
     inspectorDataOverlay: HTMLElement | null;
+    colorPickerActive: boolean;
+    colorPickerTooltip: HTMLElement | null;
   }
 
   const state: State = {
@@ -39,6 +41,8 @@
     linkPreviewElement: null,
     currentHoveredLink: null,
     inspectorDataOverlay: null,
+    colorPickerActive: false,
+    colorPickerTooltip: null,
   };
 
   /**
@@ -49,6 +53,7 @@
     createMetadataTooltip();
     createLinkPreviewElement();
     createInspectorDataOverlay();
+    createColorPickerTooltip();
     setupMessageListener();
     setupKeyboardShortcuts();
     console.log('XCalibr initialized on:', window.location.href);
@@ -128,6 +133,11 @@
             toggleLinkPreview(message.data.enabled);
             sendResponse({ success: true });
           }
+          break;
+
+        case 'TOGGLE_COLOR_PICKER':
+          toggleColorPicker(message.data?.isActive);
+          sendResponse({ success: true });
           break;
 
         default:
@@ -1062,6 +1072,262 @@
     state.metadataTooltip.style.left = `${posX}px`;
     state.metadataTooltip.style.top = `${posY}px`;
     state.metadataTooltip.style.display = 'block';
+  }
+
+  /**
+   * Create color picker tooltip
+   */
+  function createColorPickerTooltip() {
+    const tooltip = document.createElement('div');
+    tooltip.id = 'xcalibr-color-picker-tooltip';
+    tooltip.style.cssText = `
+      position: fixed;
+      z-index: 2147483647;
+      display: none;
+      background: #0f172a;
+      border: 2px solid #00e600;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: 12px;
+      color: #cbd5e1;
+      box-shadow: 0 0 20px rgba(0, 230, 0, 0.3);
+      pointer-events: none;
+      min-width: 200px;
+    `;
+    document.body.appendChild(tooltip);
+    state.colorPickerTooltip = tooltip;
+  }
+
+  /**
+   * Toggle color picker
+   */
+  function toggleColorPicker(forceState?: boolean) {
+    state.colorPickerActive = forceState !== undefined ? forceState : !state.colorPickerActive;
+
+    if (state.colorPickerActive) {
+      activateColorPicker();
+    } else {
+      deactivateColorPicker();
+    }
+
+    console.log('Color picker:', state.colorPickerActive ? 'activated' : 'deactivated');
+  }
+
+  /**
+   * Activate color picker
+   */
+  function activateColorPicker() {
+    document.addEventListener('mousemove', handleColorPickerHover);
+    document.addEventListener('click', handleColorPickerClick, true);
+    document.body.style.cursor = 'crosshair';
+  }
+
+  /**
+   * Deactivate color picker
+   */
+  function deactivateColorPicker() {
+    document.removeEventListener('mousemove', handleColorPickerHover);
+    document.removeEventListener('click', handleColorPickerClick, true);
+    document.body.style.cursor = '';
+    if (state.colorPickerTooltip) {
+      state.colorPickerTooltip.style.display = 'none';
+    }
+  }
+
+  /**
+   * Handle color picker hover
+   */
+  function handleColorPickerHover(e: MouseEvent) {
+    const element = e.target as HTMLElement;
+
+    // Ignore our own tooltip
+    if (element.id === 'xcalibr-color-picker-tooltip') {
+      return;
+    }
+
+    const computed = window.getComputedStyle(element);
+    const color = computed.color;
+    const backgroundColor = computed.backgroundColor;
+
+    // Use background color if available, otherwise text color
+    const pickedColor = backgroundColor !== 'rgba(0, 0, 0, 0)' ? backgroundColor : color;
+
+    displayColorTooltip(pickedColor, e.clientX, e.clientY);
+  }
+
+  /**
+   * Handle color picker click
+   */
+  function handleColorPickerClick(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const element = e.target as HTMLElement;
+
+    // Ignore our own tooltip
+    if (element.id === 'xcalibr-color-picker-tooltip') {
+      return;
+    }
+
+    const computed = window.getComputedStyle(element);
+    const color = computed.color;
+    const backgroundColor = computed.backgroundColor;
+
+    // Use background color if available, otherwise text color
+    const pickedColor = backgroundColor !== 'rgba(0, 0, 0, 0)' ? backgroundColor : color;
+
+    const colorData = extractColorFormats(pickedColor);
+
+    // Store to chrome.storage for persistence (popup might be closed)
+    chrome.storage.local.get(['xcalibr_pending_colors'], (result) => {
+      const pendingColors = (result.xcalibr_pending_colors as any[]) || [];
+      pendingColors.push(colorData);
+      chrome.storage.local.set({ xcalibr_pending_colors: pendingColors });
+    });
+
+    // Also try to send message if popup is open
+    chrome.runtime.sendMessage({
+      type: 'COLOR_PICKED',
+      data: colorData,
+    }).catch(() => {
+      console.log('Color picked and stored (popup not open)');
+    });
+
+    console.log('Color picked:', colorData);
+
+    // Deactivate color picker after picking
+    deactivateColorPicker();
+    state.colorPickerActive = false;
+  }
+
+  /**
+   * Display color tooltip
+   */
+  function displayColorTooltip(color: string, x: number, y: number) {
+    if (!state.colorPickerTooltip) return;
+
+    const formats = extractColorFormats(color);
+
+    state.colorPickerTooltip.innerHTML = `
+      <div style="margin-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <div style="width: 40px; height: 40px; border-radius: 6px; border: 2px solid #334155; background: ${formats.hex};"></div>
+          <div>
+            <div style="color: #00e600; font-weight: 600; font-size: 14px; font-family: monospace;">
+              ${formats.hex}
+            </div>
+            <div style="color: #64748b; font-size: 10px;">
+              Click to pick
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: grid; gap: 6px; font-size: 11px;">
+        <div style="padding: 6px; background: #1e293b; border: 1px solid #334155; border-radius: 4px;">
+          <div style="color: #94a3b8; font-size: 10px; margin-bottom: 2px;">HEX</div>
+          <div style="color: #cbd5e1; font-family: monospace;">${formats.hex}</div>
+        </div>
+        <div style="padding: 6px; background: #1e293b; border: 1px solid #334155; border-radius: 4px;">
+          <div style="color: #94a3b8; font-size: 10px; margin-bottom: 2px;">RGB</div>
+          <div style="color: #cbd5e1; font-family: monospace;">${formats.rgb}</div>
+        </div>
+        <div style="padding: 6px; background: #1e293b; border: 1px solid #334155; border-radius: 4px;">
+          <div style="color: #94a3b8; font-size: 10px; margin-bottom: 2px;">RGBA</div>
+          <div style="color: #cbd5e1; font-family: monospace;">${formats.rgba}</div>
+        </div>
+        <div style="padding: 6px; background: #1e293b; border: 1px solid #334155; border-radius: 4px;">
+          <div style="color: #94a3b8; font-size: 10px; margin-bottom: 2px;">HSL</div>
+          <div style="color: #cbd5e1; font-family: monospace;">${formats.hsl}</div>
+        </div>
+      </div>
+    `;
+
+    // Position tooltip
+    const tooltipWidth = 220;
+    const tooltipHeight = 280;
+    const offsetX = 15;
+    const offsetY = 15;
+
+    let posX = x + offsetX;
+    let posY = y + offsetY;
+
+    // Adjust if tooltip goes off-screen
+    if (posX + tooltipWidth > window.innerWidth) {
+      posX = x - tooltipWidth - offsetX;
+    }
+    if (posY + tooltipHeight > window.innerHeight) {
+      posY = y - tooltipHeight - offsetY;
+    }
+
+    state.colorPickerTooltip.style.left = `${posX}px`;
+    state.colorPickerTooltip.style.top = `${posY}px`;
+    state.colorPickerTooltip.style.display = 'block';
+  }
+
+  /**
+   * Extract color in all formats
+   */
+  function extractColorFormats(color: string) {
+    const rgb = parseRgbColor(color);
+    if (!rgb) {
+      return {
+        color,
+        hex: '#000000',
+        rgb: 'rgb(0, 0, 0)',
+        rgba: 'rgba(0, 0, 0, 1)',
+        hsl: 'hsl(0, 0%, 0%)',
+      };
+    }
+
+    // Get alpha from rgba if present
+    const alphaMatch = color.match(/rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
+    const alpha = alphaMatch ? parseFloat(alphaMatch[1]) : 1;
+
+    const hex = rgbToHex(color);
+    const hsl = rgbToHsl(rgb);
+
+    return {
+      color,
+      hex,
+      rgb: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
+      rgba: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`,
+      hsl,
+    };
+  }
+
+  /**
+   * Convert RGB to HSL
+   */
+  function rgbToHsl(rgb: { r: number; g: number; b: number }): string {
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0;
+    let s = 0;
+    const l = (max + min) / 2;
+
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+      switch (max) {
+        case r:
+          h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+          break;
+        case g:
+          h = ((b - r) / d + 2) / 6;
+          break;
+        case b:
+          h = ((r - g) / d + 4) / 6;
+          break;
+      }
+    }
+
+    return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
   }
 
   // Initialize when DOM is ready
