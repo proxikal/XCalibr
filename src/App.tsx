@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { TabNavigation } from '@/components/layout/TabNavigation';
 import { Footer } from '@/components/layout/Footer';
@@ -8,12 +8,49 @@ import { Pagination } from '@/components/ui/Pagination';
 import { CrashRecoveryNotification } from '@/components/CrashRecoveryNotification';
 import { useActiveTab, useToolState, useUIState } from '@/hooks/useAppStore';
 import { tools } from '@/data/tools';
+import type { TabCategory } from '@/types';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useActiveTab();
   const { toolState, recordToolUsage, toggleFavorite } = useToolState();
   const { uiState, setCurrentPage } = useUIState();
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Auto-switch tab when searching if no results in current tab
+  useEffect(() => {
+    if (!uiState.searchQuery) return;
+
+    const query = uiState.searchQuery.toLowerCase();
+
+    // Check if current tab has any matches
+    const currentTabTools = tools.filter(
+      (tool) =>
+        tool.category === activeTab &&
+        (tool.name.toLowerCase().includes(query) ||
+          tool.description.toLowerCase().includes(query))
+    );
+
+    // If current tab has matches, don't switch
+    if (currentTabTools.length > 0) return;
+
+    // Find first tab with matches (priority: frontend -> backend -> other)
+    const tabPriority: TabCategory[] = ['frontend', 'backend', 'other'];
+
+    for (const tab of tabPriority) {
+      const tabTools = tools.filter(
+        (tool) =>
+          tool.category === tab &&
+          (tool.name.toLowerCase().includes(query) ||
+            tool.description.toLowerCase().includes(query))
+      );
+
+      if (tabTools.length > 0) {
+        console.log(`🔍 Auto-switching to ${tab} tab - found ${tabTools.length} matching tools`);
+        setActiveTab(tab);
+        break;
+      }
+    }
+  }, [uiState.searchQuery, activeTab, setActiveTab]);
 
   const handleToolClick = (toolId: string, toolName: string) => {
     console.log(`Tool clicked: ${toolName}`);

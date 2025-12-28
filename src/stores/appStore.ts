@@ -99,12 +99,30 @@ class AppStore {
           };
         }
 
-        // Restore state
+        // Migrate old state format - merge with defaults for new properties
         this.state = {
+          ...DEFAULT_STATE,
           ...savedState,
+          // Ensure uiState exists (for migration from older versions)
+          uiState: {
+            ...DEFAULT_STATE.uiState,
+            ...(savedState.uiState || {}),
+          },
+          // Ensure toolState exists and has all required properties
+          toolState: {
+            ...DEFAULT_STATE.toolState,
+            ...(savedState.toolState || {}),
+          },
+          // Ensure settings exists
+          settings: {
+            ...DEFAULT_STATE.settings,
+            ...(savedState.settings || {}),
+          },
           sessionId: generateSessionId(),
           lastActiveTimestamp: Date.now(),
         };
+
+        console.log('✅ State migrated successfully:', this.state);
       }
 
       // Start heartbeat to track active sessions
