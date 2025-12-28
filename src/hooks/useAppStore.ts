@@ -118,3 +118,46 @@ export function useCrashRecovery(): {
     clearCrashRecoveryData,
   };
 }
+
+/**
+ * Hook to use UI state (search, filters, pagination)
+ */
+export function useUIState() {
+  const [state, setState] = useAppStore();
+
+  const setSearchQuery = useCallback((query: string) => {
+    setState((currentState) => ({
+      uiState: {
+        ...currentState.uiState,
+        searchQuery: query,
+        currentPage: 1, // Reset to page 1 when searching
+      },
+    }));
+  }, [setState]);
+
+  const setShowFavoritesOnly = useCallback((show: boolean) => {
+    setState((currentState) => ({
+      uiState: {
+        ...currentState.uiState,
+        showFavoritesOnly: show,
+        currentPage: 1, // Reset to page 1 when toggling favorites
+      },
+    }));
+  }, [setState]);
+
+  const setCurrentPage = useCallback((page: number) => {
+    setState((currentState) => ({
+      uiState: {
+        ...currentState.uiState,
+        currentPage: page,
+      },
+    }));
+  }, [setState]);
+
+  return {
+    uiState: state.uiState,
+    setSearchQuery,
+    setShowFavoritesOnly,
+    setCurrentPage,
+  };
+}

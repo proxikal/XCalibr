@@ -18,10 +18,18 @@ export interface ToolState {
   toolUsageCount: Record<string, number>;
 }
 
+export interface UIState {
+  searchQuery: string;
+  showFavoritesOnly: boolean;
+  currentPage: number;
+  itemsPerPage: number;
+}
+
 export interface AppState {
   activeTab: TabCategory;
   settings: AppSettings;
   toolState: ToolState;
+  uiState: UIState;
   lastActiveTimestamp: number;
   sessionId: string;
   crashRecoveryData?: {
@@ -41,6 +49,12 @@ const DEFAULT_STATE: AppState = {
     lastUsedTool: null,
     favoriteTools: [],
     toolUsageCount: {},
+  },
+  uiState: {
+    searchQuery: '',
+    showFavoritesOnly: false,
+    currentPage: 1,
+    itemsPerPage: 5,
   },
   lastActiveTimestamp: Date.now(),
   sessionId: generateSessionId(),
