@@ -461,11 +461,11 @@ const App = () => {
               />
             </div>
             <span
-              className={`font-bold text-slate-200 text-sm whitespace-nowrap transition-opacity duration-200 ${
+              className={`font-bold text-slate-200 text-[11px] whitespace-nowrap transition-opacity duration-200 ${
                 state.isOpen ? 'opacity-100 delay-150' : 'opacity-0'
               }`}
             >
-              {isAnchoredEffective ? 'Extension' : 'XCalibr'}
+              {isAnchoredEffective ? 'Quick Bar' : 'XCalibr - Quickbar'}
             </span>
           </div>
           <button
