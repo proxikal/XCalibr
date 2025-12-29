@@ -6,6 +6,7 @@ export type XcalibrState = {
   searchQuery: string;
   tabOffsetY: number;
   showMenuBar: boolean;
+  isAnchored: boolean;
 };
 
 const STORAGE_KEY = 'xcalibr_state';
@@ -17,7 +18,8 @@ export const DEFAULT_STATE: XcalibrState = {
   isVisible: true,
   searchQuery: '',
   tabOffsetY: 0,
-  showMenuBar: false
+  showMenuBar: false,
+  isAnchored: false
 };
 
 const normalizeState = (value: unknown): XcalibrState => {
@@ -30,10 +32,15 @@ const normalizeState = (value: unknown): XcalibrState => {
     typeof partial.tabOffsetY === 'number'
       ? partial.tabOffsetY
       : DEFAULT_STATE.tabOffsetY;
+  const isAnchored =
+    typeof partial.isAnchored === 'boolean'
+      ? partial.isAnchored
+      : DEFAULT_STATE.isAnchored;
   return {
     ...DEFAULT_STATE,
     ...partial,
     tabOffsetY,
+    isAnchored,
     version: DEFAULT_STATE.version
   };
 };

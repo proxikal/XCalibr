@@ -94,16 +94,17 @@ const App = () => {
   const [dragOffsetY, setDragOffsetY] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [dragAnchored, setDragAnchored] = useState<boolean | null>(null);
   const menuBarRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef({
     startY: 0,
     startOffset: 0,
     moved: false,
-    lastOffset: 0
+    lastOffset: 0,
+    unanchored: false
   });
   const iconSizeClass = 'w-3 h-3';
   const menuHeight = 550;
-  const tabHeight = 48;
   const menuBarHeight = 32;
 
   useEffect(() => {
@@ -147,24 +148,39 @@ const App = () => {
   const handleTabPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    const startOffset = clampTabOffset(state.tabOffsetY, state.showMenuBar ? menuBarHeight : 0);
+    const startOffset = clampTabOffset(
+      state.tabOffsetY,
+      state.showMenuBar && !state.isAnchored ? menuBarHeight : 0
+    );
     dragStateRef.current = {
       startY: event.clientY,
       startOffset,
       moved: false,
-      lastOffset: startOffset
+      lastOffset: startOffset,
+      unanchored: false
     };
     setDragOffsetY(startOffset);
     setIsDragging(true);
+    setDragAnchored(state.isAnchored);
 
     const handleMove = (moveEvent: PointerEvent) => {
       const delta = moveEvent.clientY - dragStateRef.current.startY;
       if (Math.abs(delta) > 3) {
         dragStateRef.current.moved = true;
       }
+      if (
+        state.showMenuBar &&
+        state.isAnchored &&
+        !dragStateRef.current.unanchored &&
+        Math.abs(delta) > 3
+      ) {
+        dragStateRef.current.unanchored = true;
+        dragStateRef.current.startOffset = menuBarHeight;
+        setDragAnchored(false);
+      }
       const nextOffset = clampTabOffset(
         dragStateRef.current.startOffset + delta,
-        state.showMenuBar ? menuBarHeight : 0
+        state.showMenuBar && !dragStateRef.current.unanchored ? menuBarHeight : 0
       );
       dragStateRef.current.lastOffset = nextOffset;
       setDragOffsetY(nextOffset);
@@ -177,11 +193,21 @@ const App = () => {
       const { moved, lastOffset } = dragStateRef.current;
       setIsDragging(false);
       setDragOffsetY(null);
+      setDragAnchored(null);
 
       if (moved) {
         await updateState((current) => ({
           ...current,
-          tabOffsetY: clampTabOffset(lastOffset, state.showMenuBar ? menuBarHeight : 0)
+          tabOffsetY: clampTabOffset(
+            lastOffset,
+            current.showMenuBar && !dragStateRef.current.unanchored
+              ? menuBarHeight
+              : 0
+          ),
+          isAnchored:
+            current.showMenuBar && !dragStateRef.current.unanchored
+              ? current.isAnchored
+              : false
         }));
         return;
       }
@@ -223,12 +249,19 @@ const App = () => {
   useEffect(() => {
     if (!state.showMenuBar) {
       setActiveMenu(null);
+      if (state.isAnchored) {
+        updateState((current) => ({
+          ...current,
+          isAnchored: false
+        })).then(setState);
+      }
       return;
     }
-    if (state.tabOffsetY < menuBarHeight) {
+    if (state.tabOffsetY <= menuBarHeight) {
       updateState((current) => ({
         ...current,
-        tabOffsetY: menuBarHeight
+        tabOffsetY: 0,
+        isAnchored: true
       })).then(setState);
     }
   }, [menuBarHeight, state.showMenuBar, state.tabOffsetY]);
@@ -241,7 +274,9 @@ const App = () => {
     return null;
   }
 
-  const topInset = state.showMenuBar ? menuBarHeight : 0;
+  const isAnchoredEffective = state.showMenuBar && (dragAnchored ?? state.isAnchored);
+  const tabHeight = isAnchoredEffective ? menuBarHeight : 48;
+  const topInset = state.showMenuBar && !isAnchoredEffective ? menuBarHeight : 0;
   const effectiveOffset = clampTabOffset(
     isDragging && dragOffsetY !== null ? dragOffsetY : state.tabOffsetY,
     topInset
@@ -259,10 +294,9 @@ const App = () => {
     ? transitionProgress * (menuHeight - tabHeight)
     : 0;
   const maxPanelTop = Math.max(topInset, viewportHeight - menuHeight);
-  const panelTop = Math.min(
-    Math.max(effectiveOffset - anchorOffset, topInset),
-    maxPanelTop
-  );
+  const panelTop = isAnchoredEffective
+    ? 0
+    : Math.min(Math.max(effectiveOffset - anchorOffset, topInset), maxPanelTop);
   const tabTranslateY = Math.min(
     Math.max(effectiveOffset - panelTop, 0),
     menuHeight - tabHeight
@@ -283,7 +317,7 @@ const App = () => {
               <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center">
                 <FontAwesomeIcon icon={faBolt} className="w-3 h-3 text-white" />
               </div>
-              <span className="text-xs font-semibold text-slate-100">DevTools</span>
+              <span className="text-xs font-semibold text-slate-100">XCalibr</span>
             </div>
             {menuBarItems.map((item) => {
               const isOpen = activeMenu === item.label;
@@ -319,8 +353,8 @@ const App = () => {
                             </button>
                           );
                         }
-                        return (
-                          <div key={entry.label} className="relative group/menu">
+                      return (
+                        <div key={entry.label} className="relative group/menu">
                             <button
                               type="button"
                               className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors flex items-center justify-between"
@@ -328,12 +362,12 @@ const App = () => {
                               <span>{entry.label}</span>
                               <span className="text-slate-500">›</span>
                             </button>
-                            <div className="absolute left-full top-0 ml-1 w-44 bg-slate-900 border border-slate-700 rounded shadow-2xl opacity-0 group-hover/menu:opacity-100 pointer-events-none group-hover/menu:pointer-events-auto transition-opacity">
-                              <div className="py-1">
-                                {entry.items.map((subItem) => (
-                                  <button
-                                    key={subItem}
-                                    type="button"
+                          <div className="absolute left-full top-0 ml-1 w-44 bg-slate-900 border border-slate-700 rounded shadow-2xl opacity-0 group-hover/menu:opacity-100 pointer-events-none group-hover/menu:pointer-events-auto transition-opacity">
+                            <div className="py-1">
+                              {entry.items.map((subItem) => (
+                                <button
+                                  key={subItem}
+                                  type="button"
                                     className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
                                   >
                                     {subItem}
@@ -363,7 +397,9 @@ const App = () => {
         type="button"
         onPointerDown={handleTabPointerDown}
         style={{ touchAction: 'none', transform: `translateY(${tabTranslateY}px)` }}
-        className="z-50 bg-slate-800 text-white w-8 h-12 flex items-center justify-center rounded-l-lg shadow-lg hover:bg-slate-700 transition-colors border-l border-t border-b border-slate-600 cursor-pointer"
+        className={`z-50 bg-slate-800 text-white flex items-center justify-center rounded-l-lg shadow-lg hover:bg-slate-700 transition-colors border-l border-t border-b border-slate-600 cursor-pointer ${
+          isAnchoredEffective ? 'w-7 h-8' : 'w-8 h-12'
+        }`}
       >
         <FontAwesomeIcon
           icon={state.isOpen ? faChevronRight : faChevronLeft}
@@ -375,9 +411,17 @@ const App = () => {
         className={`bg-slate-900 h-full shadow-2xl transition-all duration-300 ease-in-out border-l border-slate-700 flex flex-col overflow-hidden rounded-l-md ${
           state.isOpen ? 'opacity-100' : 'opacity-0'
         }`}
-        style={{ width: panelWidth }}
+        style={{
+          width: panelWidth,
+          borderTopLeftRadius: isAnchoredEffective ? 0 : undefined,
+          borderBottomLeftRadius: isAnchoredEffective ? 0 : undefined
+        }}
       >
-        <div className="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
+        <div
+          className={`border-b border-slate-800 flex justify-between items-center bg-slate-900 sticky top-0 z-10 ${
+            isAnchoredEffective ? 'h-8 px-2 py-1' : 'p-3'
+          }`}
+        >
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center shrink-0">
               <FontAwesomeIcon
@@ -390,13 +434,13 @@ const App = () => {
                 state.isOpen ? 'opacity-100 delay-150' : 'opacity-0'
               }`}
             >
-              DevTools
+              XCalibr
             </span>
           </div>
           <button
             type="button"
             onClick={toggleWide}
-            className="text-slate-400 hover:text-white transition-colors"
+            className="text-slate-400 hover:text-white transition-colors shrink-0"
             title={state.isWide ? 'Compress Width' : 'Expand Width'}
           >
             <FontAwesomeIcon
