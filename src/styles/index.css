@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :host {
+    all: initial;
+    color: #e2e8f0;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system;
+    font-size: 16px;
+    line-height: 1.5;
+    isolation: isolate;
+  }
+  :host, * {
+    box-sizing: border-box;
+  }
+  button,
+  input {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+.xcalibr-app-container {
+  height: 550px;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  position: relative;
+  top: 50px;
+  right: 0;
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
