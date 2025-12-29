@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -71,7 +71,16 @@ const tools = [
 
 const App = () => {
   const [state, setState] = useState(DEFAULT_STATE);
+  const [dragOffsetY, setDragOffsetY] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStateRef = useRef({
+    startY: 0,
+    startOffset: 0,
+    moved: false,
+    lastOffset: 0
+  });
   const iconSizeClass = 'w-3 h-3';
+  const menuHeight = 550;
 
   useEffect(() => {
     let mounted = true;
@@ -90,6 +99,11 @@ const App = () => {
     return state.isWide ? 300 : 160;
   }, [state.isOpen, state.isWide]);
 
+  const clampOffset = (value: number) => {
+    const maxOffset = Math.max(0, window.innerHeight - menuHeight);
+    return Math.min(Math.max(value, 0), maxOffset);
+  };
+
   const toggleOpen = async () => {
     const next = await updateState((current) => ({
       ...current,
@@ -106,6 +120,52 @@ const App = () => {
     setState(next);
   };
 
+  const handleTabPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const startOffset = clampOffset(state.tabOffsetY);
+    dragStateRef.current = {
+      startY: event.clientY,
+      startOffset,
+      moved: false,
+      lastOffset: startOffset
+    };
+    setDragOffsetY(startOffset);
+    setIsDragging(true);
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const delta = moveEvent.clientY - dragStateRef.current.startY;
+      if (Math.abs(delta) > 3) {
+        dragStateRef.current.moved = true;
+      }
+      const nextOffset = clampOffset(dragStateRef.current.startOffset + delta);
+      dragStateRef.current.lastOffset = nextOffset;
+      setDragOffsetY(nextOffset);
+    };
+
+    const handleUp = async () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+
+      const { moved, lastOffset } = dragStateRef.current;
+      setIsDragging(false);
+      setDragOffsetY(null);
+
+      if (moved) {
+        await updateState((current) => ({
+          ...current,
+          tabOffsetY: clampOffset(lastOffset)
+        }));
+        return;
+      }
+
+      await toggleOpen();
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp, { once: true });
+  };
+
   const updateSearch = async (value: string) => {
     const next = await updateState((current) => ({
       ...current,
@@ -118,16 +178,21 @@ const App = () => {
     return null;
   }
 
+  const effectiveOffset =
+    isDragging && dragOffsetY !== null ? dragOffsetY : state.tabOffsetY;
+
   return (
     <div
       className="xcalibr-app-container pointer-events-auto font-sans text-slate-200"
       style={{
-        fontFamily: "'Inter', ui-sans-serif, system-ui, -apple-system"
+        fontFamily: "'Inter', ui-sans-serif, system-ui, -apple-system",
+        top: `${clampOffset(effectiveOffset)}px`
       }}
     >
       <button
         type="button"
-        onClick={toggleOpen}
+        onPointerDown={handleTabPointerDown}
+        style={{ touchAction: 'none' }}
         className="z-50 bg-slate-800 text-white w-8 h-12 flex items-center justify-center rounded-l-lg shadow-lg hover:bg-slate-700 transition-colors border-l border-t border-b border-slate-600 cursor-pointer"
       >
         <FontAwesomeIcon
