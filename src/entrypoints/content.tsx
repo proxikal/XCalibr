@@ -29,7 +29,8 @@ const tools = [
         title: 'Color Picker',
         subtitle: 'Grab hex/rgb',
         icon: faEyeDropper,
-        hover: 'group-hover:border-blue-500 group-hover:text-blue-400'
+        hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
+        toolId: 'colorPicker'
       },
       {
         title: 'JSON Formatter',
@@ -76,7 +77,7 @@ const menuBarItems = [
   },
   {
     label: 'Web Dev',
-    items: ['Debugger']
+    items: ['Debugger', { label: 'Color Picker', toolId: 'colorPicker' }]
   },
   {
     label: 'Database',
@@ -89,12 +90,136 @@ const menuBarItems = [
   }
 ];
 
+const TOOL_DEFAULT_POSITION = { x: 80, y: 140 };
+
+type ToolRegistryEntry = {
+  id: string;
+  title: string;
+  render: (
+    data: unknown,
+    onChange: (next: unknown) => void
+  ) => React.ReactNode;
+};
+
+const hexToRgb = (hex: string) => {
+  const normalized = hex.replace('#', '').trim();
+  if (![3, 6].includes(normalized.length)) return null;
+  const expanded =
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map((char) => `${char}${char}`)
+          .join('')
+      : normalized;
+  const int = Number.parseInt(expanded, 16);
+  if (Number.isNaN(int)) return null;
+  return {
+    r: (int >> 16) & 255,
+    g: (int >> 8) & 255,
+    b: int & 255
+  };
+};
+
+const ColorPickerTool = ({
+  data,
+  onChange
+}: {
+  data: { color?: string } | undefined;
+  onChange: (next: { color: string }) => void;
+}) => {
+  const color = data?.color ?? '#2563eb';
+  const rgb = hexToRgb(color);
+  const rgbLabel = rgb ? `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})` : 'Invalid HEX';
+  const rgbaLabel = rgb
+    ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`
+    : 'Invalid HEX';
+  const pickFromPage = async () => {
+    if (!('EyeDropper' in window)) return;
+    try {
+      const dropper = new (window as Window & { EyeDropper: typeof EyeDropper })
+        .EyeDropper();
+      const result = await dropper.open();
+      onChange({ color: result.sRGBHex });
+    } catch {
+      // User cancelled the eye dropper.
+    }
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <input
+          type="color"
+          value={color}
+          onChange={(event) => onChange({ color: event.target.value })}
+          className="h-10 w-10 rounded border border-slate-700 bg-slate-800"
+        />
+        <div className="text-xs text-slate-400">
+          Pick a color to copy its hex value.
+        </div>
+      </div>
+      <button
+        type="button"
+        className="w-full rounded bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+        onClick={pickFromPage}
+        disabled={!('EyeDropper' in window)}
+      >
+        {('EyeDropper' in window) ? 'Pick from page' : 'EyeDropper not supported'}
+      </button>
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={color}
+          onChange={(event) => onChange({ color: event.target.value })}
+          className="flex-1 rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        />
+        <button
+          type="button"
+          className="rounded bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+          onClick={() => navigator.clipboard.writeText(color)}
+        >
+          Copy
+        </button>
+      </div>
+      <div className="space-y-1 text-[11px] text-slate-400">
+        <div>HEX: <span className="text-slate-200">{color}</span></div>
+        <div>RGB: <span className="text-slate-200">{rgbLabel}</span></div>
+        <div>RGBA: <span className="text-slate-200">{rgbaLabel}</span></div>
+      </div>
+    </div>
+  );
+};
+
+const toolRegistry: ToolRegistryEntry[] = [
+  {
+    id: 'colorPicker',
+    title: 'Color Picker',
+    render: (data, onChange) => (
+      <ColorPickerTool
+        data={data as { color?: string } | undefined}
+        onChange={(next) => onChange(next)}
+      />
+    )
+  }
+];
+
+const getToolEntry = (toolId: string) =>
+  toolRegistry.find((tool) => tool.id === toolId) ?? null;
+
 const App = () => {
   const [state, setState] = useState(DEFAULT_STATE);
   const [dragOffsetY, setDragOffsetY] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragAnchored, setDragAnchored] = useState<boolean | null>(null);
   const menuBarRef = useRef<HTMLDivElement | null>(null);
+  const toolDragRef = useRef<{
+    toolId: string;
+    offsetX: number;
+    offsetY: number;
+    startX: number;
+    startY: number;
+    moved: boolean;
+    windowEl: HTMLElement | null;
+  } | null>(null);
   const dragStateRef = useRef({
     startY: 0,
     startOffset: 0,
@@ -234,6 +359,96 @@ const App = () => {
     setState(next);
   };
 
+  const openTool = async (toolId: string) => {
+    const next = await updateState((current) => {
+      const existing = current.toolWindows[toolId];
+      return {
+        ...current,
+        toolWindows: {
+          ...current.toolWindows,
+          [toolId]: {
+            isOpen: true,
+            isMinimized: false,
+            x: existing?.x ?? TOOL_DEFAULT_POSITION.x,
+            y: existing?.y ?? TOOL_DEFAULT_POSITION.y
+          }
+        }
+      };
+    });
+    setState(next);
+  };
+
+  const closeTool = async (toolId: string) => {
+    const next = await updateState((current) => {
+      const existing = current.toolWindows[toolId];
+      if (!existing) return current;
+      return {
+        ...current,
+        toolWindows: {
+          ...current.toolWindows,
+          [toolId]: { ...existing, isOpen: false, isMinimized: false }
+        }
+      };
+    });
+    setState(next);
+  };
+
+  const minimizeTool = async (toolId: string) => {
+    const next = await updateState((current) => {
+      const existing = current.toolWindows[toolId];
+      if (!existing) return current;
+      return {
+        ...current,
+        toolWindows: {
+          ...current.toolWindows,
+          [toolId]: { ...existing, isMinimized: true, isOpen: true }
+        }
+      };
+    });
+    setState(next);
+  };
+
+  const restoreTool = async (toolId: string) => {
+    const next = await updateState((current) => {
+      const existing = current.toolWindows[toolId];
+      if (!existing) return current;
+      return {
+        ...current,
+        toolWindows: {
+          ...current.toolWindows,
+          [toolId]: { ...existing, isMinimized: false, isOpen: true }
+        }
+      };
+    });
+    setState(next);
+  };
+
+  const updateToolPosition = async (toolId: string, x: number, y: number) => {
+    const next = await updateState((current) => {
+      const existing = current.toolWindows[toolId];
+      if (!existing) return current;
+      return {
+        ...current,
+        toolWindows: {
+          ...current.toolWindows,
+          [toolId]: { ...existing, x, y }
+        }
+      };
+    });
+    setState(next);
+  };
+
+  const updateToolData = async (toolId: string, data: unknown) => {
+    const next = await updateState((current) => ({
+      ...current,
+      toolData: {
+        ...current.toolData,
+        [toolId]: data
+      }
+    }));
+    setState(next);
+  };
+
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
       if (!menuBarRef.current) return;
@@ -355,17 +570,37 @@ const App = () => {
                   >
                     <div className="py-1">
                       {item.items.map((entry) => {
-                        if (typeof entry === 'string') {
-                          return (
-                            <button
-                              key={entry}
-                              type="button"
-                              className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
-                            >
-                              {entry}
-                            </button>
-                          );
-                        }
+                      if (typeof entry === 'string') {
+                        return (
+                          <button
+                            key={entry}
+                            type="button"
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                          >
+                            {entry}
+                          </button>
+                        );
+                      }
+                      if ('toolId' in entry) {
+                        return (
+                          <button
+                            key={entry.label}
+                            type="button"
+                            onClick={async () => {
+                              await openTool(entry.toolId);
+                              const next = await updateState((current) => ({
+                                ...current,
+                                menuBarActiveMenu: null,
+                                menuBarActiveSubmenu: null
+                              }));
+                              setState(next);
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                          >
+                            {entry.label}
+                          </button>
+                        );
+                      }
                       return (
                         <div key={entry.label} className="relative group/menu">
                             <button
@@ -516,6 +751,7 @@ const App = () => {
                 <button
                   key={item.title}
                   type="button"
+                  onClick={() => (item.toolId ? openTool(item.toolId) : undefined)}
                   className="w-full flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group"
                 >
                   <div
@@ -553,6 +789,119 @@ const App = () => {
         </div>
       </div>
     </div>
+    <div className="fixed bottom-3 right-3 flex gap-2 z-[80]">
+      {Object.entries(state.toolWindows)
+        .filter(([, toolState]) => toolState.isOpen && toolState.isMinimized)
+        .map(([toolId]) => {
+          const entry = getToolEntry(toolId);
+          if (!entry) return null;
+          return (
+            <button
+              key={toolId}
+              type="button"
+              onClick={() => restoreTool(toolId)}
+              className="px-3 py-2 rounded bg-slate-900 border border-slate-700 text-xs text-slate-200 shadow-lg hover:bg-slate-800 transition-colors"
+            >
+              {entry.title}
+            </button>
+          );
+        })}
+    </div>
+    {Object.entries(state.toolWindows)
+      .filter(([, toolState]) => toolState.isOpen && !toolState.isMinimized)
+      .map(([toolId, toolState]) => {
+        const entry = getToolEntry(toolId);
+        if (!entry) return null;
+        return (
+          <div
+            key={toolId}
+            className="fixed z-[80] bg-slate-900 border border-slate-700 rounded-lg shadow-2xl w-72"
+            style={{ left: toolState.x, top: toolState.y }}
+          >
+            <div
+              className="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-900 cursor-move"
+              style={{ touchAction: 'none' }}
+              onPointerDown={(event) => {
+                if (
+                  event.target instanceof HTMLElement &&
+                  event.target.closest('button')
+                ) {
+                  return;
+                }
+                event.preventDefault();
+                const windowEl = event.currentTarget.parentElement as HTMLElement | null;
+                if (!windowEl) return;
+                const rect = windowEl.getBoundingClientRect();
+                event.currentTarget.setPointerCapture(event.pointerId);
+                toolDragRef.current = {
+                  toolId,
+                  offsetX: event.clientX - rect.left,
+                  offsetY: event.clientY - rect.top,
+                  startX: toolState.x,
+                  startY: toolState.y,
+                  moved: false,
+                  windowEl
+                };
+                const handleMove = (moveEvent: PointerEvent) => {
+                  if (!toolDragRef.current?.windowEl) return;
+                  toolDragRef.current.moved = true;
+                  const nextX = moveEvent.clientX - toolDragRef.current.offsetX;
+                  const nextY = moveEvent.clientY - toolDragRef.current.offsetY;
+                  toolDragRef.current.windowEl.style.left = `${nextX}px`;
+                  toolDragRef.current.windowEl.style.top = `${nextY}px`;
+                  toolDragRef.current.startX = nextX;
+                  toolDragRef.current.startY = nextY;
+                };
+                const handleUp = async () => {
+                  window.removeEventListener('pointermove', handleMove);
+                  window.removeEventListener('pointerup', handleUp);
+                  if (toolDragRef.current?.moved) {
+                    await updateToolPosition(
+                      toolId,
+                      toolDragRef.current.startX,
+                      toolDragRef.current.startY
+                    );
+                  }
+                  toolDragRef.current = null;
+                };
+                window.addEventListener('pointermove', handleMove);
+                window.addEventListener('pointerup', handleUp, { once: true });
+              }}
+            >
+              <span className="text-xs font-semibold text-slate-200">
+                {entry.title}
+              </span>
+              <div className="flex items-center gap-3 text-slate-400">
+                <button
+                  type="button"
+                  className="hover:text-slate-200 transition-colors text-xs"
+                  onClick={() => minimizeTool(toolId)}
+                >
+                  _
+                </button>
+                <button
+                  type="button"
+                  className="hover:text-slate-200 transition-colors text-xs"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className="hover:text-slate-200 transition-colors text-xs"
+                  onClick={() => closeTool(toolId)}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="p-3 text-slate-200 text-sm">
+              {entry.render(state.toolData[toolId], (next) =>
+                updateToolData(toolId, next)
+              )}
+            </div>
+          </div>
+        );
+      })}
     </>
   );
 };

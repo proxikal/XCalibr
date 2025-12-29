@@ -9,6 +9,16 @@ export type XcalibrState = {
   isAnchored: boolean;
   menuBarActiveMenu: string | null;
   menuBarActiveSubmenu: string | null;
+  toolWindows: Record<
+    string,
+    {
+      isOpen: boolean;
+      isMinimized: boolean;
+      x: number;
+      y: number;
+    }
+  >;
+  toolData: Record<string, unknown>;
 };
 
 const STORAGE_KEY = 'xcalibr_state';
@@ -23,7 +33,9 @@ export const DEFAULT_STATE: XcalibrState = {
   showMenuBar: false,
   isAnchored: false,
   menuBarActiveMenu: null,
-  menuBarActiveSubmenu: null
+  menuBarActiveSubmenu: null,
+  toolWindows: {},
+  toolData: {}
 };
 
 const normalizeState = (value: unknown): XcalibrState => {
@@ -48,6 +60,14 @@ const normalizeState = (value: unknown): XcalibrState => {
     typeof partial.menuBarActiveSubmenu === 'string' || partial.menuBarActiveSubmenu === null
       ? partial.menuBarActiveSubmenu
       : DEFAULT_STATE.menuBarActiveSubmenu;
+  const toolWindows =
+    partial.toolWindows && typeof partial.toolWindows === 'object'
+      ? (partial.toolWindows as XcalibrState['toolWindows'])
+      : DEFAULT_STATE.toolWindows;
+  const toolData =
+    partial.toolData && typeof partial.toolData === 'object'
+      ? (partial.toolData as XcalibrState['toolData'])
+      : DEFAULT_STATE.toolData;
   return {
     ...DEFAULT_STATE,
     ...partial,
@@ -55,6 +75,8 @@ const normalizeState = (value: unknown): XcalibrState => {
     isAnchored,
     menuBarActiveMenu,
     menuBarActiveSubmenu,
+    toolWindows,
+    toolData,
     version: DEFAULT_STATE.version
   };
 };
