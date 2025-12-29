@@ -81,6 +81,7 @@ const App = () => {
   });
   const iconSizeClass = 'w-3 h-3';
   const menuHeight = 550;
+  const tabHeight = 48;
 
   useEffect(() => {
     let mounted = true;
@@ -99,8 +100,8 @@ const App = () => {
     return state.isWide ? 300 : 160;
   }, [state.isOpen, state.isWide]);
 
-  const clampOffset = (value: number) => {
-    const maxOffset = Math.max(0, window.innerHeight - menuHeight);
+  const clampTabOffset = (value: number) => {
+    const maxOffset = Math.max(0, window.innerHeight - tabHeight);
     return Math.min(Math.max(value, 0), maxOffset);
   };
 
@@ -123,7 +124,7 @@ const App = () => {
   const handleTabPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    const startOffset = clampOffset(state.tabOffsetY);
+    const startOffset = clampTabOffset(state.tabOffsetY);
     dragStateRef.current = {
       startY: event.clientY,
       startOffset,
@@ -138,7 +139,7 @@ const App = () => {
       if (Math.abs(delta) > 3) {
         dragStateRef.current.moved = true;
       }
-      const nextOffset = clampOffset(dragStateRef.current.startOffset + delta);
+      const nextOffset = clampTabOffset(dragStateRef.current.startOffset + delta);
       dragStateRef.current.lastOffset = nextOffset;
       setDragOffsetY(nextOffset);
     };
@@ -154,7 +155,7 @@ const App = () => {
       if (moved) {
         await updateState((current) => ({
           ...current,
-          tabOffsetY: clampOffset(lastOffset)
+          tabOffsetY: clampTabOffset(lastOffset)
         }));
         return;
       }
@@ -178,21 +179,40 @@ const App = () => {
     return null;
   }
 
-  const effectiveOffset =
-    isDragging && dragOffsetY !== null ? dragOffsetY : state.tabOffsetY;
+  const effectiveOffset = clampTabOffset(
+    isDragging && dragOffsetY !== null ? dragOffsetY : state.tabOffsetY
+  );
+  const viewportHeight = window.innerHeight;
+  const tabCenter = effectiveOffset + tabHeight / 2;
+  const transitionStart = viewportHeight * 0.5;
+  const transitionEnd = viewportHeight * 0.85;
+  const transitionRange = Math.max(1, transitionEnd - transitionStart);
+  const transitionProgress = Math.min(
+    Math.max((tabCenter - transitionStart) / transitionRange, 0),
+    1
+  );
+  const anchorOffset = state.isOpen
+    ? transitionProgress * (menuHeight - tabHeight)
+    : 0;
+  const maxPanelTop = Math.max(0, viewportHeight - menuHeight);
+  const panelTop = Math.min(Math.max(effectiveOffset - anchorOffset, 0), maxPanelTop);
+  const tabTranslateY = Math.min(
+    Math.max(effectiveOffset - panelTop, 0),
+    menuHeight - tabHeight
+  );
 
   return (
     <div
       className="xcalibr-app-container pointer-events-auto font-sans text-slate-200"
       style={{
         fontFamily: "'Inter', ui-sans-serif, system-ui, -apple-system",
-        top: `${clampOffset(effectiveOffset)}px`
+        top: `${panelTop}px`
       }}
     >
       <button
         type="button"
         onPointerDown={handleTabPointerDown}
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: 'none', transform: `translateY(${tabTranslateY}px)` }}
         className="z-50 bg-slate-800 text-white w-8 h-12 flex items-center justify-center rounded-l-lg shadow-lg hover:bg-slate-700 transition-colors border-l border-t border-b border-slate-600 cursor-pointer"
       >
         <FontAwesomeIcon

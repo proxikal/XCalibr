@@ -15,7 +15,7 @@ export const DEFAULT_STATE: XcalibrState = {
   isWide: false,
   isVisible: true,
   searchQuery: '',
-  tabOffsetY: 50
+  tabOffsetY: 0
 };
 
 const normalizeState = (value: unknown): XcalibrState => {
