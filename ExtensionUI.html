@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu UI Concept 1: Sleek Expandable Sidebar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom Scrollbar */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            background-color: transparent; /* Simulating extension overlay */
+            display: flex;
+            justify-content: flex-end; /* Align to right side */
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        #app-container {
+            /* Simulating the iframe/container constraints */
+            height: 550px;
+            /* Width handled by JS/CSS */
+            display: flex;
+            flex-direction: row-reverse; /* Tab on right, menu expands left */
+            align-items: flex-start;
+            position: relative;
+            top: 50px; /* Offset from top */
+            right: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <!-- Toggle Tab -->
+        <button id="toggle-btn" class="z-50 bg-slate-800 text-white w-8 h-12 flex items-center justify-center rounded-l-lg shadow-lg hover:bg-slate-700 transition-colors border-l border-t border-b border-slate-600 cursor-pointer">
+            <i class="fa-solid fa-chevron-left text-xs" id="toggle-icon"></i>
+        </button>
+
+        <!-- Main Menu Panel -->
+        <div id="menu-panel" class="bg-slate-900 h-full shadow-2xl transition-all duration-300 ease-in-out border-l border-slate-700 flex flex-col overflow-hidden w-0 opacity-0 rounded-l-md">
+            
+            <!-- Header -->
+            <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <div class="w-6 h-6 rounded bg-blue-600 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-bolt text-xs text-white"></i>
+                    </div>
+                    <span class="font-bold text-slate-200 text-sm whitespace-nowrap title-text opacity-0 transition-opacity duration-200">DevTools</span>
+                </div>
+                <button id="expand-width-btn" class="text-slate-400 hover:text-white transition-colors" title="Expand Width">
+                    <i class="fa-solid fa-expand text-xs"></i>
+                </button>
+            </div>
+
+            <!-- Search -->
+            <div class="p-2 border-b border-slate-800">
+                <div class="relative">
+                    <i class="fa-solid fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-500 text-xs"></i>
+                    <input type="text" placeholder="Find tool..." class="w-full bg-slate-800 text-slate-300 text-xs rounded pl-7 pr-2 py-1.5 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors placeholder-slate-500">
+                </div>
+            </div>
+
+            <!-- Tools List -->
+            <div class="flex-1 overflow-y-auto no-scrollbar p-1 space-y-1">
+                
+                <!-- Category: Essentials -->
+                <div class="px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500 font-semibold mt-2 category-label whitespace-nowrap">Essentials</div>
+                
+                <button class="w-full group flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group">
+                    <div class="w-6 h-6 rounded bg-slate-800 border border-slate-700 group-hover:border-blue-500 group-hover:text-blue-400 flex items-center justify-center text-slate-400 transition-colors shrink-0">
+                        <i class="fa-solid fa-eye-dropper text-xs"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="text-slate-300 text-xs font-medium whitespace-nowrap">Color Picker</div>
+                        <div class="text-slate-500 text-[10px] whitespace-nowrap">Grab hex/rgb</div>
+                    </div>
+                </button>
+
+                <button class="w-full group flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group">
+                    <div class="w-6 h-6 rounded bg-slate-800 border border-slate-700 group-hover:border-purple-500 group-hover:text-purple-400 flex items-center justify-center text-slate-400 transition-colors shrink-0">
+                        <i class="fa-solid fa-code text-xs"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="text-slate-300 text-xs font-medium whitespace-nowrap">JSON Formatter</div>
+                        <div class="text-slate-500 text-[10px] whitespace-nowrap">Validate & View</div>
+                    </div>
+                </button>
+
+                <!-- Category: Design -->
+                <div class="px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500 font-semibold mt-2 category-label whitespace-nowrap">Design</div>
+
+                <button class="w-full group flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group">
+                    <div class="w-6 h-6 rounded bg-slate-800 border border-slate-700 group-hover:border-pink-500 group-hover:text-pink-400 flex items-center justify-center text-slate-400 transition-colors shrink-0">
+                        <i class="fa-solid fa-ruler-combined text-xs"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="text-slate-300 text-xs font-medium whitespace-nowrap">Page Ruler</div>
+                        <div class="text-slate-500 text-[10px] whitespace-nowrap">Measure elements</div>
+                    </div>
+                </button>
+
+                <button class="w-full group flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group">
+                    <div class="w-6 h-6 rounded bg-slate-800 border border-slate-700 group-hover:border-orange-500 group-hover:text-orange-400 flex items-center justify-center text-slate-400 transition-colors shrink-0">
+                        <i class="fa-solid fa-font text-xs"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="text-slate-300 text-xs font-medium whitespace-nowrap">Font Info</div>
+                        <div class="text-slate-500 text-[10px] whitespace-nowrap">Inspect typography</div>
+                    </div>
+                </button>
+
+                 <!-- Category: Network -->
+                 <div class="px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500 font-semibold mt-2 category-label whitespace-nowrap">Network</div>
+
+                 <button class="w-full group flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group">
+                     <div class="w-6 h-6 rounded bg-slate-800 border border-slate-700 group-hover:border-green-500 group-hover:text-green-400 flex items-center justify-center text-slate-400 transition-colors shrink-0">
+                         <i class="fa-solid fa-network-wired text-xs"></i>
+                     </div>
+                     <div class="overflow-hidden">
+                         <div class="text-slate-300 text-xs font-medium whitespace-nowrap">Request Log</div>
+                         <div class="text-slate-500 text-[10px] whitespace-nowrap">Monitor fetch/xhr</div>
+                     </div>
+                 </button>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="p-2 border-t border-slate-800 bg-slate-900 mt-auto">
+                <button class="w-full py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-400 transition-colors flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-gear"></i> <span>Settings</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const toggleBtn = document.getElementById('toggle-btn');
+        const menuPanel = document.getElementById('menu-panel');
+        const toggleIcon = document.getElementById('toggle-icon');
+        const expandWidthBtn = document.getElementById('expand-width-btn');
+        const titleText = document.querySelector('.title-text');
+        
+        let isOpen = false;
+        let isWide = false;
+        const defaultWidth = '160px';
+        const wideWidth = '300px';
+
+        toggleBtn.addEventListener('click', () => {
+            isOpen = !isOpen;
+            if (isOpen) {
+                menuPanel.style.width = isWide ? wideWidth : defaultWidth;
+                menuPanel.classList.remove('opacity-0');
+                toggleIcon.classList.remove('fa-chevron-left');
+                toggleIcon.classList.add('fa-chevron-right');
+                setTimeout(() => titleText.classList.remove('opacity-0'), 150);
+            } else {
+                menuPanel.style.width = '0';
+                menuPanel.classList.add('opacity-0');
+                toggleIcon.classList.remove('fa-chevron-right');
+                toggleIcon.classList.add('fa-chevron-left');
+                titleText.classList.add('opacity-0');
+            }
+        });
+
+        expandWidthBtn.addEventListener('click', () => {
+            isWide = !isWide;
+            if (isOpen) {
+                menuPanel.style.width = isWide ? wideWidth : defaultWidth;
+                expandWidthBtn.innerHTML = isWide ? '<i class="fa-solid fa-compress text-xs"></i>' : '<i class="fa-solid fa-expand text-xs"></i>';
+            }
+        });
+
+        // Initialize as closed
+        menuPanel.style.width = '0';
+    </script>
+</body>
+</html>

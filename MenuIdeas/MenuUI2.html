@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 2: Retro Windows 95</title>
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; font-family: 'Tahoma', sans-serif; }
+        .win95-bg { background-color: #c0c0c0; }
+        .win95-border {
+            border-top: 2px solid #dfdfdf; border-left: 2px solid #dfdfdf;
+            border-right: 2px solid #404040; border-bottom: 2px solid #404040;
+            box-shadow: 1px 1px 0 #000;
+        }
+        .win95-btn {
+            background: #c0c0c0;
+            border-top: 2px solid #fff; border-left: 2px solid #fff;
+            border-right: 2px solid #404040; border-bottom: 2px solid #404040;
+            box-shadow: 1px 1px 0 #000; cursor: pointer;
+        }
+        .win95-btn:active {
+            border-top: 2px solid #404040; border-left: 2px solid #404040;
+            border-right: 2px solid #fff; border-bottom: 2px solid #fff;
+            box-shadow: none; transform: translate(1px, 1px);
+        }
+        .title-bar {
+            background: linear-gradient(90deg, #000080, #1084d0); color: white;
+            font-weight: bold; padding: 2px 4px; font-size: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div style="height: 550px; display: flex; flex-direction: row-reverse; position: relative; top: 50px;">
+        <button id="tab" class="win95-btn" style="width: 30px; height: 80px; writing-mode: vertical-rl; font-weight: bold;">START</button>
+        <div id="menu" class="win95-bg win95-border" style="width: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; transition: width 0.1s steps(5);">
+            <div class="title-bar"><span>Tools.exe</span><button class="win95-btn">x</button></div>
+            <div style="padding: 4px; flex: 1;">
+                <div style="background: white; border: 2px inset; height: 100%; padding: 5px;">
+                    <div style="margin-bottom: 5px; cursor: pointer;">File..</div>
+                    <div style="margin-bottom: 5px; cursor: pointer;">Edit..</div>
+                    <div style="margin-bottom: 5px; cursor: pointer;">View..</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const tab = document.getElementById('tab');
+        const menu = document.getElementById('menu');
+        let open = false;
+        tab.addEventListener('click', () => {
+            open = !open;
+            menu.style.width = open ? '180px' : '0';
+        });
+    </script>
+</body>
+</html>

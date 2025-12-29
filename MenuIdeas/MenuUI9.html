@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 9: Dynamic Island</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; font-family: -apple-system, sans-serif; }
+        .island {
+            background: #000; color: white; border-radius: 40px;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .island.closed { width: 50px; height: 140px; border-radius: 25px; }
+        .island.open { width: 250px; height: 400px; border-radius: 30px; }
+    </style>
+</head>
+<body>
+    <div class="h-[550px] relative top-12 pr-4 pt-10">
+        <div id="island" class="island closed flex flex-col items-center overflow-hidden relative shadow-2xl cursor-pointer">
+            <div id="closed-ui" class="absolute top-0 w-full h-full flex flex-col items-center justify-between py-6">
+                <i class="fa-solid fa-circle-notch fa-spin text-white text-xl"></i>
+            </div>
+            <div id="open-ui" class="opacity-0 transition-opacity duration-300 w-full h-full p-6 flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <span class="font-semibold text-lg">Control Center</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-gray-800 rounded-2xl p-3 flex flex-col gap-2"><i class="fa-solid fa-wifi"></i> Net</div>
+                    <div class="bg-gray-800 rounded-2xl p-3 flex flex-col gap-2"><i class="fa-solid fa-database"></i> Storage</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const island = document.getElementById('island');
+        const closedUi = document.getElementById('closed-ui');
+        const openUi = document.getElementById('open-ui');
+        let isOpen = false;
+        island.addEventListener('click', () => {
+            isOpen = !isOpen;
+            if(isOpen) {
+                island.classList.remove('closed'); island.classList.add('open');
+                closedUi.style.opacity = '0';
+                setTimeout(() => { openUi.style.opacity = '1'; }, 300);
+            } else {
+                island.classList.remove('open'); island.classList.add('closed');
+                openUi.style.opacity = '0';
+                setTimeout(() => { closedUi.style.opacity = '1'; }, 200);
+            }
+        });
+    </script>
+</body>
+</html>

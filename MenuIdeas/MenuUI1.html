@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 1: Neumorphism</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; font-family: sans-serif; }
+        .soft-bg { background-color: #e0e5ec; }
+        .soft-shadow {
+            box-shadow: 9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5);
+        }
+        .soft-inset {
+            box-shadow: inset 6px 6px 10px 0 rgba(163,177,198, 0.7), inset -6px -6px 10px 0 rgba(255,255,255, 0.8);
+        }
+        .toggle-tab { border-radius: 10px 0 0 10px; }
+        #menu { width: 0; transition: width 0.4s ease; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <div class="h-[550px] relative top-12 flex flex-row-reverse">
+        <button id="tab" class="soft-bg soft-shadow w-12 h-16 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors toggle-tab z-50 cursor-pointer">
+            <i class="fa-solid fa-layer-group text-xl"></i>
+        </button>
+        <div id="menu" class="soft-bg h-full rounded-l-2xl flex flex-col soft-shadow border-r border-gray-300">
+            <div class="p-4 text-center">
+                <h2 class="text-gray-600 font-bold tracking-wider">SOFT<span class="text-blue-500">UI</span></h2>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="soft-bg soft-inset p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:scale-[0.98] transition-transform">
+                    <i class="fa-solid fa-eye-dropper text-gray-500"></i>
+                    <span class="text-sm text-gray-600 font-medium">Picker</span>
+                </div>
+                <div class="soft-bg soft-shadow p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:soft-inset transition-all">
+                    <i class="fa-solid fa-code text-blue-500"></i>
+                    <span class="text-sm text-gray-600 font-medium">Formatter</span>
+                </div>
+                <div class="soft-bg soft-shadow p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:soft-inset transition-all">
+                    <i class="fa-solid fa-ruler text-pink-500"></i>
+                    <span class="text-sm text-gray-600 font-medium">Ruler</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const tab = document.getElementById('tab');
+        const menu = document.getElementById('menu');
+        let open = false;
+        tab.addEventListener('click', () => {
+            open = !open;
+            menu.style.width = open ? '200px' : '0';
+        });
+    </script>
+</body>
+</html>

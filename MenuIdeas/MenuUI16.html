@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 16: Floating Orbs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; }
+        .orb {
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; position: absolute; right: 20px; transition: all 0.4s;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .orb-main { width: 60px; height: 60px; z-index: 50; background-color: #6c5ce7; color: white; }
+        .orb-child { width: 50px; height: 50px; background-color: #a29bfe; color: white; opacity: 0; pointer-events: none; transform: scale(0.5); }
+        .active .orb-child-1 { transform: translateY(-70px) scale(1); opacity: 1; pointer-events: auto; }
+        .active .orb-child-2 { transform: translateY(-130px) scale(1); opacity: 1; pointer-events: auto; }
+    </style>
+</head>
+<body>
+    <div class="h-[550px] relative top-12 w-[100px] flex flex-col items-center" id="container">
+        <div class="orb orb-child orb-child-2"><i class="fa-solid fa-code"></i></div>
+        <div class="orb orb-child orb-child-1"><i class="fa-solid fa-eye"></i></div>
+        <div class="orb orb-main" id="main-orb" style="bottom: 20px;"><i class="fa-solid fa-plus"></i></div>
+    </div>
+    <script>
+        document.getElementById('main-orb').addEventListener('click', () => {
+            document.getElementById('container').classList.toggle('active');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 12: Aurora Glass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        .aurora-bg {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .glass-btn { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="h-[550px] relative top-12 flex flex-row-reverse p-4">
+        <button id="toggle" class="w-14 h-14 rounded-full aurora-bg flex items-center justify-center text-white text-xl z-50 cursor-pointer">
+            <i class="fa-solid fa-sparkles"></i>
+        </button>
+        <div id="menu" class="aurora-bg h-full rounded-2xl mr-4 w-0 overflow-hidden transition-all duration-500 opacity-0 flex flex-col text-white">
+            <div class="p-5">
+                <h2 class="text-xl font-bold mb-4">Aurora Tools</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="glass-btn p-3 rounded-xl flex flex-col items-center gap-2 aspect-square justify-center"><i class="fa-solid fa-eye"></i> Inspect</div>
+                    <div class="glass-btn p-3 rounded-xl flex flex-col items-center gap-2 aspect-square justify-center"><i class="fa-solid fa-palette"></i> Colors</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const toggle = document.getElementById('toggle');
+        const menu = document.getElementById('menu');
+        let open = false;
+        toggle.addEventListener('click', () => {
+            open = !open;
+            menu.style.width = open ? '260px' : '0';
+            menu.style.opacity = open ? '1' : '0';
+        });
+    </script>
+</body>
+</html>

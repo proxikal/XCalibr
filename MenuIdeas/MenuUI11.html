@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 11: Accordion Deck</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; font-family: sans-serif; }
+        .deck-card {
+            background: #2d3436; color: #dfe6e9; transition: all 0.3s ease;
+            cursor: pointer; writing-mode: vertical-rl; text-orientation: mixed;
+            border-left: 1px solid #636e72;
+        }
+        .deck-card:hover { background: #353b48; }
+        .deck-card.active { width: 200px; background: #0984e3; writing-mode: horizontal-tb; cursor: default; }
+        .card-content { display: none; }
+        .active .card-content { display: block; }
+        .active .card-icon { display: none; }
+    </style>
+</head>
+<body>
+    <div class="h-[550px] relative top-12 flex flex-row-reverse bg-gray-900 rounded-l-lg overflow-hidden shadow-2xl">
+        <div class="w-12 bg-black flex items-center justify-center cursor-pointer border-r border-gray-700 z-50">
+            <i class="fa-solid fa-bars text-xl text-white"></i>
+        </div>
+        <div class="flex flex-row-reverse h-full">
+            <div class="deck-card w-10 h-full flex flex-col items-center py-4 relative" onclick="activate(this)">
+                <i class="fa-solid fa-palette text-xl mb-4 card-icon"></i>
+                <div class="card-content w-full h-full p-4">
+                    <h3 class="font-bold text-lg mb-4">Design</h3>
+                    <div class="space-y-2 text-sm"><div>Picker</div><div>Fonts</div></div>
+                </div>
+            </div>
+            <div class="deck-card w-10 h-full flex flex-col items-center py-4 relative bg-gray-800" onclick="activate(this)">
+                <i class="fa-solid fa-code text-xl mb-4 card-icon"></i>
+                <div class="card-content w-full h-full p-4">
+                    <h3 class="font-bold text-lg mb-4">Dev</h3>
+                    <div class="space-y-2 text-sm"><div>Console</div><div>Network</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function activate(el) {
+            document.querySelectorAll('.deck-card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+    </script>
+</body>
+</html>

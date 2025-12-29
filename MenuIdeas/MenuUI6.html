@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 6: Bento Grid</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; font-family: 'Inter', sans-serif; }
+        .bento-card { background: #fff; border-radius: 16px; transition: transform 0.2s; }
+        .bento-card:hover { transform: scale(1.02); background: #f8fafc; }
+        .bento-container { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <div class="h-[550px] relative top-12 flex flex-row-reverse">
+        <button id="tab" class="w-12 h-12 rounded-l-2xl bg-white shadow-lg flex items-center justify-center text-slate-700 hover:text-indigo-600 cursor-pointer z-50 my-auto mr-[-10px] border border-gray-100">
+            <i class="fa-solid fa-grid-2 text-lg"></i>
+        </button>
+        <div id="menu" class="h-full w-0 bento-container rounded-l-3xl shadow-2xl overflow-hidden transition-all duration-300 relative flex flex-col">
+            <div class="p-4 h-full overflow-y-auto">
+                <h3 class="text-slate-500 text-xs font-bold uppercase mb-3">Workspace</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="col-span-2 bento-card p-3 shadow-sm border border-slate-200 h-24 flex flex-col justify-between">
+                        <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i>
+                        <span class="text-xs font-bold text-slate-800">Magic Inspect</span>
+                    </div>
+                    <div class="bento-card p-3 shadow-sm border border-slate-200 h-24 flex flex-col justify-between">
+                        <i class="fa-solid fa-palette text-orange-400"></i>
+                        <span class="text-[10px] font-bold">Colors</span>
+                    </div>
+                    <div class="bento-card p-3 shadow-sm border border-slate-200 h-24 flex flex-col justify-between">
+                        <i class="fa-solid fa-ruler text-teal-400"></i>
+                        <span class="text-[10px] font-bold">Ruler</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const tab = document.getElementById('tab');
+        const menu = document.getElementById('menu');
+        let open = false;
+        tab.addEventListener('click', () => {
+            open = !open;
+            menu.style.width = open ? '260px' : '0';
+        });
+    </script>
+</body>
+</html>

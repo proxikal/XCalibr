@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 15: Binder Tabs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; font-family: sans-serif; }
+        .binder-tab {
+            width: 40px; height: 120px; border-radius: 10px 0 0 10px;
+            writing-mode: vertical-rl; text-orientation: mixed;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .page {
+            position: absolute; top: 0; right: 0; bottom: 0; width: 280px;
+            background: white; transform: translateX(100%); transition: transform 0.3s;
+            z-index: 50; padding: 20px;
+        }
+        .page.open { transform: translateX(0); }
+    </style>
+</head>
+<body>
+    <div class="h-[550px] relative top-12 flex flex-col items-end gap-2 pr-0">
+        <div class="binder-tab bg-red-200" onclick="openPage('p1')">GENERAL</div>
+        <div class="binder-tab bg-yellow-200" onclick="openPage('p2')">EDITORS</div>
+        <div id="p1" class="page bg-red-50 border-l-8 border-red-200">
+            <h2 class="text-2xl font-bold text-red-800">General</h2>
+            <button class="mt-4 px-4 py-2 bg-red-200" onclick="closeAll()">Close</button>
+        </div>
+        <div id="p2" class="page bg-yellow-50 border-l-8 border-yellow-200">
+            <h2 class="text-2xl font-bold text-yellow-800">Editors</h2>
+            <button class="mt-4 px-4 py-2 bg-yellow-200" onclick="closeAll()">Close</button>
+        </div>
+    </div>
+    <script>
+        function closeAll() { document.querySelectorAll('.page').forEach(p => p.classList.remove('open')); }
+        function openPage(id) { closeAll(); document.getElementById(id).classList.add('open'); }
+    </script>
+</body>
+</html>

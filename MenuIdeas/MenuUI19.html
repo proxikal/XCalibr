@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 19: Material 3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; font-family: 'Roboto', sans-serif; }
+        .m3-surface { background-color: #f3edf7; color: #1d1b20; }
+        .m3-primary { background-color: #6750a4; color: white; }
+        .m3-fab { border-radius: 16px; transition: all 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="h-[550px] relative top-12 flex flex-row-reverse p-4">
+        <button id="fab" class="w-14 h-14 m3-primary m3-fab flex items-center justify-center text-2xl z-50 cursor-pointer shadow-lg">
+            <i class="fa-solid fa-bars" id="fab-icon"></i>
+        </button>
+        <div id="drawer" class="absolute right-4 top-4 m3-surface h-[520px] w-14 rounded-[20px] transition-all duration-300 overflow-hidden flex flex-col items-center shadow-xl">
+             <div class="h-14 w-full flex-shrink-0"></div> 
+             <div class="w-[280px] opacity-0 transition-opacity duration-200 p-4" id="content">
+                 <div class="text-sm font-medium px-4 py-2">XCalibr Tools</div>
+                 <div class="mt-2 space-y-1">
+                     <button class="w-full flex items-center gap-4 px-4 py-3 rounded-full hover:bg-black/5"><i class="fa-solid fa-droplet"></i> Color Picker</button>
+                     <button class="w-full flex items-center gap-4 px-4 py-3 rounded-full hover:bg-black/5"><i class="fa-solid fa-code"></i> Formatter</button>
+                 </div>
+             </div>
+        </div>
+    </div>
+    <script>
+        const fab = document.getElementById('fab');
+        const drawer = document.getElementById('drawer');
+        const content = document.getElementById('content');
+        let open = false;
+        fab.addEventListener('click', () => {
+            open = !open;
+            if(open) {
+                drawer.style.width = '280px';
+                setTimeout(() => content.style.opacity = '1', 200);
+            } else {
+                content.style.opacity = '0';
+                drawer.style.width = '56px';
+            }
+        });
+    </script>
+</body>
+</html>

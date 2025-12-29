@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu UI 18: Steampunk</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: transparent; display: flex; justify-content: flex-end; height: 100vh; overflow: hidden; font-family: 'Georgia', serif; }
+        .brass-plate {
+            background: linear-gradient(135deg, #b8860b, #daa520, #b8860b);
+            border: 4px solid #8b4513; border-radius: 10px;
+        }
+        .panel-bg { background: #2b1d0e; color: #d4af37; border-left: 5px solid #8b4513; }
+    </style>
+</head>
+<body>
+    <div style="height: 550px; display: flex; flex-direction: row-reverse; position: relative; top: 50px;">
+        <button id="tab" class="brass-plate" style="width: 50px; height: 100px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-top: 50px; z-index: 50;">
+            <i class="fa-solid fa-cogs" style="color: #3e2723; font-size: 24px;"></i>
+        </button>
+        <div id="menu" class="panel-bg" style="width: 0; height: 100%; overflow: hidden; transition: width 0.5s;">
+            <div style="padding: 20px; text-align: center;">
+                <h2>Machinery</h2>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <button style="background: #3e2723; color: #d4af37; border: 2px solid #d4af37; padding: 10px;">Inspector</button>
+                    <button style="background: #3e2723; color: #d4af37; border: 2px solid #d4af37; padding: 10px;">Gauges</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const tab = document.getElementById('tab');
+        const menu = document.getElementById('menu');
+        let open = false;
+        tab.addEventListener('click', () => {
+            open = !open;
+            menu.style.width = open ? '200px' : '0';
+        });
+    </script>
+</body>
+</html>
