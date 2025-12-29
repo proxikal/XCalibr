@@ -5,6 +5,7 @@ export type XcalibrState = {
   isVisible: boolean;
   searchQuery: string;
   tabOffsetY: number;
+  showMenuBar: boolean;
 };
 
 const STORAGE_KEY = 'xcalibr_state';
@@ -15,7 +16,8 @@ export const DEFAULT_STATE: XcalibrState = {
   isWide: false,
   isVisible: true,
   searchQuery: '',
-  tabOffsetY: 0
+  tabOffsetY: 0,
+  showMenuBar: false
 };
 
 const normalizeState = (value: unknown): XcalibrState => {

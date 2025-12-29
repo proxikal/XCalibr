@@ -69,10 +69,32 @@ const tools = [
   }
 ];
 
+const menuBarItems = [
+  {
+    label: 'Tools',
+    items: ['Example Tool 1', 'Example Tool 2']
+  },
+  {
+    label: 'Web Dev',
+    items: ['Debugger']
+  },
+  {
+    label: 'Database',
+    items: [
+      {
+        label: 'JSON',
+        items: ['Minify', 'Prettify', 'Format']
+      }
+    ]
+  }
+];
+
 const App = () => {
   const [state, setState] = useState(DEFAULT_STATE);
   const [dragOffsetY, setDragOffsetY] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const menuBarRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef({
     startY: 0,
     startOffset: 0,
@@ -82,6 +104,7 @@ const App = () => {
   const iconSizeClass = 'w-3 h-3';
   const menuHeight = 550;
   const tabHeight = 48;
+  const menuBarHeight = 32;
 
   useEffect(() => {
     let mounted = true;
@@ -100,9 +123,9 @@ const App = () => {
     return state.isWide ? 300 : 160;
   }, [state.isOpen, state.isWide]);
 
-  const clampTabOffset = (value: number) => {
-    const maxOffset = Math.max(0, window.innerHeight - tabHeight);
-    return Math.min(Math.max(value, 0), maxOffset);
+  const clampTabOffset = (value: number, minOffset = 0) => {
+    const maxOffset = Math.max(minOffset, window.innerHeight - tabHeight);
+    return Math.min(Math.max(value, minOffset), maxOffset);
   };
 
   const toggleOpen = async () => {
@@ -124,7 +147,7 @@ const App = () => {
   const handleTabPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    const startOffset = clampTabOffset(state.tabOffsetY);
+    const startOffset = clampTabOffset(state.tabOffsetY, state.showMenuBar ? menuBarHeight : 0);
     dragStateRef.current = {
       startY: event.clientY,
       startOffset,
@@ -139,7 +162,10 @@ const App = () => {
       if (Math.abs(delta) > 3) {
         dragStateRef.current.moved = true;
       }
-      const nextOffset = clampTabOffset(dragStateRef.current.startOffset + delta);
+      const nextOffset = clampTabOffset(
+        dragStateRef.current.startOffset + delta,
+        state.showMenuBar ? menuBarHeight : 0
+      );
       dragStateRef.current.lastOffset = nextOffset;
       setDragOffsetY(nextOffset);
     };
@@ -155,7 +181,7 @@ const App = () => {
       if (moved) {
         await updateState((current) => ({
           ...current,
-          tabOffsetY: clampTabOffset(lastOffset)
+          tabOffsetY: clampTabOffset(lastOffset, state.showMenuBar ? menuBarHeight : 0)
         }));
         return;
       }
@@ -175,12 +201,50 @@ const App = () => {
     setState(next);
   };
 
+  const updateMenuBar = async (value: boolean) => {
+    const next = await updateState((current) => ({
+      ...current,
+      showMenuBar: value
+    }));
+    setState(next);
+  };
+
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!menuBarRef.current) return;
+      if (menuBarRef.current.contains(event.target as Node)) return;
+      setActiveMenu(null);
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    return () => document.removeEventListener('mousedown', handleDocumentClick);
+  }, []);
+
+  useEffect(() => {
+    if (!state.showMenuBar) {
+      setActiveMenu(null);
+      return;
+    }
+    if (state.tabOffsetY < menuBarHeight) {
+      updateState((current) => ({
+        ...current,
+        tabOffsetY: menuBarHeight
+      })).then(setState);
+    }
+  }, [menuBarHeight, state.showMenuBar, state.tabOffsetY]);
+
+  const handleMenuClick = (label: string) => {
+    setActiveMenu((current) => (current === label ? null : label));
+  };
+
   if (!state.isVisible) {
     return null;
   }
 
+  const topInset = state.showMenuBar ? menuBarHeight : 0;
   const effectiveOffset = clampTabOffset(
-    isDragging && dragOffsetY !== null ? dragOffsetY : state.tabOffsetY
+    isDragging && dragOffsetY !== null ? dragOffsetY : state.tabOffsetY,
+    topInset
   );
   const viewportHeight = window.innerHeight;
   const tabCenter = effectiveOffset + tabHeight / 2;
@@ -194,14 +258,100 @@ const App = () => {
   const anchorOffset = state.isOpen
     ? transitionProgress * (menuHeight - tabHeight)
     : 0;
-  const maxPanelTop = Math.max(0, viewportHeight - menuHeight);
-  const panelTop = Math.min(Math.max(effectiveOffset - anchorOffset, 0), maxPanelTop);
+  const maxPanelTop = Math.max(topInset, viewportHeight - menuHeight);
+  const panelTop = Math.min(
+    Math.max(effectiveOffset - anchorOffset, topInset),
+    maxPanelTop
+  );
   const tabTranslateY = Math.min(
     Math.max(effectiveOffset - panelTop, 0),
     menuHeight - tabHeight
   );
 
   return (
+    <>
+      {state.showMenuBar ? (
+        <div
+          ref={menuBarRef}
+          className="pointer-events-auto fixed top-0 left-0 right-0 z-50 bg-slate-900 border-b border-slate-800 text-slate-200 shadow-lg"
+          style={{
+            fontFamily: "'Inter', ui-sans-serif, system-ui, -apple-system"
+          }}
+        >
+          <div className="flex items-center gap-1 px-3 py-1.5">
+            <div className="flex items-center gap-2 mr-2">
+              <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center">
+                <FontAwesomeIcon icon={faBolt} className="w-3 h-3 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-slate-100">DevTools</span>
+            </div>
+            {menuBarItems.map((item) => {
+              const isOpen = activeMenu === item.label;
+              return (
+                <div
+                  key={item.label}
+                  className="relative"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleMenuClick(item.label)}
+                    className="px-2 py-1 text-xs text-slate-300 rounded hover:bg-slate-800 transition-colors"
+                  >
+                    {item.label}
+                  </button>
+                  <div
+                    className={`absolute left-0 mt-1 w-44 bg-slate-900 border border-slate-700 rounded shadow-2xl transition-opacity ${
+                      isOpen
+                        ? 'opacity-100 pointer-events-auto'
+                        : 'opacity-0 pointer-events-none'
+                    }`}
+                  >
+                    <div className="py-1">
+                      {item.items.map((entry) => {
+                        if (typeof entry === 'string') {
+                          return (
+                            <button
+                              key={entry}
+                              type="button"
+                              className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                            >
+                              {entry}
+                            </button>
+                          );
+                        }
+                        return (
+                          <div key={entry.label} className="relative group/menu">
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors flex items-center justify-between"
+                            >
+                              <span>{entry.label}</span>
+                              <span className="text-slate-500">›</span>
+                            </button>
+                            <div className="absolute left-full top-0 ml-1 w-44 bg-slate-900 border border-slate-700 rounded shadow-2xl opacity-0 group-hover/menu:opacity-100 pointer-events-none group-hover/menu:pointer-events-auto transition-opacity">
+                              <div className="py-1">
+                                {entry.items.map((subItem) => (
+                                  <button
+                                    key={subItem}
+                                    type="button"
+                                    className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                                  >
+                                    {subItem}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     <div
       className="xcalibr-app-container pointer-events-auto font-sans text-slate-200"
       style={{
@@ -257,6 +407,15 @@ const App = () => {
         </div>
 
         <div className="p-2 border-b border-slate-800">
+          <label className="flex items-center gap-2 text-[11px] text-slate-400 mb-2">
+            <input
+              type="checkbox"
+              checked={state.showMenuBar}
+              onChange={(event) => updateMenuBar(event.target.checked)}
+              className="h-3 w-3 rounded border border-slate-700 bg-slate-800 text-blue-500 focus:ring-0 focus:outline-none"
+            />
+            <span>Show Menu Bar</span>
+          </label>
           <div className="relative">
             <FontAwesomeIcon
               icon={faSearch}
@@ -319,6 +478,7 @@ const App = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
