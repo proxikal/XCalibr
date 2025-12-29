@@ -9,8 +9,20 @@ import {
   faCompress,
   faExpand,
   faEyeDropper,
+  faFileCode,
+  faFingerprint,
+  faFlask,
+  faBug,
   faGear,
-  faSearch
+  faGlobe,
+  faLink,
+  faRobot,
+  faSliders,
+  faSitemap,
+  faShieldHalved,
+  faSearch,
+  faTable,
+  faWaveSquare
 } from '@fortawesome/free-solid-svg-icons';
 import { defineContentScript } from 'wxt/sandbox';
 import tailwindStyles from '../styles/index.css?inline';
@@ -28,9 +40,36 @@ const menuBarItems = [
     items: [
       { label: 'Code Injector', toolId: 'codeInjector' },
       'Debugger',
+      'Performance Timeline',
+      'Storage Explorer',
+      'Console Snippet Runner',
+      'Lighthouse Snapshot',
       {
         label: 'Front End',
-        items: [{ label: 'Color Picker', toolId: 'colorPicker' }]
+        items: [
+          { label: 'Color Picker', toolId: 'colorPicker' },
+          'CSS Grid Generator',
+          'Flexbox Inspector',
+          'Font Identifier',
+          'Contrast Checker',
+          'Responsive Preview',
+          'Animation Preview',
+          'SVG Optimizer',
+          'Accessibility Audit'
+        ]
+      },
+      {
+        label: 'Back End',
+        items: [
+          'JWT Debugger',
+          'Regex Tester',
+          'API Response Viewer',
+          'GraphQL Explorer',
+          'REST Client',
+          'OAuth Token Inspector',
+          'Webhook Tester',
+          'Cookie Manager'
+        ]
       }
     ]
   },
@@ -39,7 +78,33 @@ const menuBarItems = [
     items: [
       {
         label: 'JSON',
-        items: ['Minify', 'Prettify', 'Format']
+        items: [
+          'JSON Minifier',
+          'JSON Prettifier',
+          'JSON Schema Validator',
+          'JSON Path Tester',
+          'JSON Diff'
+        ]
+      },
+      {
+        label: 'SQL',
+        items: [
+          'SQL Formatter',
+          'SQL Query Builder',
+          'Explain Plan Viewer',
+          'SQL to CSV',
+          'Index Advisor'
+        ]
+      },
+      {
+        label: 'NoSQL',
+        items: [
+          'BSON Viewer',
+          'Mongo Query Builder',
+          'DynamoDB JSON Converter',
+          'Firebase Rules Linter',
+          'CouchDB Doc Explorer'
+        ]
       }
     ]
   },
@@ -48,19 +113,35 @@ const menuBarItems = [
     items: [
       {
         label: 'Recon',
-        items: ['Headers Inspector', 'Tech Fingerprint', 'Robots.txt Viewer']
+        items: [
+          { label: 'Header Inspector', toolId: 'headerInspector' },
+          { label: 'Tech Fingerprint', toolId: 'techFingerprint' },
+          { label: 'Robots.txt Viewer', toolId: 'robotsViewer' }
+        ]
       },
       {
         label: 'Testing',
-        items: ['Form Fuzzer', 'URL Encoder/Decoder', 'Param Analyzer']
+        items: [
+          { label: 'Form Fuzzer', toolId: 'formFuzzer' },
+          { label: 'URL Encoder/Decoder', toolId: 'urlCodec' },
+          { label: 'Param Analyzer', toolId: 'paramAnalyzer' }
+        ]
       },
       {
         label: 'Content',
-        items: ['Link Extractor', 'DOM Snapshot', 'Asset Mapper']
+        items: [
+          { label: 'Link Extractor', toolId: 'linkExtractor' },
+          { label: 'DOM Snapshot', toolId: 'domSnapshot' },
+          { label: 'Asset Mapper', toolId: 'assetMapper' }
+        ]
       },
       {
         label: 'Network',
-        items: ['Request Log', 'Payload Replay', 'CORS Check']
+        items: [
+          { label: 'Request Log', toolId: 'requestLog' },
+          { label: 'Payload Replay', toolId: 'payloadReplay' },
+          { label: 'CORS Check', toolId: 'corsCheck' }
+        ]
       }
     ]
   }
@@ -175,6 +256,276 @@ type CodeInjectorData = {
   code?: string;
 };
 
+type HeaderInspectorData = {
+  url?: string;
+  status?: number;
+  headers?: { name: string; value: string }[];
+  error?: string;
+  updatedAt?: number;
+};
+
+type TechFingerprintData = {
+  url?: string;
+  findings?: { label: string; value: string }[];
+  updatedAt?: number;
+};
+
+type RobotsViewerData = {
+  url?: string;
+  content?: string;
+  error?: string;
+  updatedAt?: number;
+};
+
+type FormFuzzerData = {
+  forms?: {
+    index: number;
+    action: string;
+    method: string;
+    inputs: { name: string; type: string; placeholder: string }[];
+  }[];
+  selectedFormIndex?: number;
+  payloads?: string[];
+  selectedPayload?: string;
+  customPayload?: string;
+  status?: string;
+};
+
+type UrlCodecData = {
+  input?: string;
+  output?: string;
+  mode?: 'encode' | 'decode';
+  error?: string;
+};
+
+type ParamAnalyzerData = {
+  url?: string;
+  params?: { key: string; value: string }[];
+};
+
+type LinkExtractorData = {
+  internal?: string[];
+  external?: string[];
+  updatedAt?: number;
+};
+
+type DomSnapshotData = {
+  html?: string;
+  updatedAt?: number;
+};
+
+type AssetMapperData = {
+  images?: string[];
+  scripts?: string[];
+  styles?: string[];
+  updatedAt?: number;
+};
+
+type RequestLogData = {
+  entries?: {
+    name: string;
+    initiatorType: string;
+    duration: number;
+    transferSize: number;
+    startTime: number;
+  }[];
+};
+
+type PayloadReplayData = {
+  url?: string;
+  method?: string;
+  headers?: string;
+  body?: string;
+  responseStatus?: number;
+  responseHeaders?: { name: string; value: string }[];
+  responseBody?: string;
+  error?: string;
+};
+
+type CorsCheckData = {
+  url?: string;
+  result?: {
+    status?: number;
+    acao?: string | null;
+    acc?: string | null;
+    methods?: string | null;
+    headers?: string | null;
+  };
+  error?: string;
+  updatedAt?: number;
+};
+
+const defaultPayloads = [
+  `"' OR '1'='1`,
+  '<script>alert(1)</script>',
+  '../../etc/passwd',
+  '{{7*7}}',
+  '${7*7}'
+];
+
+const parseHeadersInput = (value: string) =>
+  value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const index = line.indexOf(':');
+      if (index === -1) return null;
+      return {
+        name: line.slice(0, index).trim(),
+        value: line.slice(index + 1).trim()
+      };
+    })
+    .filter(
+      (entry): entry is { name: string; value: string } =>
+        Boolean(entry?.name)
+    );
+
+const parseQueryParams = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    return Array.from(parsed.searchParams.entries()).map(([key, value]) => ({
+      key,
+      value
+    }));
+  } catch {
+    return [];
+  }
+};
+
+const buildUrlWithParams = (url: string, params: { key: string; value: string }[]) => {
+  try {
+    const parsed = new URL(url);
+    parsed.search = '';
+    params
+      .filter((entry) => entry.key.trim().length > 0)
+      .forEach((entry) => parsed.searchParams.append(entry.key, entry.value));
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+};
+
+const extractLinksFromDocument = () => {
+  const anchors = Array.from(document.querySelectorAll('a[href]'));
+  const internal: string[] = [];
+  const external: string[] = [];
+  const origin = window.location.origin;
+  const seen = new Set<string>();
+  anchors.forEach((anchor) => {
+    const href = anchor.getAttribute('href');
+    if (!href) return;
+    let absolute: string;
+    try {
+      absolute = new URL(href, origin).toString();
+    } catch {
+      return;
+    }
+    if (seen.has(absolute)) return;
+    seen.add(absolute);
+    if (absolute.startsWith(origin)) {
+      internal.push(absolute);
+    } else {
+      external.push(absolute);
+    }
+  });
+  return { internal, external };
+};
+
+const sanitizeHtmlSnapshot = (rawHtml: string) => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(rawHtml, 'text/html');
+  doc.querySelectorAll('script').forEach((script) => script.remove());
+  return doc.documentElement.outerHTML;
+};
+
+const mapAssetsFromDocument = () => {
+  const images = Array.from(document.images)
+    .map((img) => img.currentSrc || img.src)
+    .filter(Boolean);
+  const scripts = Array.from(document.scripts)
+    .map((script) => script.src)
+    .filter(Boolean);
+  const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+    .map((link) => (link as HTMLLinkElement).href)
+    .filter(Boolean);
+  return { images, scripts, styles };
+};
+
+const detectTechnologies = () => {
+  const findings: { label: string; value: string }[] = [];
+  const generator = document
+    .querySelector('meta[name="generator"]')
+    ?.getAttribute('content');
+  if (generator) {
+    findings.push({ label: 'Meta Generator', value: generator });
+  }
+  if ((window as Window & { __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown })
+    .__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+    findings.push({ label: 'Framework', value: 'React' });
+  }
+  if ((window as Window & { __VUE_DEVTOOLS_GLOBAL_HOOK__?: unknown })
+    .__VUE_DEVTOOLS_GLOBAL_HOOK__) {
+    findings.push({ label: 'Framework', value: 'Vue' });
+  }
+  if (document.querySelector('[ng-version]')) {
+    findings.push({ label: 'Framework', value: 'Angular' });
+  }
+  const scriptSources = Array.from(document.scripts)
+    .map((script) => script.src)
+    .filter(Boolean);
+  if (scriptSources.some((src) => src.includes('wp-content'))) {
+    findings.push({ label: 'CMS', value: 'WordPress' });
+  }
+  if (scriptSources.some((src) => src.includes('shopify'))) {
+    findings.push({ label: 'Platform', value: 'Shopify' });
+  }
+  if (scriptSources.some((src) => src.includes('cdn.jsdelivr.net/npm/bootstrap'))) {
+    findings.push({ label: 'UI Library', value: 'Bootstrap' });
+  }
+  return findings;
+};
+
+const getFormsSnapshot = () =>
+  Array.from(document.querySelectorAll('form')).map((form, index) => {
+    const inputs = Array.from(
+      form.querySelectorAll('input, textarea, select')
+    ).map((input) => ({
+      name: input.getAttribute('name') ?? '',
+      type: input.getAttribute('type') ?? input.tagName.toLowerCase(),
+      placeholder: input.getAttribute('placeholder') ?? ''
+    }));
+    return {
+      index,
+      action: form.getAttribute('action') ?? window.location.href,
+      method: (form.getAttribute('method') ?? 'GET').toUpperCase(),
+      inputs
+    };
+  });
+
+const applyPayloadToForm = (formIndex: number, payload: string) => {
+  const form = document.querySelectorAll('form')[formIndex];
+  if (!form) return false;
+  const fields = Array.from(
+    form.querySelectorAll('input, textarea, select')
+  ) as Array<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+  fields.forEach((field) => {
+    if (field instanceof HTMLInputElement) {
+      const type = field.type.toLowerCase();
+      if (['checkbox', 'radio', 'submit', 'button', 'file'].includes(type)) {
+        return;
+      }
+    }
+    if (field instanceof HTMLSelectElement) {
+      field.value = field.options[0]?.value ?? '';
+    } else {
+      field.value = payload;
+    }
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  return true;
+};
 const CodeInjectorTool = ({
   data,
   onChange,
@@ -288,6 +639,855 @@ const CodeInjectorTool = ({
   );
 };
 
+const HeaderInspectorTool = ({
+  data,
+  onRefresh
+}: {
+  data: HeaderInspectorData | undefined;
+  onRefresh: () => Promise<void>;
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const headers = data?.headers ?? [];
+  const updatedAt = data?.updatedAt;
+  const securityHeaders = new Set([
+    'content-security-policy',
+    'strict-transport-security',
+    'x-frame-options'
+  ]);
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    await onRefresh();
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs text-slate-200">Current Tab Headers</div>
+          <div className="text-[11px] text-slate-500">
+            {data?.url ?? 'No data yet'}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          {isLoading ? 'Loading...' : 'Refresh'}
+        </button>
+      </div>
+
+      {data?.error ? (
+        <div className="rounded border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">
+          {data.error}
+        </div>
+      ) : null}
+
+      {updatedAt ? (
+        <div className="text-[10px] text-slate-500">
+          Updated {new Date(updatedAt).toLocaleTimeString()}
+        </div>
+      ) : null}
+
+      <div className="space-y-2">
+        {headers.length === 0 ? (
+          <div className="text-[11px] text-slate-500">
+            No headers captured yet.
+          </div>
+        ) : (
+          headers.map((header) => {
+            const isSecurity = securityHeaders.has(header.name.toLowerCase());
+            return (
+              <div
+                key={`${header.name}-${header.value}`}
+                className={`rounded border px-2 py-1 text-[11px] ${
+                  isSecurity
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                    : 'border-slate-800 bg-slate-800/60 text-slate-300'
+                }`}
+              >
+                <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                  {header.name}
+                </div>
+                <div className="break-words">{header.value}</div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
+
+const TechFingerprintTool = ({
+  data,
+  onRefresh
+}: {
+  data: TechFingerprintData | undefined;
+  onRefresh: () => Promise<void>;
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const findings = data?.findings ?? [];
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    await onRefresh();
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs text-slate-200">Tech Fingerprint</div>
+          <div className="text-[11px] text-slate-500">{data?.url ?? ''}</div>
+        </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          {isLoading ? 'Scanning...' : 'Scan'}
+        </button>
+      </div>
+      {findings.length === 0 ? (
+        <div className="text-[11px] text-slate-500">
+          No signals yet. Run a scan.
+        </div>
+      ) : (
+        findings.map((finding, index) => (
+          <div
+            key={`${finding.label}-${finding.value}-${index}`}
+            className="rounded border border-slate-800 bg-slate-800/60 px-2 py-1 text-[11px] text-slate-300"
+          >
+            <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+              {finding.label}
+            </div>
+            <div className="break-words">{finding.value}</div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
+const RobotsViewerTool = ({
+  data,
+  onRefresh
+}: {
+  data: RobotsViewerData | undefined;
+  onRefresh: () => Promise<void>;
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    await onRefresh();
+    setIsLoading(false);
+  };
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs text-slate-200">Robots.txt Viewer</div>
+          <div className="text-[11px] text-slate-500">{data?.url ?? ''}</div>
+        </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          {isLoading ? 'Loading...' : 'Fetch'}
+        </button>
+      </div>
+      {data?.error ? (
+        <div className="rounded border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">
+          {data.error}
+        </div>
+      ) : null}
+      <textarea
+        value={data?.content ?? ''}
+        readOnly
+        rows={8}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none"
+        placeholder="robots.txt will appear here..."
+      />
+    </div>
+  );
+};
+
+const FormFuzzerTool = ({
+  data,
+  onChange,
+  onRefresh,
+  onApply
+}: {
+  data: FormFuzzerData | undefined;
+  onChange: (next: FormFuzzerData) => void;
+  onRefresh: () => Promise<void>;
+  onApply: (formIndex: number, payload: string) => Promise<boolean>;
+}) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const payloads = data?.payloads ?? defaultPayloads;
+  const selectedPayload = data?.selectedPayload ?? payloads[0] ?? '';
+  const selectedFormIndex = data?.selectedFormIndex ?? 0;
+  const forms = data?.forms ?? [];
+  const customPayload = data?.customPayload ?? '';
+  const update = (next: Partial<FormFuzzerData>) =>
+    onChange({
+      payloads,
+      selectedPayload,
+      selectedFormIndex,
+      forms,
+      customPayload,
+      status: data?.status,
+      ...next
+    });
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    await onRefresh();
+    setIsLoading(false);
+  };
+
+  const handleApply = async () => {
+    const payload =
+      selectedPayload === '__custom__' ? customPayload : selectedPayload;
+    if (!payload) {
+      update({ status: 'Choose a payload to apply.' });
+      return;
+    }
+    const ok = await onApply(selectedFormIndex, payload);
+    update({
+      status: ok ? 'Payload applied.' : 'Could not apply payload.'
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">Form Fuzzer</div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          {isLoading ? 'Scanning...' : 'Refresh Forms'}
+        </button>
+      </div>
+
+      {forms.length === 0 ? (
+        <div className="text-[11px] text-slate-500">
+          No forms detected on this page.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
+            Select Form
+          </div>
+          <div className="space-y-1">
+            {forms.map((form) => (
+              <button
+                key={form.index}
+                type="button"
+                onClick={() => update({ selectedFormIndex: form.index })}
+                className={`w-full rounded px-2 py-1 text-[11px] border text-left transition-colors ${
+                  selectedFormIndex === form.index
+                    ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
+                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+                }`}
+              >
+                {form.method} • {form.action}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <div className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
+          Payload
+        </div>
+        <div className="space-y-1">
+          {payloads.map((payload) => (
+            <button
+              key={payload}
+              type="button"
+              onClick={() => update({ selectedPayload: payload })}
+              className={`w-full rounded px-2 py-1 text-[11px] border text-left transition-colors ${
+                selectedPayload === payload
+                  ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+              }`}
+            >
+              {payload}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => update({ selectedPayload: '__custom__' })}
+            className={`w-full rounded px-2 py-1 text-[11px] border text-left transition-colors ${
+              selectedPayload === '__custom__'
+                ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+            }`}
+          >
+            Custom Payload
+          </button>
+        </div>
+        {selectedPayload === '__custom__' ? (
+          <input
+            type="text"
+            value={customPayload}
+            onChange={(event) => update({ customPayload: event.target.value })}
+            className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+            placeholder="Enter custom payload"
+          />
+        ) : null}
+      </div>
+
+      {data?.status ? (
+        <div className="text-[11px] text-slate-500">{data.status}</div>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={handleApply}
+        disabled={forms.length === 0}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Apply Payload
+      </button>
+    </div>
+  );
+};
+
+const UrlCodecTool = ({
+  data,
+  onChange
+}: {
+  data: UrlCodecData | undefined;
+  onChange: (next: UrlCodecData) => void;
+}) => {
+  const mode = data?.mode ?? 'encode';
+  const input = data?.input ?? '';
+  const output = data?.output ?? '';
+  const error = data?.error;
+
+  const updateInput = (value: string) => {
+    try {
+      const result = mode === 'encode' ? encodeURIComponent(value) : decodeURIComponent(value);
+      onChange({ mode, input: value, output: result, error: undefined });
+    } catch {
+      onChange({ mode, input: value, output: '', error: 'Unable to decode input.' });
+    }
+  };
+
+  const toggleMode = () => {
+    const nextMode = mode === 'encode' ? 'decode' : 'encode';
+    try {
+      const result = nextMode === 'encode'
+        ? encodeURIComponent(input)
+        : decodeURIComponent(input);
+      onChange({ mode: nextMode, input, output: result, error: undefined });
+    } catch {
+      onChange({ mode: nextMode, input, output: '', error: 'Unable to decode input.' });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">URL Encoder / Decoder</div>
+        <button
+          type="button"
+          onClick={toggleMode}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          {mode === 'encode' ? 'Encode' : 'Decode'}
+        </button>
+      </div>
+      <textarea
+        value={input}
+        onChange={(event) => updateInput(event.target.value)}
+        rows={4}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors"
+        placeholder="Enter text to encode/decode"
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <textarea
+        value={output}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none"
+        placeholder="Result"
+      />
+      <button
+        type="button"
+        onClick={() => navigator.clipboard.writeText(output)}
+        disabled={!output}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Copy Result
+      </button>
+    </div>
+  );
+};
+
+const ParamAnalyzerTool = ({
+  data,
+  onChange,
+  onRefresh
+}: {
+  data: ParamAnalyzerData | undefined;
+  onChange: (next: ParamAnalyzerData) => void;
+  onRefresh: () => Promise<void>;
+}) => {
+  const params = data?.params ?? [];
+  const url = data?.url ?? window.location.href;
+  const updateParams = (nextParams: { key: string; value: string }[]) =>
+    onChange({ url, params: nextParams });
+  const applyUrl = (nextUrl: string) => {
+    navigator.clipboard.writeText(nextUrl);
+    window.location.href = nextUrl;
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs text-slate-200">Param Analyzer</div>
+          <div className="text-[11px] text-slate-500">{url}</div>
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+
+      {params.length === 0 ? (
+        <div className="text-[11px] text-slate-500">
+          No query parameters detected.
+        </div>
+      ) : null}
+
+      <div className="space-y-2">
+        {params.map((param, index) => (
+          <div key={`${param.key}-${index}`} className="flex gap-2">
+            <input
+              type="text"
+              value={param.key}
+              onChange={(event) => {
+                const next = [...params];
+                next[index] = { ...next[index], key: event.target.value };
+                updateParams(next);
+              }}
+              className="w-1/3 rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+              placeholder="Key"
+            />
+            <input
+              type="text"
+              value={param.value}
+              onChange={(event) => {
+                const next = [...params];
+                next[index] = { ...next[index], value: event.target.value };
+                updateParams(next);
+              }}
+              className="flex-1 rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+              placeholder="Value"
+            />
+            <button
+              type="button"
+              onClick={() => updateParams(params.filter((_, i) => i !== index))}
+              className="rounded bg-slate-800 px-2 text-[11px] text-slate-400 hover:text-slate-200"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => updateParams([...params, { key: '', value: '' }])}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Add Param
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          const nextUrl = buildUrlWithParams(url, params);
+          navigator.clipboard.writeText(nextUrl);
+        }}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Copy Updated URL
+      </button>
+      <button
+        type="button"
+        onClick={() => applyUrl(buildUrlWithParams(url, params))}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Open Updated URL
+      </button>
+    </div>
+  );
+};
+
+const LinkExtractorTool = ({
+  data,
+  onRefresh
+}: {
+  data: LinkExtractorData | undefined;
+  onRefresh: () => Promise<void>;
+}) => {
+  const internal = data?.internal ?? [];
+  const external = data?.external ?? [];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">Link Extractor</div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+      <div className="text-[11px] text-slate-500">
+        {internal.length} internal • {external.length} external
+      </div>
+      <div className="space-y-2 max-h-40 overflow-y-auto no-scrollbar">
+        {internal.map((link) => (
+          <div key={link} className="text-[11px] text-slate-300 break-words">
+            {link}
+          </div>
+        ))}
+        {external.map((link) => (
+          <div key={link} className="text-[11px] text-slate-400 break-words">
+            {link}
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            navigator.clipboard.writeText(
+              JSON.stringify({ internal, external }, null, 2)
+            )
+          }
+          className="flex-1 rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+        >
+          Copy JSON
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const csv = [...internal, ...external].join('\n');
+            navigator.clipboard.writeText(csv);
+          }}
+          className="flex-1 rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+        >
+          Copy CSV
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const DomSnapshotTool = ({
+  data,
+  onCapture
+}: {
+  data: DomSnapshotData | undefined;
+  onCapture: () => Promise<void>;
+}) => {
+  const html = data?.html ?? '';
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">DOM Snapshot</div>
+        <button
+          type="button"
+          onClick={onCapture}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Capture
+        </button>
+      </div>
+      <textarea
+        value={html}
+        readOnly
+        rows={6}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none"
+        placeholder="Snapshot will appear here..."
+      />
+      <button
+        type="button"
+        onClick={() => navigator.clipboard.writeText(html)}
+        disabled={!html}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Copy HTML
+      </button>
+    </div>
+  );
+};
+
+const AssetMapperTool = ({
+  data,
+  onRefresh
+}: {
+  data: AssetMapperData | undefined;
+  onRefresh: () => Promise<void>;
+}) => {
+  const images = data?.images ?? [];
+  const scripts = data?.scripts ?? [];
+  const styles = data?.styles ?? [];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">Asset Mapper</div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+      <div className="text-[11px] text-slate-500">
+        {images.length} images • {scripts.length} scripts • {styles.length} styles
+      </div>
+      <div className="space-y-2 max-h-40 overflow-y-auto no-scrollbar text-[11px] text-slate-300">
+        {images.map((asset) => (
+          <div key={`img-${asset}`} className="break-words">
+            {asset}
+          </div>
+        ))}
+        {scripts.map((asset) => (
+          <div key={`script-${asset}`} className="break-words text-slate-400">
+            {asset}
+          </div>
+        ))}
+        {styles.map((asset) => (
+          <div key={`style-${asset}`} className="break-words text-slate-500">
+            {asset}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const RequestLogTool = ({
+  data,
+  onClear
+}: {
+  data: RequestLogData | undefined;
+  onClear: () => Promise<void>;
+}) => {
+  const entries = data?.entries ?? [];
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">Request Log</div>
+        <button
+          type="button"
+          onClick={onClear}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Clear
+        </button>
+      </div>
+      {entries.length === 0 ? (
+        <div className="text-[11px] text-slate-500">
+          No requests captured yet.
+        </div>
+      ) : (
+        <div className="max-h-40 overflow-y-auto no-scrollbar space-y-1">
+          {entries.map((entry, index) => (
+            <div
+              key={`${entry.name}-${entry.startTime}-${index}`}
+              className="rounded border border-slate-800 bg-slate-800/60 px-2 py-1 text-[11px] text-slate-300"
+            >
+              <div className="break-words">{entry.name}</div>
+              <div className="text-[10px] text-slate-500">
+                {entry.initiatorType} • {entry.duration.toFixed(1)}ms
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PayloadReplayTool = ({
+  data,
+  onChange,
+  onSend
+}: {
+  data: PayloadReplayData | undefined;
+  onChange: (next: PayloadReplayData) => void;
+  onSend: (payload: {
+    url: string;
+    method: string;
+    headers: { name: string; value: string }[];
+    body: string;
+  }) => Promise<void>;
+}) => {
+  const url = data?.url ?? '';
+  const method = data?.method ?? 'GET';
+  const headers = data?.headers ?? '';
+  const body = data?.body ?? '';
+  const update = (next: Partial<PayloadReplayData>) => onChange({ ...data, ...next });
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Payload Replay</div>
+      <input
+        type="text"
+        value={url}
+        onChange={(event) => update({ url: event.target.value })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="https://example.com/api"
+      />
+      <div className="flex gap-2">
+        {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => update({ method: option })}
+            className={`flex-1 rounded px-2 py-1 text-[11px] border transition-colors ${
+              method === option
+                ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={headers}
+        onChange={(event) => update({ headers: event.target.value })}
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Header: value"
+      />
+      <textarea
+        value={body}
+        onChange={(event) => update({ body: event.target.value })}
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Request body"
+      />
+      <button
+        type="button"
+        onClick={() =>
+          onSend({
+            url,
+            method,
+            headers: parseHeadersInput(headers),
+            body
+          })
+        }
+        disabled={!url}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Send Request
+      </button>
+      {data?.error ? (
+        <div className="text-[11px] text-rose-300">{data.error}</div>
+      ) : null}
+      {typeof data?.responseStatus === 'number' ? (
+        <div className="text-[11px] text-slate-500">
+          Status: {data.responseStatus}
+        </div>
+      ) : null}
+      {data?.responseHeaders?.length ? (
+        <div className="space-y-1">
+          {data.responseHeaders.map((header) => (
+            <div key={`${header.name}-${header.value}`} className="text-[10px] text-slate-500">
+              {header.name}: {header.value}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {data?.responseBody ? (
+        <textarea
+          value={data.responseBody}
+          readOnly
+          rows={4}
+          className="w-full rounded bg-slate-900 text-slate-200 text-xs px-2 py-2 border border-slate-800 focus:outline-none"
+        />
+      ) : null}
+    </div>
+  );
+};
+
+const CorsCheckTool = ({
+  data,
+  onChange,
+  onCheck
+}: {
+  data: CorsCheckData | undefined;
+  onChange: (next: CorsCheckData) => void;
+  onCheck: (url: string) => Promise<void>;
+}) => {
+  const url = data?.url ?? '';
+  const result = data?.result;
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">CORS Check</div>
+      <input
+        type="text"
+        value={url}
+        onChange={(event) => onChange({ ...data, url: event.target.value })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="https://example.com"
+      />
+      <button
+        type="button"
+        onClick={() => onCheck(url)}
+        disabled={!url}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Run Check
+      </button>
+      {data?.error ? (
+        <div className="text-[11px] text-rose-300">{data.error}</div>
+      ) : null}
+      {result ? (
+        <div className="space-y-2 text-[11px] text-slate-400">
+          <div>Status: {result.status ?? 'Unknown'}</div>
+          <div>ACAO: {result.acao ?? 'None'}</div>
+          <div>ACAC: {result.acc ?? 'None'}</div>
+          <div>Allow-Methods: {result.methods ?? 'None'}</div>
+          <div>Allow-Headers: {result.headers ?? 'None'}</div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 const toolRegistry: ToolRegistryEntry[] = [
   {
     id: 'codeInjector',
@@ -305,6 +1505,227 @@ const toolRegistry: ToolRegistryEntry[] = [
             type: 'xcalibr-inject-code',
             payload
           });
+        }}
+      />
+    )
+  },
+  {
+    id: 'headerInspector',
+    title: 'Header Inspector',
+    subtitle: 'Security headers',
+    category: 'CyberSec',
+    icon: faShieldHalved,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <HeaderInspectorTool
+        data={data as HeaderInspectorData | undefined}
+        onRefresh={async () => {
+          const result = await chrome.runtime.sendMessage({
+            type: 'xcalibr-fetch-headers'
+          });
+          onChange(result);
+        }}
+      />
+    )
+  },
+  {
+    id: 'techFingerprint',
+    title: 'Tech Fingerprint',
+    subtitle: 'Framework signals',
+    category: 'CyberSec',
+    icon: faFingerprint,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <TechFingerprintTool
+        data={data as TechFingerprintData | undefined}
+        onRefresh={async () => {
+          const findings = detectTechnologies();
+          onChange({
+            url: window.location.href,
+            findings,
+            updatedAt: Date.now()
+          });
+        }}
+      />
+    )
+  },
+  {
+    id: 'robotsViewer',
+    title: 'Robots.txt Viewer',
+    subtitle: 'Site crawl rules',
+    category: 'CyberSec',
+    icon: faRobot,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <RobotsViewerTool
+        data={data as RobotsViewerData | undefined}
+        onRefresh={async () => {
+          const result = await chrome.runtime.sendMessage({
+            type: 'xcalibr-fetch-robots'
+          });
+          onChange(result);
+        }}
+      />
+    )
+  },
+  {
+    id: 'formFuzzer',
+    title: 'Form Fuzzer',
+    subtitle: 'Inject payloads',
+    category: 'CyberSec',
+    icon: faFlask,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <FormFuzzerTool
+        data={data as FormFuzzerData | undefined}
+        onChange={(next) => onChange(next)}
+        onRefresh={async () => {
+          const payloads = (data as FormFuzzerData | undefined)?.payloads ?? defaultPayloads;
+          onChange({
+            forms: getFormsSnapshot(),
+            payloads,
+            selectedFormIndex: 0,
+            selectedPayload: payloads[0] ?? ''
+          });
+        }}
+        onApply={async (formIndex, payload) =>
+          applyPayloadToForm(formIndex, payload)
+        }
+      />
+    )
+  },
+  {
+    id: 'urlCodec',
+    title: 'URL Encoder/Decoder',
+    subtitle: 'Encode strings',
+    category: 'CyberSec',
+    icon: faWaveSquare,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <UrlCodecTool data={data as UrlCodecData | undefined} onChange={onChange} />
+    )
+  },
+  {
+    id: 'paramAnalyzer',
+    title: 'Param Analyzer',
+    subtitle: 'Edit query params',
+    category: 'CyberSec',
+    icon: faSliders,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <ParamAnalyzerTool
+        data={data as ParamAnalyzerData | undefined}
+        onChange={onChange}
+        onRefresh={async () => {
+          const url = window.location.href;
+          onChange({ url, params: parseQueryParams(url) });
+        }}
+      />
+    )
+  },
+  {
+    id: 'linkExtractor',
+    title: 'Link Extractor',
+    subtitle: 'Internal vs external',
+    category: 'CyberSec',
+    icon: faLink,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <LinkExtractorTool
+        data={data as LinkExtractorData | undefined}
+        onRefresh={async () => {
+          const links = extractLinksFromDocument();
+          onChange({ ...links, updatedAt: Date.now() });
+        }}
+      />
+    )
+  },
+  {
+    id: 'domSnapshot',
+    title: 'DOM Snapshot',
+    subtitle: 'Capture HTML',
+    category: 'CyberSec',
+    icon: faFileCode,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <DomSnapshotTool
+        data={data as DomSnapshotData | undefined}
+        onCapture={async () => {
+          const raw = document.documentElement.outerHTML;
+          onChange({ html: sanitizeHtmlSnapshot(raw), updatedAt: Date.now() });
+        }}
+      />
+    )
+  },
+  {
+    id: 'assetMapper',
+    title: 'Asset Mapper',
+    subtitle: 'Images, scripts, CSS',
+    category: 'CyberSec',
+    icon: faSitemap,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <AssetMapperTool
+        data={data as AssetMapperData | undefined}
+        onRefresh={async () => {
+          const assets = mapAssetsFromDocument();
+          onChange({ ...assets, updatedAt: Date.now() });
+        }}
+      />
+    )
+  },
+  {
+    id: 'requestLog',
+    title: 'Request Log',
+    subtitle: 'Network activity',
+    category: 'CyberSec',
+    icon: faTable,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <RequestLogTool
+        data={data as RequestLogData | undefined}
+        onClear={async () => onChange({ entries: [] })}
+      />
+    )
+  },
+  {
+    id: 'payloadReplay',
+    title: 'Payload Replay',
+    subtitle: 'Replay HTTP requests',
+    category: 'CyberSec',
+    icon: faBug,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <PayloadReplayTool
+        data={data as PayloadReplayData | undefined}
+        onChange={onChange}
+        onSend={async (payload) => {
+          const result = await chrome.runtime.sendMessage({
+            type: 'xcalibr-payload-replay',
+            payload
+          });
+          onChange({ ...data, ...result });
+        }}
+      />
+    )
+  },
+  {
+    id: 'corsCheck',
+    title: 'CORS Check',
+    subtitle: 'Inspect CORS headers',
+    category: 'CyberSec',
+    icon: faGlobe,
+    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    render: (data, onChange) => (
+      <CorsCheckTool
+        data={data as CorsCheckData | undefined}
+        onChange={onChange}
+        onCheck={async (url) => {
+          const result = await chrome.runtime.sendMessage({
+            type: 'xcalibr-cors-check',
+            payload: { url }
+          });
+          onChange({ url, ...result });
         }}
       />
     )
@@ -337,6 +1758,7 @@ const App = () => {
   const [spotlightQuery, setSpotlightQuery] = useState('');
   const menuBarRef = useRef<HTMLDivElement | null>(null);
   const spotlightInputRef = useRef<HTMLInputElement | null>(null);
+  const requestLogSeenRef = useRef<Set<string>>(new Set());
   const toolDragRef = useRef<{
     toolId: string;
     offsetX: number;
@@ -406,6 +1828,47 @@ const App = () => {
     });
   }, [spotlightQuery, searchableTools]);
 
+  useEffect(() => {
+    const isOpen = state.toolWindows.requestLog?.isOpen;
+    if (!isOpen) return;
+
+    const observer = new PerformanceObserver((list) => {
+      const entries = list.getEntries() as PerformanceResourceTiming[];
+      if (!entries.length) return;
+      updateState((current) => {
+        const existing =
+          (current.toolData.requestLog as RequestLogData | undefined)?.entries ?? [];
+        const nextEntries = [...existing];
+        entries.forEach((entry) => {
+          const key = `${entry.name}-${entry.startTime}`;
+          if (requestLogSeenRef.current.has(key)) return;
+          requestLogSeenRef.current.add(key);
+          nextEntries.unshift({
+            name: entry.name,
+            initiatorType: entry.initiatorType,
+            duration: entry.duration,
+            transferSize: entry.transferSize,
+            startTime: entry.startTime
+          });
+        });
+        return {
+          ...current,
+          toolData: {
+            ...current.toolData,
+            requestLog: { entries: nextEntries.slice(0, 200) }
+          }
+        };
+      }).then(setState);
+    });
+
+    try {
+      observer.observe({ type: 'resource', buffered: true });
+    } catch {
+      // PerformanceObserver might not support resource entries on all pages.
+    }
+    return () => observer.disconnect();
+  }, [state.toolWindows.requestLog?.isOpen]);
+
   const panelWidth = useMemo(() => {
     if (!state.isOpen) return 0;
     return state.isWide ? 300 : 160;
@@ -417,6 +1880,8 @@ const App = () => {
         return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30';
       case 'Front End':
         return 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+      case 'CyberSec':
+        return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
       default:
         return 'bg-slate-500/10 text-slate-300 border-slate-500/30';
     }
@@ -546,6 +2011,7 @@ const App = () => {
     setState(next);
   };
 
+
   const openTool = async (toolId: string) => {
     const next = await updateState((current) => {
       const existing = current.toolWindows[toolId];
@@ -657,6 +2123,14 @@ const App = () => {
     document.addEventListener('mousedown', handleDocumentClick);
     return () => document.removeEventListener('mousedown', handleDocumentClick);
   }, []);
+
+  useEffect(() => {
+    const entries =
+      (state.toolData.requestLog as RequestLogData | undefined)?.entries ?? [];
+    if (entries.length === 0) {
+      requestLogSeenRef.current.clear();
+    }
+  }, [state.toolData.requestLog]);
 
   useEffect(() => {
     if (!state.showMenuBar) {
