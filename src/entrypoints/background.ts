@@ -136,6 +136,66 @@ export default defineBackground(() => {
       return true;
     }
 
+    if (message?.type === 'xcalibr-couchdb-fetch') {
+      const run = async () => {
+        const { url } = message.payload as { url: string };
+        const response = await fetch(url, { method: 'GET' });
+        const text = await response.text();
+        sendResponse({
+          output: text,
+          error: response.ok ? '' : `Request failed (${response.status})`
+        });
+      };
+
+      run().catch((error) => {
+        sendResponse({
+          output: '',
+          error: error instanceof Error ? error.message : 'Fetch failed.'
+        });
+      });
+      return true;
+    }
+
+    if (message?.type === 'xcalibr-http-request') {
+      const run = async () => {
+        const payload = message.payload as {
+          url: string;
+          method: string;
+          headers?: Record<string, string>;
+          body?: string;
+        };
+        const response = await fetch(payload.url, {
+          method: payload.method,
+          headers: payload.headers,
+          body:
+            payload.method === 'GET' || payload.method === 'HEAD'
+              ? undefined
+              : payload.body
+        });
+        const text = await response.text();
+        sendResponse({
+          status: response.status,
+          statusText: response.statusText,
+          headers: Array.from(response.headers.entries()).map(([name, value]) => ({
+            name,
+            value
+          })),
+          body: text
+        });
+      };
+
+      run().catch((error) => {
+        sendResponse({
+          status: 0,
+          statusText: '',
+          headers: [],
+          body: '',
+          error: error instanceof Error ? error.message : 'Request failed.'
+        });
+      });
+      return true;
+    }
+
     if (message?.type !== 'xcalibr-inject-code') return;
 
     const { mode, scope, code } = message.payload as {

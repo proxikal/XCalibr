@@ -13,9 +13,11 @@ import {
   faFingerprint,
   faFlask,
   faBug,
+  faFont,
   faGear,
   faGlobe,
   faLink,
+  faNetworkWired,
   faRobot,
   faSliders,
   faSitemap,
@@ -38,6 +40,26 @@ import {
   generateCssSelector,
   generateXPath
 } from '../shared/scraper';
+import { diffJson, resolveJsonPath, validateJsonSchema } from '../shared/json-tools';
+import {
+  buildSqlQuery,
+  formatSql,
+  fromDynamo,
+  jsonArrayToCsv,
+  lintFirebaseRules,
+  normalizeBsonValue,
+  suggestIndex,
+  toDynamo
+} from '../shared/data-tools';
+import {
+  auditAccessibility,
+  contrastRatio,
+  decodeJwt,
+  optimizeSvg,
+  parseCookieString,
+  runRegexTest,
+  safeParseJson
+} from '../shared/web-tools';
 
 const ROOT_ID = 'xcalibr-root';
 
@@ -50,36 +72,36 @@ const baseMenuBarItems = [
     label: 'Web Dev',
     items: [
       { label: 'Code Injector', toolId: 'codeInjector' },
-      'Debugger',
+      { label: 'Debugger', toolId: 'debuggerTool' },
       'Performance Timeline',
-      'Storage Explorer',
-      'Console Snippet Runner',
-      'Lighthouse Snapshot',
+      { label: 'Storage Explorer', toolId: 'storageExplorer' },
+      { label: 'Console Snippet Runner', toolId: 'snippetRunner' },
+      { label: 'Lighthouse Snapshot', toolId: 'lighthouseSnapshot' },
       {
         label: 'Front End',
         items: [
           { label: 'Color Picker', toolId: 'colorPicker' },
-          'CSS Grid Generator',
-          'Flexbox Inspector',
-          'Font Identifier',
-          'Contrast Checker',
-          'Responsive Preview',
-          'Animation Preview',
-          'SVG Optimizer',
-          'Accessibility Audit'
+          { label: 'CSS Grid Generator', toolId: 'cssGridGenerator' },
+          { label: 'Flexbox Inspector', toolId: 'flexboxInspector' },
+          { label: 'Font Identifier', toolId: 'fontIdentifier' },
+          { label: 'Contrast Checker', toolId: 'contrastChecker' },
+          { label: 'Responsive Preview', toolId: 'responsivePreview' },
+          { label: 'Animation Preview', toolId: 'animationPreview' },
+          { label: 'SVG Optimizer', toolId: 'svgOptimizer' },
+          { label: 'Accessibility Audit', toolId: 'accessibilityAudit' }
         ]
       },
       {
         label: 'Back End',
         items: [
-          'JWT Debugger',
-          'Regex Tester',
-          'API Response Viewer',
-          'GraphQL Explorer',
-          'REST Client',
-          'OAuth Token Inspector',
-          'Webhook Tester',
-          'Cookie Manager'
+          { label: 'JWT Debugger', toolId: 'jwtDebugger' },
+          { label: 'Regex Tester', toolId: 'regexTester' },
+          { label: 'API Response Viewer', toolId: 'apiResponseViewer' },
+          { label: 'GraphQL Explorer', toolId: 'graphqlExplorer' },
+          { label: 'REST Client', toolId: 'restClient' },
+          { label: 'OAuth Token Inspector', toolId: 'oauthTokenInspector' },
+          { label: 'Webhook Tester', toolId: 'webhookTester' },
+          { label: 'Cookie Manager', toolId: 'cookieManager' }
         ]
       }
     ]
@@ -91,30 +113,30 @@ const baseMenuBarItems = [
         label: 'JSON',
         items: [
           { label: 'JSON Minifier', toolId: 'jsonMinifier' },
-          'JSON Prettifier',
-          'JSON Schema Validator',
-          'JSON Path Tester',
-          'JSON Diff'
+          { label: 'JSON Prettifier', toolId: 'jsonPrettifier' },
+          { label: 'JSON Schema Validator', toolId: 'jsonSchemaValidator' },
+          { label: 'JSON Path Tester', toolId: 'jsonPathTester' },
+          { label: 'JSON Diff', toolId: 'jsonDiff' }
         ]
       },
       {
         label: 'SQL',
         items: [
-          'SQL Formatter',
-          'SQL Query Builder',
+          { label: 'SQL Formatter', toolId: 'sqlFormatter' },
+          { label: 'SQL Query Builder', toolId: 'sqlQueryBuilder' },
           'Explain Plan Viewer',
-          'SQL to CSV',
-          'Index Advisor'
+          { label: 'SQL to CSV', toolId: 'sqlToCsv' },
+          { label: 'Index Advisor', toolId: 'indexAdvisor' }
         ]
       },
       {
         label: 'NoSQL',
         items: [
-          'BSON Viewer',
-          'Mongo Query Builder',
-          'DynamoDB JSON Converter',
-          'Firebase Rules Linter',
-          'CouchDB Doc Explorer'
+          { label: 'BSON Viewer', toolId: 'bsonViewer' },
+          { label: 'Mongo Query Builder', toolId: 'mongoQueryBuilder' },
+          { label: 'DynamoDB JSON Converter', toolId: 'dynamoDbConverter' },
+          { label: 'Firebase Rules Linter', toolId: 'firebaseRulesLinter' },
+          { label: 'CouchDB Doc Explorer', toolId: 'couchDbDocExplorer' }
         ]
       }
     ]
@@ -370,6 +392,215 @@ type JsonMinifierData = {
   input?: string;
   output?: string;
   error?: string;
+};
+
+type JsonPrettifierData = {
+  input?: string;
+  output?: string;
+  error?: string;
+};
+
+type JsonSchemaValidatorData = {
+  schema?: string;
+  input?: string;
+  issues?: string[];
+  error?: string;
+};
+
+type JsonPathTesterData = {
+  input?: string;
+  path?: string;
+  output?: string;
+  error?: string;
+};
+
+type JsonDiffData = {
+  left?: string;
+  right?: string;
+  diff?: string[];
+  error?: string;
+};
+
+type SqlFormatterData = {
+  input?: string;
+  output?: string;
+};
+
+type SqlQueryBuilderData = {
+  table?: string;
+  columns?: string;
+  where?: string;
+  orderBy?: string;
+  limit?: string;
+  output?: string;
+};
+
+type SqlToCsvData = {
+  input?: string;
+  output?: string;
+  error?: string;
+};
+
+type IndexAdvisorData = {
+  table?: string;
+  columns?: string;
+  unique?: boolean;
+  output?: string;
+};
+
+type BsonViewerData = {
+  input?: string;
+  output?: string;
+  error?: string;
+};
+
+type MongoQueryBuilderData = {
+  collection?: string;
+  filter?: string;
+  projection?: string;
+  sort?: string;
+  limit?: string;
+  output?: string;
+  error?: string;
+};
+
+type DynamoDbConverterData = {
+  input?: string;
+  output?: string;
+  mode?: 'toDynamo' | 'fromDynamo';
+  error?: string;
+};
+
+type FirebaseRulesLinterData = {
+  input?: string;
+  warnings?: string[];
+  error?: string;
+};
+
+type CouchDbDocExplorerData = {
+  url?: string;
+  output?: string;
+  error?: string;
+};
+
+type DebuggerData = {
+  entries?: { message: string; source: string; time: number }[];
+};
+
+type StorageExplorerData = {
+  local?: { key: string; value: string }[];
+  session?: { key: string; value: string }[];
+};
+
+type SnippetRunnerData = {
+  input?: string;
+  output?: string;
+  error?: string;
+};
+
+type LighthouseSnapshotData = {
+  metrics?: { label: string; value: string }[];
+};
+
+type CssGridGeneratorData = {
+  columns?: string;
+  rows?: string;
+  gap?: string;
+  output?: string;
+};
+
+type FlexboxInspectorData = {
+  selector?: string;
+  output?: string[];
+};
+
+type FontIdentifierData = {
+  selector?: string;
+  output?: string[];
+};
+
+type ContrastCheckerData = {
+  foreground?: string;
+  background?: string;
+  ratio?: string;
+  status?: string;
+};
+
+type ResponsivePreviewData = {
+  width?: string;
+  height?: string;
+  status?: string;
+};
+
+type AnimationPreviewData = {
+  css?: string;
+};
+
+type SvgOptimizerData = {
+  input?: string;
+  output?: string;
+};
+
+type AccessibilityAuditData = {
+  issues?: string[];
+};
+
+type JwtDebuggerData = {
+  token?: string;
+  header?: string;
+  payload?: string;
+  error?: string;
+};
+
+type RegexTesterData = {
+  pattern?: string;
+  flags?: string;
+  text?: string;
+  matches?: string[];
+  error?: string;
+};
+
+type ApiResponseViewerData = {
+  url?: string;
+  response?: string;
+  status?: string;
+  error?: string;
+};
+
+type GraphqlExplorerData = {
+  url?: string;
+  query?: string;
+  variables?: string;
+  response?: string;
+  error?: string;
+};
+
+type RestClientData = {
+  url?: string;
+  method?: string;
+  headers?: string;
+  body?: string;
+  response?: string;
+  error?: string;
+};
+
+type OAuthTokenInspectorData = {
+  token?: string;
+  output?: string;
+  error?: string;
+};
+
+type WebhookTesterData = {
+  url?: string;
+  body?: string;
+  response?: string;
+  error?: string;
+};
+
+type CookieManagerData = {
+  name?: string;
+  value?: string;
+  cookies?: { name: string; value: string }[];
 };
 
 const defaultPayloads = [
@@ -1572,7 +1803,2014 @@ const JsonMinifierTool = ({
   );
 };
 
-const toolRegistry: ToolRegistryEntry[] = [
+const JsonPrettifierTool = ({
+  data,
+  onChange
+}: {
+  data: JsonPrettifierData | undefined;
+  onChange: (next: JsonPrettifierData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const output = data?.output ?? '';
+  const error = data?.error ?? '';
+
+  const handlePrettify = () => {
+    try {
+      const parsed = JSON.parse(input);
+      const prettified = JSON.stringify(parsed, null, 2);
+      onChange({ input, output: prettified, error: '' });
+    } catch (err) {
+      onChange({
+        input,
+        output: '',
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">JSON Prettifier</div>
+      <textarea
+        value={input}
+        onChange={(event) => onChange({ input: event.target.value, output, error })}
+        rows={6}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste JSON here..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handlePrettify}
+          disabled={!input.trim()}
+          className="flex-1 rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          Prettify
+        </button>
+        <button
+          type="button"
+          onClick={() => navigator.clipboard.writeText(output)}
+          disabled={!output}
+          className="flex-1 rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          Copy
+        </button>
+      </div>
+      <textarea
+        value={output}
+        readOnly
+        rows={6}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Prettified output..."
+      />
+    </div>
+  );
+};
+
+const JsonSchemaValidatorTool = ({
+  data,
+  onChange
+}: {
+  data: JsonSchemaValidatorData | undefined;
+  onChange: (next: JsonSchemaValidatorData) => void;
+}) => {
+  const schema = data?.schema ?? '';
+  const input = data?.input ?? '';
+  const issues = data?.issues ?? [];
+  const error = data?.error ?? '';
+
+  const handleValidate = () => {
+    try {
+      const parsedSchema = JSON.parse(schema);
+      const parsedInput = JSON.parse(input);
+      const result = validateJsonSchema(parsedSchema, parsedInput);
+      onChange({
+        schema,
+        input,
+        issues: result.map((issue) => `${issue.path}: ${issue.message}`),
+        error: ''
+      });
+    } catch (err) {
+      onChange({
+        schema,
+        input,
+        issues: [],
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">JSON Schema Validator</div>
+      <textarea
+        value={schema}
+        onChange={(event) =>
+          onChange({ schema: event.target.value, input, issues, error })
+        }
+        rows={5}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste JSON schema..."
+      />
+      <textarea
+        value={input}
+        onChange={(event) =>
+          onChange({ schema, input: event.target.value, issues, error })
+        }
+        rows={5}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste JSON data..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleValidate}
+        disabled={!schema.trim() || !input.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Validate
+      </button>
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-[11px] text-slate-300 max-h-32 overflow-y-auto no-scrollbar">
+        {issues.length === 0 ? 'No validation issues found.' : issues.join('\n')}
+      </div>
+    </div>
+  );
+};
+
+const JsonPathTesterTool = ({
+  data,
+  onChange
+}: {
+  data: JsonPathTesterData | undefined;
+  onChange: (next: JsonPathTesterData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const path = data?.path ?? '$';
+  const output = data?.output ?? '';
+  const error = data?.error ?? '';
+
+  const handleRun = () => {
+    try {
+      const parsed = JSON.parse(input);
+      const result = resolveJsonPath(parsed, path);
+      onChange({
+        input,
+        path,
+        output: JSON.stringify(result, null, 2),
+        error: ''
+      });
+    } catch (err) {
+      onChange({
+        input,
+        path,
+        output: '',
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">JSON Path Tester</div>
+      <input
+        type="text"
+        value={path}
+        onChange={(event) => onChange({ input, path: event.target.value, output, error })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="$.items[0].name"
+      />
+      <textarea
+        value={input}
+        onChange={(event) =>
+          onChange({ input: event.target.value, path, output, error })
+        }
+        rows={6}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste JSON data..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleRun}
+        disabled={!input.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Run Path
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Result..."
+      />
+    </div>
+  );
+};
+
+const JsonDiffTool = ({
+  data,
+  onChange
+}: {
+  data: JsonDiffData | undefined;
+  onChange: (next: JsonDiffData) => void;
+}) => {
+  const left = data?.left ?? '';
+  const right = data?.right ?? '';
+  const diff = data?.diff ?? [];
+  const error = data?.error ?? '';
+
+  const handleDiff = () => {
+    try {
+      const leftParsed = JSON.parse(left);
+      const rightParsed = JSON.parse(right);
+      const result = diffJson(leftParsed, rightParsed);
+      onChange({ left, right, diff: result, error: '' });
+    } catch (err) {
+      onChange({
+        left,
+        right,
+        diff: [],
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">JSON Diff</div>
+      <textarea
+        value={left}
+        onChange={(event) => onChange({ left: event.target.value, right, diff, error })}
+        rows={4}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Left JSON..."
+      />
+      <textarea
+        value={right}
+        onChange={(event) => onChange({ left, right: event.target.value, diff, error })}
+        rows={4}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Right JSON..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleDiff}
+        disabled={!left.trim() || !right.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Compare
+      </button>
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-[11px] text-slate-300 max-h-32 overflow-y-auto no-scrollbar">
+        {diff.length === 0 ? 'No differences found.' : diff.join('\n')}
+      </div>
+    </div>
+  );
+};
+
+const SqlFormatterTool = ({
+  data,
+  onChange
+}: {
+  data: SqlFormatterData | undefined;
+  onChange: (next: SqlFormatterData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const output = data?.output ?? '';
+
+  const handleFormat = () => {
+    onChange({ input, output: formatSql(input) });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">SQL Formatter</div>
+      <textarea
+        value={input}
+        onChange={(event) => onChange({ input: event.target.value, output })}
+        rows={6}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste SQL here..."
+      />
+      <button
+        type="button"
+        onClick={handleFormat}
+        disabled={!input.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Format SQL
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={6}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Formatted output..."
+      />
+    </div>
+  );
+};
+
+const SqlQueryBuilderTool = ({
+  data,
+  onChange
+}: {
+  data: SqlQueryBuilderData | undefined;
+  onChange: (next: SqlQueryBuilderData) => void;
+}) => {
+  const table = data?.table ?? '';
+  const columns = data?.columns ?? '';
+  const where = data?.where ?? '';
+  const orderBy = data?.orderBy ?? '';
+  const limit = data?.limit ?? '';
+  const output = data?.output ?? '';
+
+  const handleBuild = () => {
+    const query = buildSqlQuery({
+      table,
+      columns: columns
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+      where,
+      orderBy,
+      limit
+    });
+    onChange({ table, columns, where, orderBy, limit, output: query });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">SQL Query Builder</div>
+      <input
+        type="text"
+        value={table}
+        onChange={(event) =>
+          onChange({ table: event.target.value, columns, where, orderBy, limit, output })
+        }
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="Table name"
+      />
+      <input
+        type="text"
+        value={columns}
+        onChange={(event) =>
+          onChange({ table, columns: event.target.value, where, orderBy, limit, output })
+        }
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="Columns (comma separated)"
+      />
+      <input
+        type="text"
+        value={where}
+        onChange={(event) =>
+          onChange({ table, columns, where: event.target.value, orderBy, limit, output })
+        }
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="WHERE clause"
+      />
+      <input
+        type="text"
+        value={orderBy}
+        onChange={(event) =>
+          onChange({ table, columns, where, orderBy: event.target.value, limit, output })
+        }
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="ORDER BY clause"
+      />
+      <input
+        type="text"
+        value={limit}
+        onChange={(event) =>
+          onChange({ table, columns, where, orderBy, limit: event.target.value, output })
+        }
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="LIMIT"
+      />
+      <button
+        type="button"
+        onClick={handleBuild}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Build Query
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="SQL output..."
+      />
+    </div>
+  );
+};
+
+const SqlToCsvTool = ({
+  data,
+  onChange
+}: {
+  data: SqlToCsvData | undefined;
+  onChange: (next: SqlToCsvData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const output = data?.output ?? '';
+  const error = data?.error ?? '';
+
+  const handleConvert = () => {
+    try {
+      const parsed = JSON.parse(input);
+      const csv = jsonArrayToCsv(parsed);
+      if (!csv) {
+        onChange({ input, output: '', error: 'Input must be a JSON array.' });
+        return;
+      }
+      onChange({ input, output: csv, error: '' });
+    } catch (err) {
+      onChange({
+        input,
+        output: '',
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">SQL to CSV</div>
+      <textarea
+        value={input}
+        onChange={(event) => onChange({ input: event.target.value, output, error })}
+        rows={6}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste JSON array from SQL result..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handleConvert}
+          disabled={!input.trim()}
+          className="flex-1 rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          Convert
+        </button>
+        <button
+          type="button"
+          onClick={() => navigator.clipboard.writeText(output)}
+          disabled={!output}
+          className="flex-1 rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          Copy
+        </button>
+      </div>
+      <textarea
+        value={output}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="CSV output..."
+      />
+    </div>
+  );
+};
+
+const IndexAdvisorTool = ({
+  data,
+  onChange
+}: {
+  data: IndexAdvisorData | undefined;
+  onChange: (next: IndexAdvisorData) => void;
+}) => {
+  const table = data?.table ?? '';
+  const columns = data?.columns ?? '';
+  const unique = data?.unique ?? false;
+  const output = data?.output ?? '';
+
+  const handleSuggest = () => {
+    const result = suggestIndex(
+      table,
+      columns
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+      unique
+    );
+    onChange({ table, columns, unique, output: result });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Index Advisor</div>
+      <input
+        type="text"
+        value={table}
+        onChange={(event) =>
+          onChange({ table: event.target.value, columns, unique, output })
+        }
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="Table name"
+      />
+      <input
+        type="text"
+        value={columns}
+        onChange={(event) =>
+          onChange({ table, columns: event.target.value, unique, output })
+        }
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="Columns (comma separated)"
+      />
+      <label className="flex items-center gap-2 text-[11px] text-slate-400">
+        <input
+          type="checkbox"
+          checked={unique}
+          onChange={(event) =>
+            onChange({ table, columns, unique: event.target.checked, output })
+          }
+          className="h-3 w-3 rounded border border-slate-700 bg-slate-800 text-blue-500 focus:ring-0 focus:outline-none"
+        />
+        Unique index
+      </label>
+      <button
+        type="button"
+        onClick={handleSuggest}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Suggest Index
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={3}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Suggested index..."
+      />
+    </div>
+  );
+};
+
+const BsonViewerTool = ({
+  data,
+  onChange
+}: {
+  data: BsonViewerData | undefined;
+  onChange: (next: BsonViewerData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const output = data?.output ?? '';
+  const error = data?.error ?? '';
+
+  const handleParse = () => {
+    try {
+      const parsed = JSON.parse(input);
+      const normalized = normalizeBsonValue(parsed);
+      onChange({
+        input,
+        output: JSON.stringify(normalized, null, 2),
+        error: ''
+      });
+    } catch (err) {
+      onChange({
+        input,
+        output: '',
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">BSON Viewer</div>
+      <textarea
+        value={input}
+        onChange={(event) => onChange({ input: event.target.value, output, error })}
+        rows={6}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste BSON (extended JSON)..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleParse}
+        disabled={!input.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Normalize
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={5}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Normalized output..."
+      />
+    </div>
+  );
+};
+
+const MongoQueryBuilderTool = ({
+  data,
+  onChange
+}: {
+  data: MongoQueryBuilderData | undefined;
+  onChange: (next: MongoQueryBuilderData) => void;
+}) => {
+  const collection = data?.collection ?? '';
+  const filter = data?.filter ?? '{}';
+  const projection = data?.projection ?? '{}';
+  const sort = data?.sort ?? '{}';
+  const limit = data?.limit ?? '';
+  const output = data?.output ?? '';
+  const error = data?.error ?? '';
+
+  const handleBuild = () => {
+    try {
+      JSON.parse(filter);
+      JSON.parse(projection);
+      JSON.parse(sort);
+      const limitValue = limit.trim() ? `.limit(${limit.trim()})` : '';
+      const query = `db.${collection || 'collection'}.find(${filter}, ${projection}).sort(${sort})${limitValue}`;
+      onChange({ collection, filter, projection, sort, limit, output: query, error: '' });
+    } catch (err) {
+      onChange({
+        collection,
+        filter,
+        projection,
+        sort,
+        limit,
+        output: '',
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Mongo Query Builder</div>
+      <input
+        type="text"
+        value={collection}
+        onChange={(event) =>
+          onChange({ collection: event.target.value, filter, projection, sort, limit, output, error })
+        }
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="Collection name"
+      />
+      <textarea
+        value={filter}
+        onChange={(event) =>
+          onChange({ collection, filter: event.target.value, projection, sort, limit, output, error })
+        }
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder='Filter (e.g. {"status":"active"})'
+      />
+      <textarea
+        value={projection}
+        onChange={(event) =>
+          onChange({ collection, filter, projection: event.target.value, sort, limit, output, error })
+        }
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder='Projection (e.g. {"name":1})'
+      />
+      <textarea
+        value={sort}
+        onChange={(event) =>
+          onChange({ collection, filter, projection, sort: event.target.value, limit, output, error })
+        }
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder='Sort (e.g. {"createdAt":-1})'
+      />
+      <input
+        type="text"
+        value={limit}
+        onChange={(event) =>
+          onChange({ collection, filter, projection, sort, limit: event.target.value, output, error })
+        }
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="Limit"
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleBuild}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Build Query
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={3}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Mongo query output..."
+      />
+    </div>
+  );
+};
+
+const DynamoDbConverterTool = ({
+  data,
+  onChange
+}: {
+  data: DynamoDbConverterData | undefined;
+  onChange: (next: DynamoDbConverterData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const output = data?.output ?? '';
+  const mode = data?.mode ?? 'toDynamo';
+  const error = data?.error ?? '';
+
+  const handleConvert = () => {
+    try {
+      const parsed = JSON.parse(input);
+      const result = mode === 'toDynamo' ? toDynamo(parsed) : fromDynamo(parsed);
+      onChange({ input, output: JSON.stringify(result, null, 2), mode, error: '' });
+    } catch (err) {
+      onChange({
+        input,
+        output: '',
+        mode,
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">DynamoDB JSON Converter</div>
+      <div className="flex gap-2">
+        {(['toDynamo', 'fromDynamo'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange({ input, output, mode: option, error })}
+            className={`flex-1 rounded px-2 py-1 text-[11px] border transition-colors ${
+              mode === option
+                ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+            }`}
+          >
+            {option === 'toDynamo' ? 'To Dynamo' : 'From Dynamo'}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={input}
+        onChange={(event) => onChange({ input: event.target.value, output, mode, error })}
+        rows={5}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste JSON..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleConvert}
+        disabled={!input.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Convert
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={5}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Converted output..."
+      />
+    </div>
+  );
+};
+
+const FirebaseRulesLinterTool = ({
+  data,
+  onChange
+}: {
+  data: FirebaseRulesLinterData | undefined;
+  onChange: (next: FirebaseRulesLinterData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const warnings = data?.warnings ?? [];
+  const error = data?.error ?? '';
+
+  const handleLint = () => {
+    try {
+      const parsed = JSON.parse(input);
+      const result = lintFirebaseRules(parsed);
+      onChange({ input, warnings: result, error: '' });
+    } catch (err) {
+      onChange({
+        input,
+        warnings: [],
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Firebase Rules Linter</div>
+      <textarea
+        value={input}
+        onChange={(event) => onChange({ input: event.target.value, warnings, error })}
+        rows={6}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste rules JSON..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleLint}
+        disabled={!input.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Lint Rules
+      </button>
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-[11px] text-slate-300 max-h-32 overflow-y-auto no-scrollbar">
+        {warnings.length === 0 ? 'No warnings.' : warnings.join('\n')}
+      </div>
+    </div>
+  );
+};
+
+const CouchDbDocExplorerTool = ({
+  data,
+  onChange
+}: {
+  data: CouchDbDocExplorerData | undefined;
+  onChange: (next: CouchDbDocExplorerData) => void;
+}) => {
+  const url = data?.url ?? '';
+  const output = data?.output ?? '';
+  const error = data?.error ?? '';
+
+  const handleFetch = async () => {
+    const result = await chrome.runtime.sendMessage({
+      type: 'xcalibr-couchdb-fetch',
+      payload: { url }
+    });
+    onChange({
+      url,
+      output: result?.output ?? '',
+      error: result?.error ?? ''
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">CouchDB Doc Explorer</div>
+      <input
+        type="text"
+        value={url}
+        onChange={(event) => onChange({ url: event.target.value, output, error })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="https://db.example.com/mydb/docid"
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleFetch}
+        disabled={!url.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Fetch Doc
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={6}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Document output..."
+      />
+    </div>
+  );
+};
+
+const DebuggerTool = ({
+  data,
+  onClear
+}: {
+  data: DebuggerData | undefined;
+  onClear: () => void;
+}) => {
+  const entries = data?.entries ?? [];
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">Debugger</div>
+        <button
+          type="button"
+          onClick={onClear}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Clear
+        </button>
+      </div>
+      {entries.length === 0 ? (
+        <div className="text-[11px] text-slate-500">No errors captured.</div>
+      ) : (
+        <div className="max-h-40 overflow-y-auto no-scrollbar space-y-2 text-[11px] text-slate-300">
+          {entries.map((entry, index) => (
+            <div key={`${entry.time}-${index}`} className="rounded border border-slate-800 bg-slate-900/60 px-2 py-1">
+              <div className="text-[10px] text-slate-500">
+                {new Date(entry.time).toLocaleTimeString()} • {entry.source}
+              </div>
+              <div className="break-words">{entry.message}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const StorageExplorerTool = ({
+  data,
+  onRefresh
+}: {
+  data: StorageExplorerData | undefined;
+  onRefresh: () => void;
+}) => {
+  const local = data?.local ?? [];
+  const session = data?.session ?? [];
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">Storage Explorer</div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+      <div className="text-[11px] text-slate-500">Local Storage</div>
+      <div className="max-h-24 overflow-y-auto no-scrollbar space-y-1 text-[11px] text-slate-300">
+        {local.length === 0 ? 'No entries.' : null}
+        {local.map((entry) => (
+          <div key={`local-${entry.key}`} className="break-words">
+            {entry.key}: {entry.value}
+          </div>
+        ))}
+      </div>
+      <div className="text-[11px] text-slate-500">Session Storage</div>
+      <div className="max-h-24 overflow-y-auto no-scrollbar space-y-1 text-[11px] text-slate-300">
+        {session.length === 0 ? 'No entries.' : null}
+        {session.map((entry) => (
+          <div key={`session-${entry.key}`} className="break-words">
+            {entry.key}: {entry.value}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SnippetRunnerTool = ({
+  data,
+  onChange
+}: {
+  data: SnippetRunnerData | undefined;
+  onChange: (next: SnippetRunnerData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const output = data?.output ?? '';
+  const error = data?.error ?? '';
+
+  const handleRun = () => {
+    try {
+      // eslint-disable-next-line no-new-func
+      const result = new Function(input)();
+      onChange({ input, output: String(result ?? ''), error: '' });
+    } catch (err) {
+      onChange({
+        input,
+        output: '',
+        error: err instanceof Error ? err.message : 'Execution failed'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Console Snippet Runner</div>
+      <textarea
+        value={input}
+        onChange={(event) => onChange({ input: event.target.value, output, error })}
+        rows={5}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="JavaScript snippet..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleRun}
+        disabled={!input.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Run Snippet
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={3}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Output..."
+      />
+    </div>
+  );
+};
+
+const LighthouseSnapshotTool = ({
+  data,
+  onCapture
+}: {
+  data: LighthouseSnapshotData | undefined;
+  onCapture: () => void;
+}) => {
+  const metrics = data?.metrics ?? [];
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">Lighthouse Snapshot</div>
+        <button
+          type="button"
+          onClick={onCapture}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Capture
+        </button>
+      </div>
+      <div className="space-y-1 text-[11px] text-slate-300">
+        {metrics.length === 0 ? (
+          <div className="text-slate-500">No snapshot yet.</div>
+        ) : (
+          metrics.map((metric) => (
+            <div key={metric.label} className="flex items-center justify-between">
+              <span className="text-slate-400">{metric.label}</span>
+              <span>{metric.value}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+const CssGridGeneratorTool = ({
+  data,
+  onChange
+}: {
+  data: CssGridGeneratorData | undefined;
+  onChange: (next: CssGridGeneratorData) => void;
+}) => {
+  const columns = data?.columns ?? 'repeat(3, 1fr)';
+  const rows = data?.rows ?? 'auto';
+  const gap = data?.gap ?? '16px';
+  const output = data?.output ?? '';
+
+  const handleGenerate = () => {
+    const css = `display: grid;\n grid-template-columns: ${columns};\n grid-template-rows: ${rows};\n gap: ${gap};`;
+    onChange({ columns, rows, gap, output: css });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">CSS Grid Generator</div>
+      <input
+        type="text"
+        value={columns}
+        onChange={(event) => onChange({ columns: event.target.value, rows, gap, output })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="Columns (e.g. repeat(3, 1fr))"
+      />
+      <input
+        type="text"
+        value={rows}
+        onChange={(event) => onChange({ columns, rows: event.target.value, gap, output })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="Rows (e.g. auto)"
+      />
+      <input
+        type="text"
+        value={gap}
+        onChange={(event) => onChange({ columns, rows, gap: event.target.value, output })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="Gap (e.g. 16px)"
+      />
+      <button
+        type="button"
+        onClick={handleGenerate}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Generate CSS
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="CSS output..."
+      />
+    </div>
+  );
+};
+
+const FlexboxInspectorTool = ({
+  data,
+  onChange
+}: {
+  data: FlexboxInspectorData | undefined;
+  onChange: (next: FlexboxInspectorData) => void;
+}) => {
+  const selector = data?.selector ?? '';
+  const output = data?.output ?? [];
+
+  const handleInspect = () => {
+    const element = document.querySelector(selector);
+    if (!element) {
+      onChange({ selector, output: ['Element not found.'] });
+      return;
+    }
+    const style = window.getComputedStyle(element);
+    onChange({
+      selector,
+      output: [
+        `display: ${style.display}`,
+        `flex-direction: ${style.flexDirection}`,
+        `justify-content: ${style.justifyContent}`,
+        `align-items: ${style.alignItems}`,
+        `gap: ${style.gap}`
+      ]
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Flexbox Inspector</div>
+      <input
+        type="text"
+        value={selector}
+        onChange={(event) => onChange({ selector: event.target.value, output })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="CSS selector (e.g. .container)"
+      />
+      <button
+        type="button"
+        onClick={handleInspect}
+        disabled={!selector.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Inspect
+      </button>
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-[11px] text-slate-300">
+        {output.length === 0 ? 'No data yet.' : output.join('\n')}
+      </div>
+    </div>
+  );
+};
+
+const FontIdentifierTool = ({
+  data,
+  onChange
+}: {
+  data: FontIdentifierData | undefined;
+  onChange: (next: FontIdentifierData) => void;
+}) => {
+  const selector = data?.selector ?? '';
+  const output = data?.output ?? [];
+
+  const handleInspect = () => {
+    const element = document.querySelector(selector);
+    if (!element) {
+      onChange({ selector, output: ['Element not found.'] });
+      return;
+    }
+    const style = window.getComputedStyle(element);
+    onChange({
+      selector,
+      output: [
+        `font-family: ${style.fontFamily}`,
+        `font-size: ${style.fontSize}`,
+        `font-weight: ${style.fontWeight}`,
+        `line-height: ${style.lineHeight}`
+      ]
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Font Identifier</div>
+      <input
+        type="text"
+        value={selector}
+        onChange={(event) => onChange({ selector: event.target.value, output })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="CSS selector (e.g. h1)"
+      />
+      <button
+        type="button"
+        onClick={handleInspect}
+        disabled={!selector.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Inspect
+      </button>
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-[11px] text-slate-300">
+        {output.length === 0 ? 'No data yet.' : output.join('\n')}
+      </div>
+    </div>
+  );
+};
+
+const ContrastCheckerTool = ({
+  data,
+  onChange
+}: {
+  data: ContrastCheckerData | undefined;
+  onChange: (next: ContrastCheckerData) => void;
+}) => {
+  const foreground = data?.foreground ?? '#0f172a';
+  const background = data?.background ?? '#ffffff';
+  const ratio = data?.ratio ?? '';
+  const status = data?.status ?? '';
+
+  const handleCheck = () => {
+    const result = contrastRatio(foreground, background);
+    if (!result) {
+      onChange({ foreground, background, ratio: '', status: 'Invalid colors.' });
+      return;
+    }
+    const rounded = result.toFixed(2);
+    const passAA = result >= 4.5;
+    const passAAA = result >= 7;
+    onChange({
+      foreground,
+      background,
+      ratio: rounded,
+      status: passAAA ? 'AAA Pass' : passAA ? 'AA Pass' : 'Fail'
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Contrast Checker</div>
+      <div className="flex gap-2">
+        <input
+          type="color"
+          value={foreground}
+          onChange={(event) =>
+            onChange({ foreground: event.target.value, background, ratio, status })
+          }
+          className="h-10 w-10 rounded border border-slate-700 bg-slate-800"
+        />
+        <input
+          type="color"
+          value={background}
+          onChange={(event) =>
+            onChange({ foreground, background: event.target.value, ratio, status })
+          }
+          className="h-10 w-10 rounded border border-slate-700 bg-slate-800"
+        />
+        <div className="flex-1 text-[11px] text-slate-500 flex items-center">
+          Ratio: {ratio || '—'} ({status || '—'})
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={handleCheck}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Check Contrast
+      </button>
+    </div>
+  );
+};
+
+const ResponsivePreviewTool = ({
+  data,
+  onChange
+}: {
+  data: ResponsivePreviewData | undefined;
+  onChange: (next: ResponsivePreviewData) => void;
+}) => {
+  const width = data?.width ?? '375';
+  const height = data?.height ?? '812';
+  const status = data?.status ?? '';
+
+  const handleOpen = () => {
+    const w = Number(width);
+    const h = Number(height);
+    if (!Number.isFinite(w) || !Number.isFinite(h)) {
+      onChange({ width, height, status: 'Invalid size.' });
+      return;
+    }
+    window.open(window.location.href, '_blank', `width=${w},height=${h}`);
+    onChange({ width, height, status: 'Opened preview window.' });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Responsive Preview</div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={width}
+          onChange={(event) => onChange({ width: event.target.value, height, status })}
+          className="w-1/2 rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+          placeholder="Width"
+        />
+        <input
+          type="text"
+          value={height}
+          onChange={(event) => onChange({ width, height: event.target.value, status })}
+          className="w-1/2 rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+          placeholder="Height"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={handleOpen}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Open Preview Window
+      </button>
+      {status ? <div className="text-[11px] text-slate-500">{status}</div> : null}
+    </div>
+  );
+};
+
+const AnimationPreviewTool = ({
+  data,
+  onChange
+}: {
+  data: AnimationPreviewData | undefined;
+  onChange: (next: AnimationPreviewData) => void;
+}) => {
+  const css = data?.css ?? 'animation: pulse 1.2s ease-in-out infinite;';
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Animation Preview</div>
+      <textarea
+        value={css}
+        onChange={(event) => onChange({ css: event.target.value })}
+        rows={4}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="CSS animation..."
+      />
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-4">
+        <div className="xcalibr-animation-preview h-12 w-12 rounded bg-blue-500/70" />
+        <style>{`
+          @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+          .xcalibr-animation-preview { ${css} }
+        `}</style>
+      </div>
+    </div>
+  );
+};
+
+const SvgOptimizerTool = ({
+  data,
+  onChange
+}: {
+  data: SvgOptimizerData | undefined;
+  onChange: (next: SvgOptimizerData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const output = data?.output ?? '';
+  const handleOptimize = () => onChange({ input, output: optimizeSvg(input) });
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">SVG Optimizer</div>
+      <textarea
+        value={input}
+        onChange={(event) => onChange({ input: event.target.value, output })}
+        rows={5}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="<svg>...</svg>"
+      />
+      <button
+        type="button"
+        onClick={handleOptimize}
+        disabled={!input.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Optimize SVG
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={5}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Optimized output..."
+      />
+    </div>
+  );
+};
+
+const AccessibilityAuditTool = ({
+  data,
+  onRun
+}: {
+  data: AccessibilityAuditData | undefined;
+  onRun: () => void;
+}) => {
+  const issues = data?.issues ?? [];
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">Accessibility Audit</div>
+        <button
+          type="button"
+          onClick={onRun}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Run Audit
+        </button>
+      </div>
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-[11px] text-slate-300 max-h-32 overflow-y-auto no-scrollbar">
+        {issues.length === 0 ? 'No audit results yet.' : issues.join('\n')}
+      </div>
+    </div>
+  );
+};
+
+const JwtDebuggerTool = ({
+  data,
+  onChange
+}: {
+  data: JwtDebuggerData | undefined;
+  onChange: (next: JwtDebuggerData) => void;
+}) => {
+  const token = data?.token ?? '';
+  const header = data?.header ?? '';
+  const payload = data?.payload ?? '';
+  const error = data?.error ?? '';
+
+  const handleDecode = () => {
+    const result = decodeJwt(token);
+    if (result.error) {
+      onChange({ token, header: '', payload: '', error: result.error });
+      return;
+    }
+    onChange({
+      token,
+      header: JSON.stringify(result.header, null, 2),
+      payload: JSON.stringify(result.payload, null, 2),
+      error: ''
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">JWT Debugger</div>
+      <textarea
+        value={token}
+        onChange={(event) => onChange({ token: event.target.value, header, payload, error })}
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste JWT..."
+      />
+      {error ? <div className="text-[11px] text-rose-300">{error}</div> : null}
+      <button
+        type="button"
+        onClick={handleDecode}
+        disabled={!token.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Decode Token
+      </button>
+      <textarea
+        value={header}
+        readOnly
+        rows={3}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Header..."
+      />
+      <textarea
+        value={payload}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Payload..."
+      />
+    </div>
+  );
+};
+
+const RegexTesterTool = ({
+  data,
+  onChange
+}: {
+  data: RegexTesterData | undefined;
+  onChange: (next: RegexTesterData) => void;
+}) => {
+  const pattern = data?.pattern ?? '';
+  const flags = data?.flags ?? 'g';
+  const text = data?.text ?? '';
+  const matches = data?.matches ?? [];
+  const error = data?.error ?? '';
+
+  const handleTest = () => {
+    const result = runRegexTest(pattern, flags, text);
+    onChange({ pattern, flags, text, matches: result.matches, error: result.error ?? '' });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Regex Tester</div>
+      <input
+        type="text"
+        value={pattern}
+        onChange={(event) => onChange({ pattern: event.target.value, flags, text, matches, error })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+        placeholder="Regex pattern"
+      />
+      <input
+        type="text"
+        value={flags}
+        onChange={(event) => onChange({ pattern, flags: event.target.value, text, matches, error })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+        placeholder="Flags (e.g. gi)"
+      />
+      <textarea
+        value={text}
+        onChange={(event) => onChange({ pattern, flags, text: event.target.value, matches, error })}
+        rows={4}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+        placeholder="Test string..."
+      />
+      {error ? <div className="text-[11px] text-rose-300">{error}</div> : null}
+      <button
+        type="button"
+        onClick={handleTest}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors"
+      >
+        Run Test
+      </button>
+      <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-[11px] text-slate-300 max-h-24 overflow-y-auto no-scrollbar">
+        {matches.length === 0 ? 'No matches.' : matches.join('\n')}
+      </div>
+    </div>
+  );
+};
+
+const ApiResponseViewerTool = ({
+  data,
+  onChange
+}: {
+  data: ApiResponseViewerData | undefined;
+  onChange: (next: ApiResponseViewerData) => void;
+}) => {
+  const url = data?.url ?? '';
+  const response = data?.response ?? '';
+  const status = data?.status ?? '';
+  const error = data?.error ?? '';
+
+  const handleFetch = async () => {
+    const result = await chrome.runtime.sendMessage({
+      type: 'xcalibr-http-request',
+      payload: { url, method: 'GET', headers: {} }
+    });
+    if (result?.error) {
+      onChange({ url, response: '', status: '', error: result.error });
+      return;
+    }
+    onChange({
+      url,
+      response: result.body ?? '',
+      status: `${result.status} ${result.statusText ?? ''}`.trim(),
+      error: ''
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">API Response Viewer</div>
+      <input
+        type="text"
+        value={url}
+        onChange={(event) => onChange({ url: event.target.value, response, status, error })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="https://api.example.com"
+      />
+      {error ? <div className="text-[11px] text-rose-300">{error}</div> : null}
+      <button
+        type="button"
+        onClick={handleFetch}
+        disabled={!url.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Fetch Response
+      </button>
+      {status ? <div className="text-[11px] text-slate-500">Status: {status}</div> : null}
+      <textarea
+        value={response}
+        readOnly
+        rows={5}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Response body..."
+      />
+    </div>
+  );
+};
+
+const GraphqlExplorerTool = ({
+  data,
+  onChange
+}: {
+  data: GraphqlExplorerData | undefined;
+  onChange: (next: GraphqlExplorerData) => void;
+}) => {
+  const url = data?.url ?? '';
+  const query = data?.query ?? '';
+  const variables = data?.variables ?? '';
+  const response = data?.response ?? '';
+  const error = data?.error ?? '';
+
+  const handleRun = async () => {
+    const vars = variables.trim() ? safeParseJson(variables) : { value: {}, error: null };
+    if (vars.error) {
+      onChange({ url, query, variables, response: '', error: vars.error });
+      return;
+    }
+    const result = await chrome.runtime.sendMessage({
+      type: 'xcalibr-http-request',
+      payload: {
+        url,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables: vars.value })
+      }
+    });
+    if (result?.error) {
+      onChange({ url, query, variables, response: '', error: result.error });
+      return;
+    }
+    onChange({
+      url,
+      query,
+      variables,
+      response: result.body ?? '',
+      error: ''
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">GraphQL Explorer</div>
+      <input
+        type="text"
+        value={url}
+        onChange={(event) => onChange({ url: event.target.value, query, variables, response, error })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="https://api.example.com/graphql"
+      />
+      <textarea
+        value={query}
+        onChange={(event) => onChange({ url, query: event.target.value, variables, response, error })}
+        rows={4}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+        placeholder="GraphQL query..."
+      />
+      <textarea
+        value={variables}
+        onChange={(event) => onChange({ url, query, variables: event.target.value, response, error })}
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+        placeholder="Variables JSON..."
+      />
+      {error ? <div className="text-[11px] text-rose-300">{error}</div> : null}
+      <button
+        type="button"
+        onClick={handleRun}
+        disabled={!url.trim() || !query.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Run Query
+      </button>
+      <textarea
+        value={response}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Response..."
+      />
+    </div>
+  );
+};
+
+const RestClientTool = ({
+  data,
+  onChange
+}: {
+  data: RestClientData | undefined;
+  onChange: (next: RestClientData) => void;
+}) => {
+  const url = data?.url ?? '';
+  const method = data?.method ?? 'GET';
+  const headers = data?.headers ?? '';
+  const body = data?.body ?? '';
+  const response = data?.response ?? '';
+  const error = data?.error ?? '';
+
+  const handleSend = async () => {
+    const headerEntries = parseHeadersInput(headers).reduce<Record<string, string>>((acc, entry) => {
+      acc[entry.name] = entry.value;
+      return acc;
+    }, {});
+    const result = await chrome.runtime.sendMessage({
+      type: 'xcalibr-http-request',
+      payload: { url, method, headers: headerEntries, body }
+    });
+    if (result?.error) {
+      onChange({ url, method, headers, body, response: '', error: result.error });
+      return;
+    }
+    onChange({
+      url,
+      method,
+      headers,
+      body,
+      response: result.body ?? '',
+      error: ''
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">REST Client</div>
+      <input
+        type="text"
+        value={url}
+        onChange={(event) => onChange({ url: event.target.value, method, headers, body, response, error })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="https://api.example.com"
+      />
+      <div className="flex gap-2">
+        {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange({ url, method: option, headers, body, response, error })}
+            className={`flex-1 rounded px-2 py-1 text-[11px] border transition-colors ${
+              method === option
+                ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={headers}
+        onChange={(event) => onChange({ url, method, headers: event.target.value, body, response, error })}
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+        placeholder="Header: value"
+      />
+      <textarea
+        value={body}
+        onChange={(event) => onChange({ url, method, headers, body: event.target.value, response, error })}
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+        placeholder="Request body"
+      />
+      {error ? <div className="text-[11px] text-rose-300">{error}</div> : null}
+      <button
+        type="button"
+        onClick={handleSend}
+        disabled={!url.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Send Request
+      </button>
+      <textarea
+        value={response}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Response..."
+      />
+    </div>
+  );
+};
+
+const OAuthTokenInspectorTool = ({
+  data,
+  onChange
+}: {
+  data: OAuthTokenInspectorData | undefined;
+  onChange: (next: OAuthTokenInspectorData) => void;
+}) => {
+  const token = data?.token ?? '';
+  const output = data?.output ?? '';
+  const error = data?.error ?? '';
+
+  const handleInspect = () => {
+    const result = decodeJwt(token);
+    if (result.error) {
+      onChange({ token, output: '', error: result.error });
+      return;
+    }
+    const payload = result.payload ?? {};
+    onChange({ token, output: JSON.stringify(payload, null, 2), error: '' });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">OAuth Token Inspector</div>
+      <textarea
+        value={token}
+        onChange={(event) => onChange({ token: event.target.value, output, error })}
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+        placeholder="Paste access token..."
+      />
+      {error ? <div className="text-[11px] text-rose-300">{error}</div> : null}
+      <button
+        type="button"
+        onClick={handleInspect}
+        disabled={!token.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Inspect Token
+      </button>
+      <textarea
+        value={output}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Token payload..."
+      />
+    </div>
+  );
+};
+
+const WebhookTesterTool = ({
+  data,
+  onChange
+}: {
+  data: WebhookTesterData | undefined;
+  onChange: (next: WebhookTesterData) => void;
+}) => {
+  const url = data?.url ?? '';
+  const body = data?.body ?? '';
+  const response = data?.response ?? '';
+  const error = data?.error ?? '';
+
+  const handleSend = async () => {
+    const result = await chrome.runtime.sendMessage({
+      type: 'xcalibr-http-request',
+      payload: {
+        url,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      }
+    });
+    if (result?.error) {
+      onChange({ url, body, response: '', error: result.error });
+      return;
+    }
+    onChange({ url, body, response: result.body ?? '', error: '' });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Webhook Tester</div>
+      <input
+        type="text"
+        value={url}
+        onChange={(event) => onChange({ url: event.target.value, body, response, error })}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+        placeholder="https://webhook.site/..."
+      />
+      <textarea
+        value={body}
+        onChange={(event) => onChange({ url, body: event.target.value, response, error })}
+        rows={3}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+        placeholder='{"event":"ping"}'
+      />
+      {error ? <div className="text-[11px] text-rose-300">{error}</div> : null}
+      <button
+        type="button"
+        onClick={handleSend}
+        disabled={!url.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Send Webhook
+      </button>
+      <textarea
+        value={response}
+        readOnly
+        rows={4}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Response..."
+      />
+    </div>
+  );
+};
+
+const CookieManagerTool = ({
+  data,
+  onChange,
+  onRefresh
+}: {
+  data: CookieManagerData | undefined;
+  onChange: (next: CookieManagerData) => void;
+  onRefresh: () => void;
+}) => {
+  const name = data?.name ?? '';
+  const value = data?.value ?? '';
+  const cookies = data?.cookies ?? [];
+
+  const handleSet = () => {
+    if (!name.trim()) return;
+    document.cookie = `${name}=${value}; path=/`;
+    onRefresh();
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-slate-200">Cookie Manager</div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={name}
+          onChange={(event) => onChange({ name: event.target.value, value, cookies })}
+          className="w-1/2 rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+          placeholder="Cookie name"
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(event) => onChange({ name, value: event.target.value, cookies })}
+          className="w-1/2 rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+          placeholder="Value"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={handleSet}
+        disabled={!name.trim()}
+        className="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+      >
+        Set Cookie
+      </button>
+      <div className="max-h-32 overflow-y-auto no-scrollbar text-[11px] text-slate-300 space-y-1">
+        {cookies.length === 0 ? 'No cookies.' : null}
+        {cookies.map((cookie) => (
+          <div key={cookie.name} className="break-words">
+            {cookie.name}: {cookie.value}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const buildToolRegistry = (handlers: {
+  refreshStorageExplorer: () => void;
+  refreshCookies: () => void;
+}): ToolRegistryEntry[] => [
   {
     id: 'codeInjector',
     title: 'Code Injector',
@@ -1829,6 +4067,482 @@ const toolRegistry: ToolRegistryEntry[] = [
     )
   },
   {
+    id: 'jsonPrettifier',
+    title: 'JSON Prettifier',
+    subtitle: 'Format JSON',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <JsonPrettifierTool
+        data={data as JsonPrettifierData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'jsonSchemaValidator',
+    title: 'JSON Schema Validator',
+    subtitle: 'Validate JSON',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <JsonSchemaValidatorTool
+        data={data as JsonSchemaValidatorData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'jsonPathTester',
+    title: 'JSON Path Tester',
+    subtitle: 'Query JSON',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <JsonPathTesterTool
+        data={data as JsonPathTesterData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'jsonDiff',
+    title: 'JSON Diff',
+    subtitle: 'Compare JSON',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <JsonDiffTool
+        data={data as JsonDiffData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'sqlFormatter',
+    title: 'SQL Formatter',
+    subtitle: 'Format SQL',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <SqlFormatterTool
+        data={data as SqlFormatterData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'sqlQueryBuilder',
+    title: 'SQL Query Builder',
+    subtitle: 'Build SELECT',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <SqlQueryBuilderTool
+        data={data as SqlQueryBuilderData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'sqlToCsv',
+    title: 'SQL to CSV',
+    subtitle: 'Export results',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <SqlToCsvTool
+        data={data as SqlToCsvData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'indexAdvisor',
+    title: 'Index Advisor',
+    subtitle: 'Suggest indexes',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <IndexAdvisorTool
+        data={data as IndexAdvisorData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'bsonViewer',
+    title: 'BSON Viewer',
+    subtitle: 'Normalize BSON',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <BsonViewerTool
+        data={data as BsonViewerData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'mongoQueryBuilder',
+    title: 'Mongo Query Builder',
+    subtitle: 'Build Mongo find',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <MongoQueryBuilderTool
+        data={data as MongoQueryBuilderData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'dynamoDbConverter',
+    title: 'DynamoDB Converter',
+    subtitle: 'Map JSON types',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <DynamoDbConverterTool
+        data={data as DynamoDbConverterData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'firebaseRulesLinter',
+    title: 'Firebase Rules Linter',
+    subtitle: 'Check rules',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <FirebaseRulesLinterTool
+        data={data as FirebaseRulesLinterData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'couchDbDocExplorer',
+    title: 'CouchDB Doc Explorer',
+    subtitle: 'Fetch docs',
+    category: 'Database',
+    icon: faCode,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <CouchDbDocExplorerTool
+        data={data as CouchDbDocExplorerData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'debuggerTool',
+    title: 'Debugger',
+    subtitle: 'Capture errors',
+    category: 'Web Dev',
+    icon: faBug,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <DebuggerTool
+        data={data as DebuggerData | undefined}
+        onClear={() => onChange({ entries: [] })}
+      />
+    )
+  },
+  {
+    id: 'storageExplorer',
+    title: 'Storage Explorer',
+    subtitle: 'View storage',
+    category: 'Web Dev',
+    icon: faGear,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data) => (
+      <StorageExplorerTool
+        data={data as StorageExplorerData | undefined}
+        onRefresh={handlers.refreshStorageExplorer}
+      />
+    )
+  },
+  {
+    id: 'snippetRunner',
+    title: 'Console Snippet Runner',
+    subtitle: 'Run snippets',
+    category: 'Web Dev',
+    icon: faCode,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <SnippetRunnerTool
+        data={data as SnippetRunnerData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'lighthouseSnapshot',
+    title: 'Lighthouse Snapshot',
+    subtitle: 'Perf metrics',
+    category: 'Web Dev',
+    icon: faBolt,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <LighthouseSnapshotTool
+        data={data as LighthouseSnapshotData | undefined}
+        onCapture={() => {
+          const timing = performance.timing;
+          const paint = performance.getEntriesByType('paint');
+          const metrics = [
+            { label: 'TTFB', value: `${timing.responseStart - timing.requestStart} ms` },
+            { label: 'DOMContentLoaded', value: `${timing.domContentLoadedEventEnd - timing.navigationStart} ms` },
+            { label: 'Load', value: `${timing.loadEventEnd - timing.navigationStart} ms` }
+          ];
+          const firstPaint = paint.find((entry) => entry.name === 'first-contentful-paint');
+          if (firstPaint) {
+            metrics.push({ label: 'FCP', value: `${Math.round(firstPaint.startTime)} ms` });
+          }
+          onChange({ metrics });
+        }}
+      />
+    )
+  },
+  {
+    id: 'cssGridGenerator',
+    title: 'CSS Grid Generator',
+    subtitle: 'Grid CSS',
+    category: 'Front End',
+    icon: faTable,
+    hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
+    render: (data, onChange) => (
+      <CssGridGeneratorTool
+        data={data as CssGridGeneratorData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'flexboxInspector',
+    title: 'Flexbox Inspector',
+    subtitle: 'Inspect flex',
+    category: 'Front End',
+    icon: faSliders,
+    hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
+    render: (data, onChange) => (
+      <FlexboxInspectorTool
+        data={data as FlexboxInspectorData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'fontIdentifier',
+    title: 'Font Identifier',
+    subtitle: 'Font details',
+    category: 'Front End',
+    icon: faFont,
+    hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
+    render: (data, onChange) => (
+      <FontIdentifierTool
+        data={data as FontIdentifierData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'contrastChecker',
+    title: 'Contrast Checker',
+    subtitle: 'WCAG ratio',
+    category: 'Front End',
+    icon: faEyeDropper,
+    hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
+    render: (data, onChange) => (
+      <ContrastCheckerTool
+        data={data as ContrastCheckerData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'responsivePreview',
+    title: 'Responsive Preview',
+    subtitle: 'Viewport size',
+    category: 'Front End',
+    icon: faExpand,
+    hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
+    render: (data, onChange) => (
+      <ResponsivePreviewTool
+        data={data as ResponsivePreviewData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'animationPreview',
+    title: 'Animation Preview',
+    subtitle: 'Preview motion',
+    category: 'Front End',
+    icon: faWaveSquare,
+    hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
+    render: (data, onChange) => (
+      <AnimationPreviewTool
+        data={data as AnimationPreviewData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'svgOptimizer',
+    title: 'SVG Optimizer',
+    subtitle: 'Minify SVG',
+    category: 'Front End',
+    icon: faFileCode,
+    hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
+    render: (data, onChange) => (
+      <SvgOptimizerTool
+        data={data as SvgOptimizerData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'accessibilityAudit',
+    title: 'Accessibility Audit',
+    subtitle: 'Basic checks',
+    category: 'Front End',
+    icon: faShieldHalved,
+    hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
+    render: (data, onChange) => (
+      <AccessibilityAuditTool
+        data={data as AccessibilityAuditData | undefined}
+        onRun={() => onChange({ issues: auditAccessibility(document) })}
+      />
+    )
+  },
+  {
+    id: 'jwtDebugger',
+    title: 'JWT Debugger',
+    subtitle: 'Decode JWT',
+    category: 'Back End',
+    icon: faCode,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <JwtDebuggerTool
+        data={data as JwtDebuggerData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'regexTester',
+    title: 'Regex Tester',
+    subtitle: 'Test patterns',
+    category: 'Back End',
+    icon: faWaveSquare,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <RegexTesterTool
+        data={data as RegexTesterData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'apiResponseViewer',
+    title: 'API Response Viewer',
+    subtitle: 'Inspect API',
+    category: 'Back End',
+    icon: faGlobe,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <ApiResponseViewerTool
+        data={data as ApiResponseViewerData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'graphqlExplorer',
+    title: 'GraphQL Explorer',
+    subtitle: 'Run queries',
+    category: 'Back End',
+    icon: faCode,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <GraphqlExplorerTool
+        data={data as GraphqlExplorerData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'restClient',
+    title: 'REST Client',
+    subtitle: 'Send requests',
+    category: 'Back End',
+    icon: faNetworkWired,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <RestClientTool
+        data={data as RestClientData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'oauthTokenInspector',
+    title: 'OAuth Token Inspector',
+    subtitle: 'Inspect token',
+    category: 'Back End',
+    icon: faFingerprint,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <OAuthTokenInspectorTool
+        data={data as OAuthTokenInspectorData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'webhookTester',
+    title: 'Webhook Tester',
+    subtitle: 'Ping webhook',
+    category: 'Back End',
+    icon: faWaveSquare,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <WebhookTesterTool
+        data={data as WebhookTesterData | undefined}
+        onChange={onChange}
+      />
+    )
+  },
+  {
+    id: 'cookieManager',
+    title: 'Cookie Manager',
+    subtitle: 'Edit cookies',
+    category: 'Back End',
+    icon: faGear,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <CookieManagerTool
+        data={data as CookieManagerData | undefined}
+        onChange={onChange}
+        onRefresh={handlers.refreshCookies}
+      />
+    )
+  },
+  {
     id: 'colorPicker',
     title: 'Color Picker',
     subtitle: 'Grab hex/rgb',
@@ -1844,9 +4558,6 @@ const toolRegistry: ToolRegistryEntry[] = [
   }
 ];
 
-const getToolEntry = (toolId: string) =>
-  toolRegistry.find((tool) => tool.id === toolId) ?? null;
-
 const App = () => {
   const [state, setState] = useState(DEFAULT_STATE);
   const [dragOffsetY, setDragOffsetY] = useState<number | null>(null);
@@ -1858,9 +4569,12 @@ const App = () => {
   const [pickerLabel, setPickerLabel] = useState('');
   const [pickerNotice, setPickerNotice] = useState<string | null>(null);
   const [showScraperHelp, setShowScraperHelp] = useState(false);
+  const [quickBarSearch, setQuickBarSearch] = useState('');
+  const [quickBarPage, setQuickBarPage] = useState(1);
   const menuBarRef = useRef<HTMLDivElement | null>(null);
   const spotlightInputRef = useRef<HTMLInputElement | null>(null);
   const requestLogSeenRef = useRef<Set<string>>(new Set());
+  const debuggerSeenRef = useRef<number>(0);
   const toolDragRef = useRef<{
     toolId: string;
     offsetX: number;
@@ -1935,26 +4649,6 @@ const App = () => {
     requestAnimationFrame(() => spotlightInputRef.current?.focus());
   }, [spotlightOpen]);
 
-  const searchableTools = useMemo(
-    () =>
-      toolRegistry.map((tool) => ({
-        id: tool.id,
-        label: tool.title,
-        subtitle: tool.subtitle
-      })),
-    []
-  );
-
-  const spotlightMatches = useMemo(() => {
-    const query = spotlightQuery.trim().toLowerCase();
-    if (!query) return searchableTools;
-    return searchableTools.filter((entry) => {
-      const label = entry.label.toLowerCase();
-      const subtitle = entry.subtitle?.toLowerCase() ?? '';
-      return label.includes(query) || subtitle.includes(query);
-    });
-  }, [spotlightQuery, searchableTools]);
-
   useEffect(() => {
     const isOpen = state.toolWindows.requestLog?.isOpen;
     if (!isOpen) return;
@@ -1995,6 +4689,46 @@ const App = () => {
     }
     return () => observer.disconnect();
   }, [state.toolWindows.requestLog?.isOpen]);
+
+  useEffect(() => {
+    const isOpen = state.toolWindows.debugger?.isOpen;
+    if (!isOpen) return;
+
+    const addEntry = (message: string, source: string) => {
+      updateState((current) => {
+        const existing =
+          (current.toolData.debugger as DebuggerData | undefined)?.entries ?? [];
+        const next = [
+          { message, source, time: Date.now() },
+          ...existing
+        ].slice(0, 100);
+        return {
+          ...current,
+          toolData: {
+            ...current.toolData,
+            debugger: { entries: next }
+          }
+        };
+      }).then(setState);
+    };
+
+    const handleError = (event: ErrorEvent) => {
+      addEntry(event.message, 'error');
+    };
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      addEntry(
+        event.reason instanceof Error ? event.reason.message : String(event.reason),
+        'unhandledrejection'
+      );
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
+  }, [state.toolWindows.debugger?.isOpen]);
 
   useEffect(() => {
     if (!state.scraperBuilderOpen || !state.scraperDraft.isPicking) return;
@@ -2078,20 +4812,14 @@ const App = () => {
         return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30';
       case 'Front End':
         return 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+      case 'Back End':
+        return 'bg-amber-500/10 text-amber-300 border-amber-500/30';
       case 'CyberSec':
         return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
       default:
         return 'bg-slate-500/10 text-slate-300 border-slate-500/30';
     }
   };
-
-  const quickBarTools = useMemo(
-    () =>
-      state.quickBarToolIds
-        .map((toolId) => getToolEntry(toolId))
-        .filter((entry): entry is ToolRegistryEntry => Boolean(entry)),
-    [state.quickBarToolIds]
-  );
 
   const activeScraper = useMemo(
     () => state.scrapers.find((entry) => entry.id === state.scraperRunnerId) ?? null,
@@ -2227,6 +4955,106 @@ const App = () => {
     });
     setState(next);
   };
+
+  const refreshStorageExplorer = async () => {
+    const local = Object.keys(localStorage).map((key) => ({
+      key,
+      value: localStorage.getItem(key) ?? ''
+    }));
+    const session = Object.keys(sessionStorage).map((key) => ({
+      key,
+      value: sessionStorage.getItem(key) ?? ''
+    }));
+    const next = await updateState((current) => ({
+      ...current,
+      toolData: {
+        ...current.toolData,
+        storageExplorer: { local, session }
+      }
+    }));
+    setState(next);
+  };
+
+  const refreshCookies = async () => {
+    const cookies = parseCookieString(document.cookie);
+    const next = await updateState((current) => ({
+      ...current,
+      toolData: {
+        ...current.toolData,
+        cookieManager: { ...((current.toolData.cookieManager as CookieManagerData) ?? {}), cookies }
+      }
+    }));
+    setState(next);
+  };
+
+  const toolRegistry = useMemo(
+    () =>
+      buildToolRegistry({
+        refreshStorageExplorer,
+        refreshCookies
+      }),
+    [refreshStorageExplorer, refreshCookies]
+  );
+
+  const getToolEntry = (toolId: string) =>
+    toolRegistry.find((tool) => tool.id === toolId) ?? null;
+
+  const quickBarTools = useMemo(
+    () =>
+      state.quickBarToolIds
+        .map((toolId) => getToolEntry(toolId))
+        .filter((entry): entry is ToolRegistryEntry => Boolean(entry)),
+    [state.quickBarToolIds, toolRegistry]
+  );
+
+  const quickBarPageSize = 6;
+  const filteredQuickBarTools = useMemo(() => {
+    const query = quickBarSearch.trim().toLowerCase();
+    if (!query) return quickBarTools;
+    return quickBarTools.filter((tool) => {
+      const title = tool.title.toLowerCase();
+      const subtitle = tool.subtitle.toLowerCase();
+      return title.includes(query) || subtitle.includes(query);
+    });
+  }, [quickBarSearch, quickBarTools]);
+  const quickBarTotalPages = Math.max(
+    1,
+    Math.ceil(filteredQuickBarTools.length / quickBarPageSize)
+  );
+  const pagedQuickBarTools = useMemo(() => {
+    const start = (quickBarPage - 1) * quickBarPageSize;
+    return filteredQuickBarTools.slice(start, start + quickBarPageSize);
+  }, [filteredQuickBarTools, quickBarPage]);
+
+  useEffect(() => {
+    setQuickBarPage(1);
+  }, [quickBarSearch, state.quickBarToolIds.length]);
+
+  useEffect(() => {
+    if (quickBarPage > quickBarTotalPages) {
+      setQuickBarPage(quickBarTotalPages);
+    }
+  }, [quickBarPage, quickBarTotalPages]);
+
+  const searchableTools = useMemo(
+    () =>
+      toolRegistry.map((tool) => ({
+        id: tool.id,
+        label: tool.title,
+        subtitle: tool.subtitle
+      })),
+    [toolRegistry]
+  );
+
+  const spotlightMatches = useMemo(() => {
+    const query = spotlightQuery.trim().toLowerCase();
+    if (!query) return searchableTools;
+    return searchableTools.filter((entry) => {
+      const label = entry.label.toLowerCase();
+      const subtitle = entry.subtitle?.toLowerCase() ?? '';
+      return label.includes(query) || subtitle.includes(query);
+    });
+  }, [spotlightQuery, searchableTools]);
 
   const updateScraperDraft = async (nextDraft: Partial<ScraperDraft>) => {
     const next = await updateState((current) => ({
@@ -3398,13 +6226,64 @@ const App = () => {
           </div>
         </div>
 
+        <div className="px-2 pb-1 pt-2">
+          <div className="relative">
+            <FontAwesomeIcon
+              icon={faSearch}
+              className={`absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 ${iconSizeClass}`}
+            />
+            <input
+              type="text"
+              value={quickBarSearch}
+              onChange={(event) => setQuickBarSearch(event.target.value)}
+              className="w-full rounded bg-slate-800 text-slate-300 text-xs pl-7 pr-2 py-1.5 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors placeholder-slate-500"
+              placeholder="Search favorites..."
+            />
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-slate-500 mt-2 px-1">
+            <span>
+              {filteredQuickBarTools.length === 0
+                ? '0 results'
+                : `${filteredQuickBarTools.length} results`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setQuickBarPage((prev) => Math.max(1, prev - 1))}
+                disabled={quickBarPage === 1}
+                className="rounded px-2 py-1 border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <span className="text-slate-500">
+                {quickBarPage} / {quickBarTotalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setQuickBarPage((prev) =>
+                    Math.min(quickBarTotalPages, prev + 1)
+                  )
+                }
+                disabled={quickBarPage === quickBarTotalPages}
+                className="rounded px-2 py-1 border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-colors disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
         <div className="flex-1 overflow-y-auto no-scrollbar p-1 space-y-1">
           {quickBarTools.length === 0 ? (
             <div className="px-3 py-4 text-[11px] text-slate-500">
               No favorites yet. Open a tool and press + to pin it here.
             </div>
+          ) : filteredQuickBarTools.length === 0 ? (
+            <div className="px-3 py-4 text-[11px] text-slate-500">
+              No matches found.
+            </div>
           ) : (
-            quickBarTools.map((item) => (
+            pagedQuickBarTools.map((item) => (
               <button
                 key={item.id}
                 type="button"
