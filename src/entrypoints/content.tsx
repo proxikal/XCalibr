@@ -27,10 +27,20 @@ import {
 import { defineContentScript } from 'wxt/sandbox';
 import tailwindStyles from '../styles/index.css?inline';
 import { DEFAULT_STATE, getState, subscribeState, updateState } from '../shared/state';
+import {
+  ScraperDefinition,
+  ScraperDraft,
+  ScraperField,
+  buildScraperId,
+  buildCsvFromResults,
+  extractScraperResults,
+  generateCssSelector,
+  generateXPath
+} from '../shared/scraper';
 
 const ROOT_ID = 'xcalibr-root';
 
-const menuBarItems = [
+const baseMenuBarItems = [
   {
     label: 'File',
     items: ['Help', 'Settings']
@@ -1756,6 +1766,10 @@ const App = () => {
   const [dragAnchored, setDragAnchored] = useState<boolean | null>(null);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [spotlightQuery, setSpotlightQuery] = useState('');
+  const [pickerRect, setPickerRect] = useState<DOMRect | null>(null);
+  const [pickerLabel, setPickerLabel] = useState('');
+  const [pickerNotice, setPickerNotice] = useState<string | null>(null);
+  const [showScraperHelp, setShowScraperHelp] = useState(false);
   const menuBarRef = useRef<HTMLDivElement | null>(null);
   const spotlightInputRef = useRef<HTMLInputElement | null>(null);
   const requestLogSeenRef = useRef<Set<string>>(new Set());
@@ -1778,6 +1792,31 @@ const App = () => {
   const iconSizeClass = 'w-3 h-3';
   const menuHeight = 550;
   const menuBarHeight = 32;
+
+  const menuItems = useMemo(() => {
+    const scraperItems =
+      state.scrapers.length > 0
+        ? state.scrapers.map((scraper) => ({
+            label: scraper.name,
+            scraperId: scraper.id
+          }))
+        : ['No saved scrapers'];
+    const scraperMenu = {
+      label: 'Scraper',
+      items: [
+        { label: 'Make Scraper', action: 'makeScraper' },
+        { label: 'Scraper List', items: scraperItems }
+      ]
+    };
+    const items = [...baseMenuBarItems];
+    const cyberIndex = items.findIndex((item) => item.label === 'CyberSec');
+    if (cyberIndex === -1) {
+      items.push(scraperMenu);
+    } else {
+      items.splice(cyberIndex + 1, 0, scraperMenu);
+    }
+    return items;
+  }, [state.scrapers]);
 
   useEffect(() => {
     let mounted = true;
@@ -1869,6 +1908,77 @@ const App = () => {
     return () => observer.disconnect();
   }, [state.toolWindows.requestLog?.isOpen]);
 
+  useEffect(() => {
+    if (!state.scraperBuilderOpen || !state.scraperDraft.isPicking) return;
+
+    const host = document.getElementById(ROOT_ID);
+
+    const handleMove = (event: MouseEvent) => {
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      if (!target || (host && host.contains(target))) {
+        setPickerRect(null);
+        setPickerLabel('');
+        return;
+      }
+      const rect = (target as Element).getBoundingClientRect();
+      setPickerRect(rect);
+      setPickerLabel(
+        `${(target as Element).tagName.toLowerCase()}${(target as Element).id ? `#${(target as Element).id}` : ''}`
+      );
+    };
+
+    const handleClick = (event: MouseEvent) => {
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      if (!target || (host && host.contains(target))) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const element = target as Element;
+      const selector = generateCssSelector(element);
+      const xpath = generateXPath(element);
+      const isDuplicate = state.scraperDraft.fields.some(
+        (field) => field.selector === selector || field.xpath === xpath
+      );
+      if (isDuplicate) {
+        setPickerNotice('Element already added.');
+        return;
+      }
+      const nextField: ScraperField = {
+        id: `field_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        name: `Field ${state.scraperDraft.fields.length + 1}`,
+        selector,
+        xpath,
+        mode: 'single',
+        source: 'text'
+      };
+      updateScraperDraft({ fields: [...state.scraperDraft.fields, nextField] });
+      setPickerNotice('Element added.');
+    };
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        updateScraperDraft({ isPicking: false });
+        setPickerRect(null);
+        setPickerLabel('');
+      }
+    };
+
+    document.addEventListener('mousemove', handleMove, true);
+    document.addEventListener('click', handleClick, true);
+    window.addEventListener('keydown', handleKey, true);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMove, true);
+      document.removeEventListener('click', handleClick, true);
+      window.removeEventListener('keydown', handleKey, true);
+    };
+  }, [state.scraperBuilderOpen, state.scraperDraft.isPicking, state.scraperDraft.fields.length]);
+
+  useEffect(() => {
+    if (!pickerNotice) return;
+    const timeout = window.setTimeout(() => setPickerNotice(null), 1400);
+    return () => window.clearTimeout(timeout);
+  }, [pickerNotice]);
+
   const panelWidth = useMemo(() => {
     if (!state.isOpen) return 0;
     return state.isWide ? 300 : 160;
@@ -1893,6 +2003,11 @@ const App = () => {
         .map((toolId) => getToolEntry(toolId))
         .filter((entry): entry is ToolRegistryEntry => Boolean(entry)),
     [state.quickBarToolIds]
+  );
+
+  const activeScraper = useMemo(
+    () => state.scrapers.find((entry) => entry.id === state.scraperRunnerId) ?? null,
+    [state.scrapers, state.scraperRunnerId]
   );
 
   const clampTabOffset = (value: number, minOffset = 0) => {
@@ -2008,6 +2123,106 @@ const App = () => {
           : [...current.quickBarToolIds, toolId]
       };
     });
+    setState(next);
+  };
+
+  const updateScraperDraft = async (nextDraft: Partial<ScraperDraft>) => {
+    const next = await updateState((current) => ({
+      ...current,
+      scraperDraft: {
+        ...current.scraperDraft,
+        ...nextDraft
+      }
+    }));
+    setState(next);
+  };
+
+  const openScraperBuilder = async () => {
+    const next = await updateState((current) => ({
+      ...current,
+      scraperBuilderOpen: true
+    }));
+    setState(next);
+  };
+
+  const closeScraperBuilder = async () => {
+    const next = await updateState((current) => ({
+      ...current,
+      scraperBuilderOpen: false,
+      scraperDraft: { ...current.scraperDraft, isPicking: false }
+    }));
+    setState(next);
+    setPickerRect(null);
+    setShowScraperHelp(false);
+  };
+
+  const saveScraperDraft = async () => {
+    const draft = state.scraperDraft;
+    if (!draft.name.trim() || draft.fields.length === 0) return;
+    const now = Date.now();
+    const newScraper: ScraperDefinition = {
+      id: buildScraperId(),
+      name: draft.name.trim(),
+      fields: draft.fields,
+      createdAt: now,
+      updatedAt: now
+    };
+    const next = await updateState((current) => ({
+      ...current,
+      scrapers: [...current.scrapers, newScraper],
+      scraperBuilderOpen: false,
+      scraperDraft: { name: '', fields: [], isPicking: false }
+    }));
+    setState(next);
+    setPickerRect(null);
+  };
+
+  const updateScraperField = async (fieldId: string, next: Partial<ScraperField>) => {
+    const nextFields = state.scraperDraft.fields.map((field) =>
+      field.id === fieldId ? { ...field, ...next } : field
+    );
+    await updateScraperDraft({ fields: nextFields });
+  };
+
+  const removeScraperField = async (fieldId: string) => {
+    const nextFields = state.scraperDraft.fields.filter((field) => field.id !== fieldId);
+    await updateScraperDraft({ fields: nextFields });
+  };
+
+  const openScraperRunner = async (scraperId: string) => {
+    const scraper = state.scrapers.find((entry) => entry.id === scraperId);
+    if (!scraper) return;
+    const results = extractScraperResults(document, scraper);
+    const next = await updateState((current) => ({
+      ...current,
+      scraperRunnerOpen: true,
+      scraperRunnerId: scraperId,
+      scraperRunnerResults: results,
+      scraperRunnerError: null
+    }));
+    setState(next);
+  };
+
+  const rerunScraper = async () => {
+    if (!state.scraperRunnerId) return;
+    const scraper = state.scrapers.find((entry) => entry.id === state.scraperRunnerId);
+    if (!scraper) return;
+    const results = extractScraperResults(document, scraper);
+    const next = await updateState((current) => ({
+      ...current,
+      scraperRunnerResults: results,
+      scraperRunnerError: null
+    }));
+    setState(next);
+  };
+
+  const closeScraperRunner = async () => {
+    const next = await updateState((current) => ({
+      ...current,
+      scraperRunnerOpen: false,
+      scraperRunnerId: null,
+      scraperRunnerError: null
+    }));
     setState(next);
   };
 
@@ -2164,6 +2379,18 @@ const App = () => {
     })).then(setState);
   };
 
+  const handleScraperAction = async (action: string) => {
+    if (action === 'makeScraper') {
+      await openScraperBuilder();
+      const next = await updateState((current) => ({
+        ...current,
+        menuBarActiveMenu: null,
+        menuBarActiveSubmenu: null
+      }));
+      setState(next);
+    }
+  };
+
   if (!state.isVisible) {
     return null;
   }
@@ -2261,6 +2488,400 @@ const App = () => {
           </div>
         </div>
       ) : null}
+      {state.scraperBuilderOpen ? (
+        state.scraperDraft.isPicking ? (
+          <div className="fixed top-4 left-1/2 z-[95] -translate-x-1/2 space-y-2">
+            <div className="rounded-full border border-slate-700 bg-slate-900/90 px-4 py-2 text-[11px] text-slate-200 shadow-lg">
+              <span className="mr-3">Picker active. Click elements to add fields.</span>
+              <button
+                type="button"
+                onClick={() => updateScraperDraft({ isPicking: false })}
+                className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+              >
+                Stop Picking
+              </button>
+            </div>
+            {pickerNotice ? (
+              <div className="rounded-full border border-slate-700 bg-slate-900/90 px-4 py-2 text-[11px] text-slate-200 shadow-lg">
+                {pickerNotice}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div
+            className="fixed inset-0 z-[95] flex items-start justify-center bg-slate-950/70 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                closeScraperBuilder();
+              }
+            }}
+          >
+            <div
+              className="mt-12 w-full max-w-2xl max-h-[85vh] rounded-2xl border border-slate-700/80 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 shadow-[0_24px_60px_rgba(0,0,0,0.55)] flex flex-col"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              {showScraperHelp ? (
+                <div className="absolute inset-0 z-[96] rounded-2xl bg-slate-950/90 backdrop-blur-sm">
+                  <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+                    <div>
+                      <div className="text-xs text-slate-200">Scraper Guide</div>
+                      <div className="text-[11px] text-slate-500">
+                        Learn how to build and run a scraper safely.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowScraperHelp(false)}
+                      className="text-slate-400 hover:text-slate-200 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="max-h-[70vh] overflow-y-auto px-5 py-4 space-y-4 text-[11px] text-slate-300">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        1. Name Your Scraper
+                      </div>
+                      <div>
+                        Give the scraper a clear name so you can find it later in
+                        the Scraper List.
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        2. Pick Elements
+                      </div>
+                      <div>
+                        Click “Pick Elements” and hover the page. Click any element
+                        you want to extract. Each click adds a field.
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        3. Rename Fields
+                      </div>
+                      <div>
+                        Rename fields so the output makes sense (e.g. Price, Title,
+                        Description).
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        4. Choose Mode
+                      </div>
+                      <div>
+                        Use “Single” for one value, or “List” when you want all
+                        matching elements on the page.
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        5. Choose Source
+                      </div>
+                      <div>
+                        Pick Text, HTML, or Attribute. Attribute is useful for
+                        links (href) or images (src).
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        6. Save Scraper
+                      </div>
+                      <div>
+                        Save when you have at least one field. It will appear in
+                        the Scraper List menu.
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        7. Run Scraper
+                      </div>
+                      <div>
+                        Open Scraper List, choose your scraper, and review results.
+                        Use Copy JSON or Copy CSV to export.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+                <div>
+                  <div className="text-xs text-slate-200">Build Scraper</div>
+                  <div className="text-[11px] text-slate-500">
+                    Click elements on the page to capture selectors.
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowScraperHelp(true)}
+                    className="text-[11px] text-blue-300 hover:text-blue-200 transition-colors"
+                  >
+                    Explain Scraper
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeScraperBuilder}
+                    className="text-slate-400 hover:text-slate-200 transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-4 px-5 py-4">
+                <div className="space-y-2">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
+                    Scraper Name
+                  </div>
+                  <input
+                    type="text"
+                    value={state.scraperDraft.name}
+                    onChange={(event) =>
+                      updateScraperDraft({ name: event.target.value })
+                    }
+                    className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+                    placeholder="e.g. Pricing Table"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] text-slate-500">Picker idle</div>
+                  <button
+                    type="button"
+                    onClick={() => updateScraperDraft({ isPicking: true })}
+                    className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+                  >
+                    Pick Elements
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {state.scraperDraft.fields.length === 0 ? (
+                    <div className="text-[11px] text-slate-500">
+                      No fields yet. Click “Pick Elements” and select elements on the page.
+                    </div>
+                  ) : (
+                    state.scraperDraft.fields.map((field) => (
+                      <div
+                        key={field.id}
+                        className="rounded border border-slate-800 bg-slate-900/60 p-3 space-y-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <input
+                            type="text"
+                            value={field.name}
+                            onChange={(event) =>
+                              updateScraperField(field.id, {
+                                name: event.target.value
+                              })
+                            }
+                            className="flex-1 rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeScraperField(field.id)}
+                            className="text-slate-500 hover:text-rose-300 transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                          Selector
+                        </div>
+                        <div className="text-[11px] text-slate-300 break-words">
+                          {field.selector}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                          XPath
+                        </div>
+                        <div className="text-[11px] text-slate-400 break-words">
+                          {field.xpath}
+                        </div>
+
+                        <div className="flex gap-2">
+                          {(['single', 'list'] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => updateScraperField(field.id, { mode })}
+                              className={`flex-1 rounded px-2 py-1 text-[11px] border transition-colors ${
+                                field.mode === mode
+                                  ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
+                                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+                              }`}
+                            >
+                              {mode === 'single' ? 'Single' : 'List'}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex gap-2">
+                          {(['text', 'html', 'attr'] as const).map((source) => (
+                            <button
+                              key={source}
+                              type="button"
+                              onClick={() => updateScraperField(field.id, { source })}
+                              className={`flex-1 rounded px-2 py-1 text-[11px] border transition-colors ${
+                                field.source === source
+                                  ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
+                                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+                              }`}
+                            >
+                              {source === 'attr' ? 'Attribute' : source.toUpperCase()}
+                            </button>
+                          ))}
+                        </div>
+                        {field.source === 'attr' ? (
+                          <input
+                            type="text"
+                            value={field.attrName ?? ''}
+                            onChange={(event) =>
+                              updateScraperField(field.id, {
+                                attrName: event.target.value
+                              })
+                            }
+                            className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+                            placeholder="Attribute name (e.g. href)"
+                          />
+                        ) : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-5 py-4">
+                <button
+                  type="button"
+                  onClick={closeScraperBuilder}
+                  className="rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveScraperDraft}
+                  disabled={
+                    !state.scraperDraft.name.trim() ||
+                    state.scraperDraft.fields.length === 0
+                  }
+                  className="rounded bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500 transition-colors disabled:opacity-50"
+                >
+                  Save Scraper
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      ) : null}
+      {state.scraperRunnerOpen && activeScraper ? (
+        <div
+          className="fixed inset-0 z-[95] flex items-start justify-center bg-slate-950/70 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeScraperRunner();
+            }
+          }}
+        >
+          <div
+            className="mt-12 w-full max-w-2xl max-h-[85vh] rounded-2xl border border-slate-700/80 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 shadow-[0_24px_60px_rgba(0,0,0,0.55)] flex flex-col"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+              <div>
+                <div className="text-xs text-slate-200">Run Scraper</div>
+                <div className="text-[11px] text-slate-500">
+                  {activeScraper.name}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeScraperRunner}
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            <div className="space-y-4 px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] text-slate-500">
+                  {state.scraperRunnerResults ? 'Results ready.' : 'No results yet.'}
+                </div>
+                <button
+                  type="button"
+                  onClick={rerunScraper}
+                  className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  Run Again
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 pb-4">
+              {state.scraperRunnerResults ? (
+                <div className="rounded border border-slate-800 bg-slate-900/60 p-3 space-y-2 text-[11px] text-slate-300">
+                  {Object.entries(state.scraperRunnerResults).map(([key, value]) => (
+                    <div key={key}>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        {key}
+                      </div>
+                      <div className="break-words">
+                        {Array.isArray(value) ? value.join(', ') : value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-5 py-4">
+              <button
+                type="button"
+                onClick={() =>
+                  navigator.clipboard.writeText(
+                    JSON.stringify(state.scraperRunnerResults ?? {}, null, 2)
+                  )
+                }
+                className="rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+              >
+                Copy JSON
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  navigator.clipboard.writeText(
+                    buildCsvFromResults(state.scraperRunnerResults ?? {})
+                  )
+                }
+                className="rounded bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+              >
+                Copy CSV
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {state.scraperDraft.isPicking && pickerRect ? (
+        <div className="fixed inset-0 z-[96] pointer-events-none">
+          <div
+            className="absolute border-2 border-blue-500/80 bg-blue-500/10"
+            style={{
+              left: pickerRect.left,
+              top: pickerRect.top,
+              width: pickerRect.width,
+              height: pickerRect.height
+            }}
+          />
+          <div
+            className="absolute rounded bg-slate-900/90 px-2 py-1 text-[10px] text-slate-200"
+            style={{
+              left: pickerRect.left,
+              top: Math.max(0, pickerRect.top - 24)
+            }}
+          >
+            {pickerLabel}
+          </div>
+        </div>
+      ) : null}
       {state.showMenuBar ? (
         <div
           ref={menuBarRef}
@@ -2277,7 +2898,7 @@ const App = () => {
               </div>
               <span className="text-xs font-semibold text-slate-100">XCalibr</span>
             </div>
-            {menuBarItems.map((item) => {
+            {menuItems.map((item) => {
               const isOpen = state.menuBarActiveMenu === item.label;
               return (
                 <div
@@ -2325,6 +2946,38 @@ const App = () => {
                               }));
                               setState(next);
                             }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                          >
+                            {entry.label}
+                          </button>
+                        );
+                      }
+                      if ('scraperId' in entry) {
+                        return (
+                          <button
+                            key={entry.label}
+                            type="button"
+                            onClick={async () => {
+                              await openScraperRunner(entry.scraperId);
+                              const next = await updateState((current) => ({
+                                ...current,
+                                menuBarActiveMenu: null,
+                                menuBarActiveSubmenu: null
+                              }));
+                              setState(next);
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                          >
+                            {entry.label}
+                          </button>
+                        );
+                      }
+                      if ('action' in entry) {
+                        return (
+                          <button
+                            key={entry.label}
+                            type="button"
+                            onClick={() => handleScraperAction(entry.action)}
                             className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
                           >
                             {entry.label}
@@ -2385,6 +3038,38 @@ const App = () => {
                                         }));
                                         setState(next);
                                       }}
+                                      className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                                    >
+                                      {subItem.label}
+                                    </button>
+                                  );
+                                }
+                                if ('scraperId' in subItem) {
+                                  return (
+                                    <button
+                                      key={subItem.label}
+                                      type="button"
+                                      onClick={async () => {
+                                        await openScraperRunner(subItem.scraperId);
+                                        const next = await updateState((current) => ({
+                                          ...current,
+                                          menuBarActiveMenu: null,
+                                          menuBarActiveSubmenu: null
+                                        }));
+                                        setState(next);
+                                      }}
+                                      className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                                    >
+                                      {subItem.label}
+                                    </button>
+                                  );
+                                }
+                                if ('action' in subItem) {
+                                  return (
+                                    <button
+                                      key={subItem.label}
+                                      type="button"
+                                      onClick={() => handleScraperAction(subItem.action)}
                                       className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
                                     >
                                       {subItem.label}

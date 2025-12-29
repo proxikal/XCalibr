@@ -1,3 +1,5 @@
+import { ScraperDefinition, ScraperDraft, normalizeScraperDraft, normalizeScrapers } from './scraper';
+
 export type XcalibrState = {
   version: 1;
   isOpen: boolean;
@@ -9,6 +11,13 @@ export type XcalibrState = {
   isAnchored: boolean;
   menuBarActiveMenu: string | null;
   menuBarActiveSubmenu: string | null;
+  scrapers: ScraperDefinition[];
+  scraperDraft: ScraperDraft;
+  scraperBuilderOpen: boolean;
+  scraperRunnerOpen: boolean;
+  scraperRunnerId: string | null;
+  scraperRunnerResults: Record<string, string | string[]> | null;
+  scraperRunnerError: string | null;
   quickBarToolIds: string[];
   toolWindows: Record<
     string,
@@ -35,6 +44,13 @@ export const DEFAULT_STATE: XcalibrState = {
   isAnchored: false,
   menuBarActiveMenu: null,
   menuBarActiveSubmenu: null,
+  scrapers: [],
+  scraperDraft: { name: '', fields: [], isPicking: false },
+  scraperBuilderOpen: false,
+  scraperRunnerOpen: false,
+  scraperRunnerId: null,
+  scraperRunnerResults: null,
+  scraperRunnerError: null,
   quickBarToolIds: [],
   toolWindows: {},
   toolData: {}
@@ -62,6 +78,28 @@ const normalizeState = (value: unknown): XcalibrState => {
     typeof partial.menuBarActiveSubmenu === 'string' || partial.menuBarActiveSubmenu === null
       ? partial.menuBarActiveSubmenu
       : DEFAULT_STATE.menuBarActiveSubmenu;
+  const scrapers = normalizeScrapers(partial.scrapers);
+  const scraperDraft = normalizeScraperDraft(partial.scraperDraft);
+  const scraperBuilderOpen =
+    typeof partial.scraperBuilderOpen === 'boolean'
+      ? partial.scraperBuilderOpen
+      : DEFAULT_STATE.scraperBuilderOpen;
+  const scraperRunnerOpen =
+    typeof partial.scraperRunnerOpen === 'boolean'
+      ? partial.scraperRunnerOpen
+      : DEFAULT_STATE.scraperRunnerOpen;
+  const scraperRunnerId =
+    typeof partial.scraperRunnerId === 'string' || partial.scraperRunnerId === null
+      ? partial.scraperRunnerId
+      : DEFAULT_STATE.scraperRunnerId;
+  const scraperRunnerResults =
+    partial.scraperRunnerResults && typeof partial.scraperRunnerResults === 'object'
+      ? (partial.scraperRunnerResults as XcalibrState['scraperRunnerResults'])
+      : DEFAULT_STATE.scraperRunnerResults;
+  const scraperRunnerError =
+    typeof partial.scraperRunnerError === 'string' || partial.scraperRunnerError === null
+      ? partial.scraperRunnerError
+      : DEFAULT_STATE.scraperRunnerError;
   const quickBarToolIds = Array.isArray(partial.quickBarToolIds)
     ? partial.quickBarToolIds.filter((entry): entry is string => typeof entry === 'string')
     : DEFAULT_STATE.quickBarToolIds;
@@ -80,6 +118,13 @@ const normalizeState = (value: unknown): XcalibrState => {
     isAnchored,
     menuBarActiveMenu,
     menuBarActiveSubmenu,
+    scrapers,
+    scraperDraft,
+    scraperBuilderOpen,
+    scraperRunnerOpen,
+    scraperRunnerId,
+    scraperRunnerResults,
+    scraperRunnerError,
     quickBarToolIds,
     toolWindows,
     toolData,
