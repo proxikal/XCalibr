@@ -9,6 +9,7 @@ export type XcalibrState = {
   isAnchored: boolean;
   menuBarActiveMenu: string | null;
   menuBarActiveSubmenu: string | null;
+  quickBarToolIds: string[];
   toolWindows: Record<
     string,
     {
@@ -34,6 +35,7 @@ export const DEFAULT_STATE: XcalibrState = {
   isAnchored: false,
   menuBarActiveMenu: null,
   menuBarActiveSubmenu: null,
+  quickBarToolIds: [],
   toolWindows: {},
   toolData: {}
 };
@@ -60,6 +62,9 @@ const normalizeState = (value: unknown): XcalibrState => {
     typeof partial.menuBarActiveSubmenu === 'string' || partial.menuBarActiveSubmenu === null
       ? partial.menuBarActiveSubmenu
       : DEFAULT_STATE.menuBarActiveSubmenu;
+  const quickBarToolIds = Array.isArray(partial.quickBarToolIds)
+    ? partial.quickBarToolIds.filter((entry): entry is string => typeof entry === 'string')
+    : DEFAULT_STATE.quickBarToolIds;
   const toolWindows =
     partial.toolWindows && typeof partial.toolWindows === 'object'
       ? (partial.toolWindows as XcalibrState['toolWindows'])
@@ -75,6 +80,7 @@ const normalizeState = (value: unknown): XcalibrState => {
     isAnchored,
     menuBarActiveMenu,
     menuBarActiveSubmenu,
+    quickBarToolIds,
     toolWindows,
     toolData,
     version: DEFAULT_STATE.version

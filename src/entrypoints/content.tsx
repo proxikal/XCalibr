@@ -9,10 +9,7 @@ import {
   faCompress,
   faExpand,
   faEyeDropper,
-  faFont,
   faGear,
-  faNetworkWired,
-  faRulerCombined,
   faSearch
 } from '@fortawesome/free-solid-svg-icons';
 import { defineContentScript } from 'wxt/sandbox';
@@ -20,55 +17,6 @@ import tailwindStyles from '../styles/index.css?inline';
 import { DEFAULT_STATE, getState, subscribeState, updateState } from '../shared/state';
 
 const ROOT_ID = 'xcalibr-root';
-
-const tools = [
-  {
-    category: 'Essentials',
-    items: [
-      {
-        title: 'Color Picker',
-        subtitle: 'Grab hex/rgb',
-        icon: faEyeDropper,
-        hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
-        toolId: 'colorPicker'
-      },
-      {
-        title: 'JSON Formatter',
-        subtitle: 'Validate & View',
-        icon: faCode,
-        hover: 'group-hover:border-purple-500 group-hover:text-purple-400'
-      }
-    ]
-  },
-  {
-    category: 'Design',
-    items: [
-      {
-        title: 'Page Ruler',
-        subtitle: 'Measure elements',
-        icon: faRulerCombined,
-        hover: 'group-hover:border-pink-500 group-hover:text-pink-400'
-      },
-      {
-        title: 'Font Info',
-        subtitle: 'Inspect typography',
-        icon: faFont,
-        hover: 'group-hover:border-orange-500 group-hover:text-orange-400'
-      }
-    ]
-  },
-  {
-    category: 'Network',
-    items: [
-      {
-        title: 'Request Log',
-        subtitle: 'Monitor fetch/xhr',
-        icon: faNetworkWired,
-        hover: 'group-hover:border-green-500 group-hover:text-green-400'
-      }
-    ]
-  }
-];
 
 const menuBarItems = [
   {
@@ -123,6 +71,10 @@ const TOOL_DEFAULT_POSITION = { x: 80, y: 140 };
 type ToolRegistryEntry = {
   id: string;
   title: string;
+  subtitle: string;
+  category: string;
+  icon: typeof faBolt;
+  hover: string;
   render: (
     data: unknown,
     onChange: (next: unknown) => void
@@ -340,6 +292,10 @@ const toolRegistry: ToolRegistryEntry[] = [
   {
     id: 'codeInjector',
     title: 'Code Injector',
+    subtitle: 'Inject CSS or JS',
+    category: 'Web Dev',
+    icon: faCode,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
     render: (data, onChange) => (
       <CodeInjectorTool
         data={data as CodeInjectorData | undefined}
@@ -356,6 +312,10 @@ const toolRegistry: ToolRegistryEntry[] = [
   {
     id: 'colorPicker',
     title: 'Color Picker',
+    subtitle: 'Grab hex/rgb',
+    category: 'Front End',
+    icon: faEyeDropper,
+    hover: 'group-hover:border-blue-500 group-hover:text-blue-400',
     render: (data, onChange) => (
       <ColorPickerTool
         data={data as { color?: string } | undefined}
@@ -426,26 +386,15 @@ const App = () => {
     requestAnimationFrame(() => spotlightInputRef.current?.focus());
   }, [spotlightOpen]);
 
-  const searchableTools = useMemo(() => {
-    const entries: { id: string; label: string; subtitle?: string }[] = [];
-    const seen = new Set<string>();
-    toolRegistry.forEach((tool) => {
-      entries.push({ id: tool.id, label: tool.title });
-      seen.add(tool.id);
-    });
-    tools.forEach((group) => {
-      group.items.forEach((item) => {
-        if (!item.toolId || seen.has(item.toolId)) return;
-        entries.push({
-          id: item.toolId,
-          label: item.title,
-          subtitle: item.subtitle
-        });
-        seen.add(item.toolId);
-      });
-    });
-    return entries;
-  }, []);
+  const searchableTools = useMemo(
+    () =>
+      toolRegistry.map((tool) => ({
+        id: tool.id,
+        label: tool.title,
+        subtitle: tool.subtitle
+      })),
+    []
+  );
 
   const spotlightMatches = useMemo(() => {
     const query = spotlightQuery.trim().toLowerCase();
@@ -462,26 +411,24 @@ const App = () => {
     return state.isWide ? 300 : 160;
   }, [state.isOpen, state.isWide]);
 
-  const flatTools = useMemo(
-    () =>
-      tools.flatMap((group) =>
-        group.items.map((item) => ({ ...item, category: group.category }))
-      ),
-    []
-  );
-
   const categoryBadge = (category: string) => {
     switch (category) {
-      case 'Essentials':
+      case 'Web Dev':
+        return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30';
+      case 'Front End':
         return 'bg-blue-500/10 text-blue-300 border-blue-500/30';
-      case 'Design':
-        return 'bg-pink-500/10 text-pink-300 border-pink-500/30';
-      case 'Network':
-        return 'bg-green-500/10 text-green-300 border-green-500/30';
       default:
         return 'bg-slate-500/10 text-slate-300 border-slate-500/30';
     }
   };
+
+  const quickBarTools = useMemo(
+    () =>
+      state.quickBarToolIds
+        .map((toolId) => getToolEntry(toolId))
+        .filter((entry): entry is ToolRegistryEntry => Boolean(entry)),
+    [state.quickBarToolIds]
+  );
 
   const clampTabOffset = (value: number, minOffset = 0) => {
     const maxOffset = Math.max(minOffset, window.innerHeight - tabHeight);
@@ -578,19 +525,24 @@ const App = () => {
     window.addEventListener('pointerup', handleUp, { once: true });
   };
 
-  const updateSearch = async (value: string) => {
-    const next = await updateState((current) => ({
-      ...current,
-      searchQuery: value
-    }));
-    setState(next);
-  };
-
   const updateMenuBar = async (value: boolean) => {
     const next = await updateState((current) => ({
       ...current,
       showMenuBar: value
     }));
+    setState(next);
+  };
+
+  const toggleQuickBarTool = async (toolId: string) => {
+    const next = await updateState((current) => {
+      const isPinned = current.quickBarToolIds.includes(toolId);
+      return {
+        ...current,
+        quickBarToolIds: isPinned
+          ? current.quickBarToolIds.filter((id) => id !== toolId)
+          : [...current.quickBarToolIds, toolId]
+      };
+    });
     setState(next);
   };
 
@@ -1061,37 +1013,43 @@ const App = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar p-1 space-y-1">
-          {flatTools.map((item) => (
-            <button
-              key={item.title}
-              type="button"
-              onClick={() => (item.toolId ? openTool(item.toolId) : undefined)}
-              className="w-full flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group"
-            >
-              <div
-                className={`w-6 h-6 rounded bg-slate-800 border border-slate-700 text-slate-400 transition-colors shrink-0 ${item.hover}`}
+          {quickBarTools.length === 0 ? (
+            <div className="px-3 py-4 text-[11px] text-slate-500">
+              No favorites yet. Open a tool and press + to pin it here.
+            </div>
+          ) : (
+            quickBarTools.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => openTool(item.id)}
+                className="w-full flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group"
               >
-                <div className="w-full h-full flex items-center justify-center">
-                  <FontAwesomeIcon icon={item.icon} className={iconSizeClass} />
-                </div>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <div className="text-slate-300 text-xs font-medium whitespace-nowrap">
-                  {item.title}
-                </div>
-                <div className="text-slate-500 text-[10px] whitespace-nowrap">
-                  {item.subtitle}
-                </div>
-              </div>
-              {state.isWide ? (
-                <span
-                  className={`text-[7px] uppercase tracking-[0.2em] px-2 py-1 rounded-full border ${categoryBadge(item.category)}`}
+                <div
+                  className={`w-6 h-6 rounded bg-slate-800 border border-slate-700 text-slate-400 transition-colors shrink-0 ${item.hover}`}
                 >
-                  {item.category}
-                </span>
-              ) : null}
-            </button>
-          ))}
+                  <div className="w-full h-full flex items-center justify-center">
+                    <FontAwesomeIcon icon={item.icon} className={iconSizeClass} />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="text-slate-300 text-xs font-medium whitespace-nowrap">
+                    {item.title}
+                  </div>
+                  <div className="text-slate-500 text-[10px] whitespace-nowrap">
+                    {item.subtitle}
+                  </div>
+                </div>
+                {state.isWide ? (
+                  <span
+                    className={`text-[7px] uppercase tracking-[0.2em] px-2 py-1 rounded-full border ${categoryBadge(item.category)}`}
+                  >
+                    {item.category}
+                  </span>
+                ) : null}
+              </button>
+            ))
+          )}
         </div>
 
         <div className="p-2 border-t border-slate-800 bg-slate-900 mt-auto">
@@ -1128,6 +1086,7 @@ const App = () => {
       .map(([toolId, toolState]) => {
         const entry = getToolEntry(toolId);
         if (!entry) return null;
+        const isPinned = state.quickBarToolIds.includes(toolId);
         return (
           <div
             key={toolId}
@@ -1198,8 +1157,10 @@ const App = () => {
                 <button
                   type="button"
                   className="hover:text-slate-200 transition-colors text-xs"
+                  onClick={() => toggleQuickBarTool(toolId)}
+                  title={isPinned ? 'Remove from Quick Bar' : 'Add to Quick Bar'}
                 >
-                  +
+                  {isPinned ? '-' : '+'}
                 </button>
                 <button
                   type="button"
