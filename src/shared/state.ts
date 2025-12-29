@@ -7,6 +7,8 @@ export type XcalibrState = {
   tabOffsetY: number;
   showMenuBar: boolean;
   isAnchored: boolean;
+  menuBarActiveMenu: string | null;
+  menuBarActiveSubmenu: string | null;
 };
 
 const STORAGE_KEY = 'xcalibr_state';
@@ -19,7 +21,9 @@ export const DEFAULT_STATE: XcalibrState = {
   searchQuery: '',
   tabOffsetY: 0,
   showMenuBar: false,
-  isAnchored: false
+  isAnchored: false,
+  menuBarActiveMenu: null,
+  menuBarActiveSubmenu: null
 };
 
 const normalizeState = (value: unknown): XcalibrState => {
@@ -36,11 +40,21 @@ const normalizeState = (value: unknown): XcalibrState => {
     typeof partial.isAnchored === 'boolean'
       ? partial.isAnchored
       : DEFAULT_STATE.isAnchored;
+  const menuBarActiveMenu =
+    typeof partial.menuBarActiveMenu === 'string' || partial.menuBarActiveMenu === null
+      ? partial.menuBarActiveMenu
+      : DEFAULT_STATE.menuBarActiveMenu;
+  const menuBarActiveSubmenu =
+    typeof partial.menuBarActiveSubmenu === 'string' || partial.menuBarActiveSubmenu === null
+      ? partial.menuBarActiveSubmenu
+      : DEFAULT_STATE.menuBarActiveSubmenu;
   return {
     ...DEFAULT_STATE,
     ...partial,
     tabOffsetY,
     isAnchored,
+    menuBarActiveMenu,
+    menuBarActiveSubmenu,
     version: DEFAULT_STATE.version
   };
 };

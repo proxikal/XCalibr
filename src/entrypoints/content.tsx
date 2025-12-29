@@ -93,7 +93,6 @@ const App = () => {
   const [state, setState] = useState(DEFAULT_STATE);
   const [dragOffsetY, setDragOffsetY] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [dragAnchored, setDragAnchored] = useState<boolean | null>(null);
   const menuBarRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef({
@@ -238,8 +237,13 @@ const App = () => {
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
       if (!menuBarRef.current) return;
-      if (menuBarRef.current.contains(event.target as Node)) return;
-      setActiveMenu(null);
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      if (path.includes(menuBarRef.current)) return;
+      updateState((current) => ({
+        ...current,
+        menuBarActiveMenu: null,
+        menuBarActiveSubmenu: null
+      })).then(setState);
     };
 
     document.addEventListener('mousedown', handleDocumentClick);
@@ -248,7 +252,11 @@ const App = () => {
 
   useEffect(() => {
     if (!state.showMenuBar) {
-      setActiveMenu(null);
+      updateState((current) => ({
+        ...current,
+        menuBarActiveMenu: null,
+        menuBarActiveSubmenu: null
+      })).then(setState);
       if (state.isAnchored) {
         updateState((current) => ({
           ...current,
@@ -267,7 +275,11 @@ const App = () => {
   }, [menuBarHeight, state.showMenuBar, state.tabOffsetY]);
 
   const handleMenuClick = (label: string) => {
-    setActiveMenu((current) => (current === label ? null : label));
+    updateState((current) => ({
+      ...current,
+      menuBarActiveMenu: current.menuBarActiveMenu === label ? null : label,
+      menuBarActiveSubmenu: null
+    })).then(setState);
   };
 
   if (!state.isVisible) {
@@ -321,7 +333,7 @@ const App = () => {
               <span className="text-xs font-semibold text-slate-100">XCalibr</span>
             </div>
             {menuBarItems.map((item) => {
-              const isOpen = activeMenu === item.label;
+              const isOpen = state.menuBarActiveMenu === item.label;
               return (
                 <div
                   key={item.label}
@@ -358,27 +370,44 @@ const App = () => {
                         <div key={entry.label} className="relative group/menu">
                             <button
                               type="button"
+                              onClick={() =>
+                                updateState((current) => ({
+                                  ...current,
+                                  menuBarActiveSubmenu:
+                                    current.menuBarActiveSubmenu ===
+                                    `${item.label}:${entry.label}`
+                                      ? null
+                                      : `${item.label}:${entry.label}`
+                                })).then(setState)
+                              }
                               className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors flex items-center justify-between"
                             >
                               <span>{entry.label}</span>
                               <span className="text-slate-500">›</span>
                             </button>
-                          <div className="absolute left-full top-0 -ml-px w-44 bg-slate-900 border border-slate-700 rounded shadow-2xl opacity-0 group-hover/menu:opacity-100 pointer-events-none group-hover/menu:pointer-events-auto transition-opacity">
+                          <div
+                            className={`absolute left-full top-0 -ml-px w-44 bg-slate-900 border border-slate-700 rounded shadow-2xl transition-opacity ${
+                              state.menuBarActiveSubmenu ===
+                              `${item.label}:${entry.label}`
+                                ? 'opacity-100 pointer-events-auto'
+                                : 'opacity-0 pointer-events-none'
+                            }`}
+                          >
                             <div className="py-1">
                               {entry.items.map((subItem) => (
                                 <button
                                   key={subItem}
                                   type="button"
-                                    className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
-                                  >
-                                    {subItem}
-                                  </button>
-                                ))}
-                              </div>
+                                  className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                                >
+                                  {subItem}
+                                </button>
+                              ))}
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      );
+                    })}
                     </div>
                   </div>
                 </div>
