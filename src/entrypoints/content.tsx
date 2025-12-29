@@ -5,6 +5,7 @@ import {
   faBolt,
   faChevronLeft,
   faChevronRight,
+  faChevronDown,
   faCode,
   faCompress,
   faExpand,
@@ -309,10 +310,11 @@ const App = () => {
           ref={menuBarRef}
           className="pointer-events-auto fixed top-0 left-0 right-0 z-50 bg-slate-900 border-b border-slate-800 text-slate-200 shadow-lg"
           style={{
-            fontFamily: "'Inter', ui-sans-serif, system-ui, -apple-system"
+            fontFamily: "'Inter', ui-sans-serif, system-ui, -apple-system",
+            height: menuBarHeight
           }}
         >
-          <div className="flex items-center gap-1 px-3 py-1.5">
+          <div className="flex h-full items-center gap-1 px-3">
             <div className="flex items-center gap-2 mr-2">
               <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center">
                 <FontAwesomeIcon icon={faBolt} className="w-3 h-3 text-white" />
@@ -387,7 +389,7 @@ const App = () => {
         </div>
       ) : null}
     <div
-      className="xcalibr-app-container pointer-events-auto font-sans text-slate-200"
+      className="xcalibr-app-container pointer-events-auto font-sans text-slate-200 z-[70]"
       style={{
         fontFamily: "'Inter', ui-sans-serif, system-ui, -apple-system",
         top: `${panelTop}px`
@@ -397,7 +399,7 @@ const App = () => {
         type="button"
         onPointerDown={handleTabPointerDown}
         style={{ touchAction: 'none', transform: `translateY(${tabTranslateY}px)` }}
-        className={`z-50 bg-slate-800 text-white flex items-center justify-center rounded-l-lg shadow-lg hover:bg-slate-700 transition-colors border-l border-t border-b border-slate-600 cursor-pointer ${
+        className={`z-[80] bg-slate-800 text-white flex items-center justify-center rounded-l-lg shadow-lg hover:bg-slate-700 transition-colors border-l border-t border-b border-slate-600 cursor-pointer ${
           isAnchoredEffective ? 'w-7 h-8' : 'w-8 h-12'
         }`}
       >
@@ -419,8 +421,9 @@ const App = () => {
       >
         <div
           className={`border-b border-slate-800 flex justify-between items-center bg-slate-900 sticky top-0 z-10 ${
-            isAnchoredEffective ? 'h-8 px-2 py-1' : 'p-3'
+            isAnchoredEffective ? 'px-2' : 'p-3'
           }`}
+          style={isAnchoredEffective ? { height: menuBarHeight } : undefined}
         >
           <div className="flex items-center gap-2 overflow-hidden">
             <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center shrink-0">
@@ -434,20 +437,32 @@ const App = () => {
                 state.isOpen ? 'opacity-100 delay-150' : 'opacity-0'
               }`}
             >
-              XCalibr
+              {isAnchoredEffective ? 'Extension' : 'XCalibr'}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={toggleWide}
-            className="text-slate-400 hover:text-white transition-colors shrink-0"
-            title={state.isWide ? 'Compress Width' : 'Expand Width'}
-          >
-            <FontAwesomeIcon
-              icon={state.isWide ? faCompress : faExpand}
-              className={iconSizeClass}
-            />
-          </button>
+          <div className="flex items-center gap-1">
+            {isAnchoredEffective && state.isOpen ? (
+              <button
+                type="button"
+                onClick={toggleOpen}
+                className="text-slate-400 hover:text-white transition-colors shrink-0"
+                title="Collapse"
+              >
+                <FontAwesomeIcon icon={faChevronDown} className={iconSizeClass} />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={toggleWide}
+              className="text-slate-400 hover:text-white transition-colors shrink-0"
+              title={state.isWide ? 'Compress Width' : 'Expand Width'}
+            >
+              <FontAwesomeIcon
+                icon={state.isWide ? faCompress : faExpand}
+                className={iconSizeClass}
+              />
+            </button>
+          </div>
         </div>
 
         <div className="p-2 border-b border-slate-800">
