@@ -6,7 +6,7 @@ export default defineConfig({
   manifest: {
     name: 'XCalibr',
     description: 'Embeds a persistent tool menu into every page you visit.',
-    permissions: ['storage', 'tabs'],
+    permissions: ['storage', 'tabs', 'scripting'],
     host_permissions: ['<all_urls>'],
     commands: {
       'toggle-xcalibr-visibility': {
