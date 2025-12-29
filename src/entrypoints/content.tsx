@@ -5,7 +5,6 @@ import {
   faBolt,
   faChevronLeft,
   faChevronRight,
-  faChevronDown,
   faCode,
   faCompress,
   faExpand,
@@ -440,29 +439,17 @@ const App = () => {
               {isAnchoredEffective ? 'Extension' : 'XCalibr'}
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            {isAnchoredEffective && state.isOpen ? (
-              <button
-                type="button"
-                onClick={toggleOpen}
-                className="text-slate-400 hover:text-white transition-colors shrink-0"
-                title="Collapse"
-              >
-                <FontAwesomeIcon icon={faChevronDown} className={iconSizeClass} />
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={toggleWide}
-              className="text-slate-400 hover:text-white transition-colors shrink-0"
-              title={state.isWide ? 'Compress Width' : 'Expand Width'}
-            >
-              <FontAwesomeIcon
-                icon={state.isWide ? faCompress : faExpand}
-                className={iconSizeClass}
-              />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={toggleWide}
+            className="text-slate-400 hover:text-white transition-colors shrink-0"
+            title={state.isWide ? 'Compress Width' : 'Expand Width'}
+          >
+            <FontAwesomeIcon
+              icon={state.isWide ? faCompress : faExpand}
+              className={iconSizeClass}
+            />
+          </button>
         </div>
 
         <div className="p-2 border-b border-slate-800">
