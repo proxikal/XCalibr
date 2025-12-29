@@ -363,7 +363,7 @@ const App = () => {
                               <span>{entry.label}</span>
                               <span className="text-slate-500">›</span>
                             </button>
-                          <div className="absolute left-full top-0 ml-1 w-44 bg-slate-900 border border-slate-700 rounded shadow-2xl opacity-0 group-hover/menu:opacity-100 pointer-events-none group-hover/menu:pointer-events-auto transition-opacity">
+                          <div className="absolute left-full top-0 -ml-px w-44 bg-slate-900 border border-slate-700 rounded shadow-2xl opacity-0 group-hover/menu:opacity-100 pointer-events-none group-hover/menu:pointer-events-auto transition-opacity">
                             <div className="py-1">
                               {entry.items.map((subItem) => (
                                 <button
