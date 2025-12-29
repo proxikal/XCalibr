@@ -77,7 +77,13 @@ const menuBarItems = [
   },
   {
     label: 'Web Dev',
-    items: ['Debugger', { label: 'Color Picker', toolId: 'colorPicker' }]
+    items: [
+      'Debugger',
+      {
+        label: 'Front End',
+        items: [{ label: 'Color Picker', toolId: 'colorPicker' }]
+      }
+    ]
   },
   {
     label: 'Database',
@@ -210,7 +216,10 @@ const App = () => {
   const [dragOffsetY, setDragOffsetY] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragAnchored, setDragAnchored] = useState<boolean | null>(null);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
+  const [spotlightQuery, setSpotlightQuery] = useState('');
   const menuBarRef = useRef<HTMLDivElement | null>(null);
+  const spotlightInputRef = useRef<HTMLInputElement | null>(null);
   const toolDragRef = useRef<{
     toolId: string;
     offsetX: number;
@@ -242,6 +251,54 @@ const App = () => {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey && event.shiftKey)) return;
+      if (event.key.toLowerCase() !== 'p') return;
+      event.preventDefault();
+      setSpotlightOpen(true);
+      setSpotlightQuery('');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!spotlightOpen) return;
+    requestAnimationFrame(() => spotlightInputRef.current?.focus());
+  }, [spotlightOpen]);
+
+  const searchableTools = useMemo(() => {
+    const entries: { id: string; label: string; subtitle?: string }[] = [];
+    const seen = new Set<string>();
+    toolRegistry.forEach((tool) => {
+      entries.push({ id: tool.id, label: tool.title });
+      seen.add(tool.id);
+    });
+    tools.forEach((group) => {
+      group.items.forEach((item) => {
+        if (!item.toolId || seen.has(item.toolId)) return;
+        entries.push({
+          id: item.toolId,
+          label: item.title,
+          subtitle: item.subtitle
+        });
+        seen.add(item.toolId);
+      });
+    });
+    return entries;
+  }, []);
+
+  const spotlightMatches = useMemo(() => {
+    const query = spotlightQuery.trim().toLowerCase();
+    if (!query) return searchableTools;
+    return searchableTools.filter((entry) => {
+      const label = entry.label.toLowerCase();
+      const subtitle = entry.subtitle?.toLowerCase() ?? '';
+      return label.includes(query) || subtitle.includes(query);
+    });
+  }, [spotlightQuery, searchableTools]);
 
   const panelWidth = useMemo(() => {
     if (!state.isOpen) return 0;
@@ -376,6 +433,12 @@ const App = () => {
       };
     });
     setState(next);
+  };
+
+  const openToolFromSpotlight = async (toolId: string) => {
+    await openTool(toolId);
+    setSpotlightOpen(false);
+    setSpotlightQuery('');
   };
 
   const closeTool = async (toolId: string) => {
@@ -531,6 +594,69 @@ const App = () => {
 
   return (
     <>
+      {spotlightOpen ? (
+        <div
+          className="fixed inset-0 z-[90] flex items-start justify-center bg-slate-950/70 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSpotlightOpen(false);
+            }
+          }}
+        >
+          <div
+            className="mt-24 w-full max-w-xl rounded-2xl border border-slate-700/80 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 shadow-[0_24px_60px_rgba(0,0,0,0.55)]"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 border-b border-slate-800 px-5 py-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800/80 text-slate-300">
+                <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[11px] uppercase tracking-[0.24em] text-slate-500">
+                  XCalibr Spotlight
+                </div>
+                <input
+                  ref={spotlightInputRef}
+                  type="text"
+                  value={spotlightQuery}
+                  onChange={(event) => setSpotlightQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') return;
+                    event.preventDefault();
+                    const match = spotlightMatches[0];
+                    if (!match) return;
+                    openToolFromSpotlight(match.id);
+                  }}
+                  placeholder="Search tools..."
+                  className="mt-1 w-full bg-transparent text-lg text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                />
+              </div>
+              <div className="text-[10px] text-slate-500">Cmd+Shift+P</div>
+            </div>
+            <div className="max-h-72 overflow-y-auto p-2">
+              {spotlightMatches.length === 0 ? (
+                <div className="px-4 py-6 text-sm text-slate-400">
+                  Nothing found. Try another keyword.
+                </div>
+              ) : (
+                spotlightMatches.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className="w-full rounded-xl px-4 py-3 text-left transition-colors hover:bg-slate-800/80"
+                    onClick={() => openToolFromSpotlight(entry.id)}
+                  >
+                    <div className="text-sm text-slate-100">{entry.label}</div>
+                    <div className="text-[11px] text-slate-500">
+                      {entry.subtitle ?? 'Open tool'}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       {state.showMenuBar ? (
         <div
           ref={menuBarRef}
@@ -629,15 +755,40 @@ const App = () => {
                             }`}
                           >
                             <div className="py-1">
-                              {entry.items.map((subItem) => (
-                                <button
-                                  key={subItem}
-                                  type="button"
-                                  className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
-                                >
-                                  {subItem}
-                                </button>
-                              ))}
+                              {entry.items.map((subItem) => {
+                                if (typeof subItem === 'string') {
+                                  return (
+                                    <button
+                                      key={subItem}
+                                      type="button"
+                                      className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                                    >
+                                      {subItem}
+                                    </button>
+                                  );
+                                }
+                                if ('toolId' in subItem) {
+                                  return (
+                                    <button
+                                      key={subItem.label}
+                                      type="button"
+                                      onClick={async () => {
+                                        await openTool(subItem.toolId);
+                                        const next = await updateState((current) => ({
+                                          ...current,
+                                          menuBarActiveMenu: null,
+                                          menuBarActiveSubmenu: null
+                                        }));
+                                        setState(next);
+                                      }}
+                                      className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                                    >
+                                      {subItem.label}
+                                    </button>
+                                  );
+                                }
+                                return null;
+                              })}
                             </div>
                           </div>
                         </div>
@@ -726,18 +877,8 @@ const App = () => {
             />
             <span>Show Menu Bar</span>
           </label>
-          <div className="relative">
-            <FontAwesomeIcon
-              icon={faSearch}
-              className={`absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 ${iconSizeClass}`}
-            />
-            <input
-              type="text"
-              placeholder="Find tool..."
-              value={state.searchQuery}
-              onChange={(event) => updateSearch(event.target.value)}
-              className="w-full bg-slate-800 text-slate-300 text-xs rounded pl-7 pr-2 py-1.5 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors placeholder-slate-500"
-            />
+          <div className="text-[11px] text-slate-500 px-1 py-1.5">
+            Hit cmd+shift+p to search.
           </div>
         </div>
 
