@@ -72,8 +72,8 @@ const tools = [
 
 const menuBarItems = [
   {
-    label: 'Tools',
-    items: ['Example Tool 1', 'Example Tool 2']
+    label: 'File',
+    items: ['Help', 'Settings']
   },
   {
     label: 'Web Dev',
@@ -304,6 +304,27 @@ const App = () => {
     if (!state.isOpen) return 0;
     return state.isWide ? 300 : 160;
   }, [state.isOpen, state.isWide]);
+
+  const flatTools = useMemo(
+    () =>
+      tools.flatMap((group) =>
+        group.items.map((item) => ({ ...item, category: group.category }))
+      ),
+    []
+  );
+
+  const categoryBadge = (category: string) => {
+    switch (category) {
+      case 'Essentials':
+        return 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+      case 'Design':
+        return 'bg-pink-500/10 text-pink-300 border-pink-500/30';
+      case 'Network':
+        return 'bg-green-500/10 text-green-300 border-green-500/30';
+      default:
+        return 'bg-slate-500/10 text-slate-300 border-slate-500/30';
+    }
+  };
 
   const clampTabOffset = (value: number, minOffset = 0) => {
     const maxOffset = Math.max(minOffset, window.innerHeight - tabHeight);
@@ -883,39 +904,36 @@ const App = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar p-1 space-y-1">
-          {tools.map((group) => (
-            <div key={group.category}>
-              <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500 font-semibold mt-2 whitespace-nowrap">
-                {group.category}
+          {flatTools.map((item) => (
+            <button
+              key={item.title}
+              type="button"
+              onClick={() => (item.toolId ? openTool(item.toolId) : undefined)}
+              className="w-full flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group"
+            >
+              <div
+                className={`w-6 h-6 rounded bg-slate-800 border border-slate-700 text-slate-400 transition-colors shrink-0 ${item.hover}`}
+              >
+                <div className="w-full h-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={item.icon} className={iconSizeClass} />
+                </div>
               </div>
-              {group.items.map((item) => (
-                <button
-                  key={item.title}
-                  type="button"
-                  onClick={() => (item.toolId ? openTool(item.toolId) : undefined)}
-                  className="w-full flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group"
+              <div className="flex-1 overflow-hidden">
+                <div className="text-slate-300 text-xs font-medium whitespace-nowrap">
+                  {item.title}
+                </div>
+                <div className="text-slate-500 text-[10px] whitespace-nowrap">
+                  {item.subtitle}
+                </div>
+              </div>
+              {state.isWide ? (
+                <span
+                  className={`text-[7px] uppercase tracking-[0.2em] px-2 py-1 rounded-full border ${categoryBadge(item.category)}`}
                 >
-                  <div
-                    className={`w-6 h-6 rounded bg-slate-800 border border-slate-700 text-slate-400 transition-colors shrink-0 ${item.hover}`}
-                  >
-                    <div className="w-full h-full flex items-center justify-center">
-                      <FontAwesomeIcon
-                        icon={item.icon}
-                        className={iconSizeClass}
-                      />
-                    </div>
-                  </div>
-                  <div className="overflow-hidden">
-                    <div className="text-slate-300 text-xs font-medium whitespace-nowrap">
-                      {item.title}
-                    </div>
-                    <div className="text-slate-500 text-[10px] whitespace-nowrap">
-                      {item.subtitle}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+                  {item.category}
+                </span>
+              ) : null}
+            </button>
           ))}
         </div>
 
