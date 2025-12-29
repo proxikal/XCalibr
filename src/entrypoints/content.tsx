@@ -34,6 +34,7 @@ import {
   buildScraperId,
   buildCsvFromResults,
   extractScraperResults,
+  getRegexMatchCount,
   generateCssSelector,
   generateXPath
 } from '../shared/scraper';
@@ -89,7 +90,7 @@ const baseMenuBarItems = [
       {
         label: 'JSON',
         items: [
-          'JSON Minifier',
+          { label: 'JSON Minifier', toolId: 'jsonMinifier' },
           'JSON Prettifier',
           'JSON Schema Validator',
           'JSON Path Tester',
@@ -363,6 +364,12 @@ type CorsCheckData = {
   };
   error?: string;
   updatedAt?: number;
+};
+
+type JsonMinifierData = {
+  input?: string;
+  output?: string;
+  error?: string;
 };
 
 const defaultPayloads = [
@@ -1498,6 +1505,73 @@ const CorsCheckTool = ({
   );
 };
 
+const JsonMinifierTool = ({
+  data,
+  onChange
+}: {
+  data: JsonMinifierData | undefined;
+  onChange: (next: JsonMinifierData) => void;
+}) => {
+  const input = data?.input ?? '';
+  const output = data?.output ?? '';
+  const error = data?.error ?? '';
+
+  const handleMinify = () => {
+    try {
+      const parsed = JSON.parse(input);
+      const minified = JSON.stringify(parsed);
+      onChange({ input, output: minified, error: '' });
+    } catch (err) {
+      onChange({
+        input,
+        output: '',
+        error: err instanceof Error ? err.message : 'Invalid JSON'
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">JSON Minifier</div>
+      <textarea
+        value={input}
+        onChange={(event) => onChange({ input: event.target.value, output, error })}
+        rows={6}
+        className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-2 border border-slate-700 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+        placeholder="Paste JSON here..."
+      />
+      {error ? (
+        <div className="text-[11px] text-rose-300">{error}</div>
+      ) : null}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handleMinify}
+          disabled={!input.trim()}
+          className="flex-1 rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          Minify
+        </button>
+        <button
+          type="button"
+          onClick={() => navigator.clipboard.writeText(output)}
+          disabled={!output}
+          className="flex-1 rounded bg-slate-800 px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          Copy
+        </button>
+      </div>
+      <textarea
+        value={output}
+        readOnly
+        rows={6}
+        className="w-full rounded bg-slate-900 text-slate-300 text-xs px-2 py-2 border border-slate-800 focus:outline-none font-mono"
+        placeholder="Minified output..."
+      />
+    </div>
+  );
+};
+
 const toolRegistry: ToolRegistryEntry[] = [
   {
     id: 'codeInjector',
@@ -1737,6 +1811,20 @@ const toolRegistry: ToolRegistryEntry[] = [
           });
           onChange({ url, ...result });
         }}
+      />
+    )
+  },
+  {
+    id: 'jsonMinifier',
+    title: 'JSON Minifier',
+    subtitle: 'Compress JSON',
+    category: 'Database',
+    icon: faCompress,
+    hover: 'group-hover:border-purple-500 group-hover:text-purple-400',
+    render: (data, onChange) => (
+      <JsonMinifierTool
+        data={data as JsonMinifierData | undefined}
+        onChange={onChange}
       />
     )
   },
@@ -2009,6 +2097,20 @@ const App = () => {
     () => state.scrapers.find((entry) => entry.id === state.scraperRunnerId) ?? null,
     [state.scrapers, state.scraperRunnerId]
   );
+
+  const regexPreviewMap = useMemo(() => {
+    const previews = new Map<string, { count: number; error: string | null; capped: boolean }>();
+    if (!state.scraperBuilderOpen) return previews;
+    const text = document.body?.innerText ?? '';
+    state.scraperDraft.fields.forEach((field) => {
+      if (field.source !== 'regex') return;
+      previews.set(
+        field.id,
+        getRegexMatchCount(text, field.regex ?? '', field.regexFlags ?? '')
+      );
+    });
+    return previews;
+  }, [state.scraperBuilderOpen, state.scraperDraft.fields]);
 
   const clampTabOffset = (value: number, minOffset = 0) => {
     const maxOffset = Math.max(minOffset, window.innerHeight - tabHeight);
@@ -2576,11 +2678,29 @@ const App = () => {
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        4b. Get Every Instance
+                      </div>
+                      <div>
+                        Use List mode with a broad selector or Regex to capture all
+                        matches like emails or URLs.
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
                         5. Choose Source
                       </div>
                       <div>
                         Pick Text, HTML, or Attribute. Attribute is useful for
                         links (href) or images (src).
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                        5b. Regex Source
+                      </div>
+                      <div>
+                        Add a Regex field to scan the entire page text. Start with
+                        presets like Emails or URLs and tweak the pattern if needed.
                       </div>
                     </div>
                     <div>
@@ -2647,13 +2767,36 @@ const App = () => {
               <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="text-[11px] text-slate-500">Picker idle</div>
-                  <button
-                    type="button"
-                    onClick={() => updateScraperDraft({ isPicking: true })}
-                    className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
-                  >
-                    Pick Elements
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextField: ScraperField = {
+                          id: `field_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+                          name: `Regex ${state.scraperDraft.fields.length + 1}`,
+                          selector: 'document',
+                          xpath: 'document',
+                          mode: 'list',
+                          source: 'regex',
+                          regex: '',
+                          regexFlags: 'gi'
+                        };
+                        updateScraperDraft({
+                          fields: [...state.scraperDraft.fields, nextField]
+                        });
+                      }}
+                      className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+                    >
+                      Add Regex Field
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateScraperDraft({ isPicking: true })}
+                      className="rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+                    >
+                      Pick Elements
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -2717,38 +2860,122 @@ const App = () => {
                           ))}
                         </div>
 
-                        <div className="flex gap-2">
-                          {(['text', 'html', 'attr'] as const).map((source) => (
-                            <button
-                              key={source}
-                              type="button"
-                              onClick={() => updateScraperField(field.id, { source })}
-                              className={`flex-1 rounded px-2 py-1 text-[11px] border transition-colors ${
-                                field.source === source
-                                  ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
-                                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
-                              }`}
-                            >
-                              {source === 'attr' ? 'Attribute' : source.toUpperCase()}
-                            </button>
-                          ))}
-                        </div>
-                        {field.source === 'attr' ? (
-                          <input
-                            type="text"
-                            value={field.attrName ?? ''}
-                            onChange={(event) =>
+                      <div className="flex gap-2">
+                        {(['text', 'html', 'attr', 'regex'] as const).map((source) => (
+                          <button
+                            key={source}
+                            type="button"
+                            onClick={() =>
                               updateScraperField(field.id, {
-                                attrName: event.target.value
+                                source,
+                                ...(source === 'regex'
+                                  ? { selector: 'document', xpath: 'document', mode: 'list' }
+                                  : {})
                               })
                             }
-                            className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
-                            placeholder="Attribute name (e.g. href)"
-                          />
-                        ) : null}
+                            className={`flex-1 rounded px-2 py-1 text-[11px] border transition-colors ${
+                              field.source === source
+                                ? 'bg-blue-500/10 border-blue-500/50 text-blue-300'
+                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'
+                            }`}
+                          >
+                            {source === 'attr'
+                              ? 'Attribute'
+                              : source === 'regex'
+                                ? 'Regex'
+                                : source.toUpperCase()}
+                          </button>
+                        ))}
                       </div>
-                    ))
-                  )}
+                      {field.source === 'attr' ? (
+                        <input
+                          type="text"
+                          value={field.attrName ?? ''}
+                          onChange={(event) =>
+                            updateScraperField(field.id, {
+                              attrName: event.target.value
+                            })
+                          }
+                          className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500"
+                          placeholder="Attribute name (e.g. href)"
+                        />
+                      ) : null}
+                      {field.source === 'regex' ? (
+                        <div className="space-y-2">
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                            Regex Pattern
+                          </div>
+                          <input
+                            type="text"
+                            value={field.regex ?? ''}
+                            onChange={(event) =>
+                              updateScraperField(field.id, { regex: event.target.value })
+                            }
+                            className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+                            placeholder="e.g. [A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}"
+                          />
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                            Flags
+                          </div>
+                          <input
+                            type="text"
+                            value={field.regexFlags ?? 'gi'}
+                            onChange={(event) =>
+                              updateScraperField(field.id, {
+                                regexFlags: event.target.value
+                              })
+                            }
+                            className="w-full rounded bg-slate-800 text-slate-200 text-xs px-2 py-1 border border-slate-700 focus:outline-none focus:border-blue-500 font-mono"
+                            placeholder="e.g. gi"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateScraperField(field.id, {
+                                  regex:
+                                    '[A-Z0-9._%+-]+@[A-Z0-9.-]+\\\\.[A-Z]{2,}',
+                                  regexFlags: 'gi',
+                                  mode: 'list'
+                                })
+                              }
+                              className="flex-1 rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+                            >
+                              Emails
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateScraperField(field.id, {
+                                  regex: "https?://[^\\s\"'`<>]+",
+                                  regexFlags: 'gi',
+                                  mode: 'list'
+                                })
+                              }
+                              className="flex-1 rounded bg-slate-800 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700 transition-colors"
+                            >
+                              URLs
+                            </button>
+                          </div>
+                          {regexPreviewMap.get(field.id)?.error ? (
+                            <div className="text-[11px] text-rose-300">
+                              {regexPreviewMap.get(field.id)?.error}
+                            </div>
+                          ) : (
+                            <div className="text-[11px] text-slate-500">
+                              Matches on page:{' '}
+                              {regexPreviewMap.get(field.id)?.count ?? 0}
+                              {regexPreviewMap.get(field.id)?.capped ? '+' : ''}
+                            </div>
+                          )}
+                          <div className="text-[11px] text-slate-500">
+                            Regex runs against full page text.
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                )}
                 </div>
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-5 py-4">

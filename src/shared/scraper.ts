@@ -1,4 +1,4 @@
-export type ScraperFieldSource = 'text' | 'html' | 'attr';
+export type ScraperFieldSource = 'text' | 'html' | 'attr' | 'regex';
 export type ScraperFieldMode = 'single' | 'list';
 
 export type ScraperField = {
@@ -9,6 +9,8 @@ export type ScraperField = {
   mode: ScraperFieldMode;
   source: ScraperFieldSource;
   attrName?: string;
+  regex?: string;
+  regexFlags?: string;
 };
 
 export type ScraperDefinition = {
@@ -123,7 +125,12 @@ export const normalizeScrapers = (value: unknown): ScraperDefinition[] => {
             xpath: candidateField.xpath,
             mode: candidateField.mode,
             source: candidateField.source,
-            attrName: candidateField.attrName ?? undefined
+            attrName: candidateField.attrName ?? undefined,
+            regex: typeof candidateField.regex === 'string' ? candidateField.regex : undefined,
+            regexFlags:
+              typeof candidateField.regexFlags === 'string'
+                ? candidateField.regexFlags
+                : undefined
           };
         })
         .filter((field): field is ScraperField => Boolean(field));
@@ -157,6 +164,36 @@ export const extractScraperResults = (
 ): ScraperRunResult => {
   const result: ScraperRunResult = {};
   scraper.fields.forEach((field) => {
+    if (field.source === 'regex') {
+      const text = documentRef.body?.innerText ?? '';
+      if (!field.regex) {
+        result[field.name] = field.mode === 'list' ? [] : '';
+        return;
+      }
+      let regex: RegExp | null = null;
+      try {
+        regex = new RegExp(field.regex, field.regexFlags ?? '');
+      } catch {
+        result[field.name] = field.mode === 'list' ? [] : '';
+        return;
+      }
+      if (field.mode === 'list') {
+        const flags = regex.flags.includes('g') ? regex.flags : `${regex.flags}g`;
+        const globalRegex = new RegExp(regex.source, flags);
+        const matches: string[] = [];
+        let match = globalRegex.exec(text);
+        while (match) {
+          matches.push(match[1] ?? match[0]);
+          match = globalRegex.exec(text);
+        }
+        result[field.name] = matches;
+      } else {
+        const match = regex.exec(text);
+        result[field.name] = match ? match[1] ?? match[0] : '';
+      }
+      return;
+    }
+
     const nodes = Array.from(documentRef.querySelectorAll(field.selector));
     const extractValue = (el: Element) => {
       if (field.source === 'html') return el.innerHTML;
@@ -183,4 +220,35 @@ export const buildCsvFromResults = (results: ScraperRunResult) => {
   });
   const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
   return `${headers.map(escape).join(',')}\n${values.map(escape).join(',')}`;
+};
+
+export const getRegexMatchCount = (
+  text: string,
+  pattern: string,
+  flags: string
+) => {
+  if (!pattern.trim()) return { count: 0, error: null, capped: false };
+  let regex: RegExp;
+  try {
+    regex = new RegExp(pattern, flags);
+  } catch (error) {
+    return {
+      count: 0,
+      error: error instanceof Error ? error.message : 'Invalid regex',
+      capped: false
+    };
+  }
+  const hasGlobal = regex.flags.includes('g');
+  const globalRegex = hasGlobal ? regex : new RegExp(regex.source, `${regex.flags}g`);
+  let count = 0;
+  const limit = 5000;
+  let match = globalRegex.exec(text);
+  while (match) {
+    count += 1;
+    if (count >= limit) {
+      return { count, error: null, capped: true };
+    }
+    match = globalRegex.exec(text);
+  }
+  return { count, error: null, capped: false };
 };
