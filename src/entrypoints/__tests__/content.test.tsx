@@ -144,10 +144,11 @@ const queryAllByText = (root: ShadowRoot, text: string) =>
 const mountContent = async () => {
   vi.resetModules();
   vi.doMock('wxt/sandbox', () => ({
-    defineContentScript: (config: { main: () => void }) => config
+    defineContentScript: (config: { main: (ctx: unknown) => void }) => config
   }));
   const module = await import('../content');
-  module.default.main();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (module.default.main as (ctx: unknown) => void)({});
   await flushPromises();
 };
 

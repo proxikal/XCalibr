@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import {
   faBolt,
   faBug,
@@ -382,7 +382,7 @@ export const buildToolRegistry = (handlers: {
             type: 'xcalibr-payload-replay',
             payload
           });
-          onChange({ ...data, ...result });
+          onChange({ ...(data as object ?? {}), ...result });
         }}
       />
     )

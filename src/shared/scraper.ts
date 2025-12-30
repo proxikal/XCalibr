@@ -74,15 +74,16 @@ export const generateXPath = (element: Element): string => {
   let current: Element | null = element;
   while (current && current.nodeType === 1) {
     const tag = current.tagName.toLowerCase();
-    const parent = current.parentElement;
-    if (!parent) break;
-    const siblings = Array.from(parent.children).filter(
+    const parentEl: Element | null = current.parentElement;
+    if (!parentEl) break;
+    const childrenArray: Element[] = Array.from(parentEl.children);
+    const siblings = childrenArray.filter(
       (child) => child.tagName.toLowerCase() === tag
     );
     const index = siblings.indexOf(current) + 1;
     segments.unshift(`${tag}[${index}]`);
-    current = parent;
-    if (current.tagName.toLowerCase() === 'html') {
+    current = parentEl;
+    if (current && current.tagName.toLowerCase() === 'html') {
       segments.unshift('html[1]');
       break;
     }
@@ -98,14 +99,14 @@ export const buildScraperId = () =>
 export const normalizeScrapers = (value: unknown): ScraperDefinition[] => {
   if (!Array.isArray(value)) return [];
   return value
-    .map((entry) => {
+    .map((entry): ScraperDefinition | null => {
       if (!entry || typeof entry !== 'object') return null;
       const candidate = entry as Partial<ScraperDefinition>;
       if (!candidate.id || !candidate.name || !Array.isArray(candidate.fields)) {
         return null;
       }
       const fields = candidate.fields
-        .map((field) => {
+        .map((field): ScraperField | null => {
           if (!field || typeof field !== 'object') return null;
           const candidateField = field as Partial<ScraperField>;
           if (
@@ -125,7 +126,7 @@ export const normalizeScrapers = (value: unknown): ScraperDefinition[] => {
             xpath: candidateField.xpath,
             mode: candidateField.mode,
             source: candidateField.source,
-            attrName: candidateField.attrName ?? undefined,
+            attrName: candidateField.attrName,
             regex: typeof candidateField.regex === 'string' ? candidateField.regex : undefined,
             regexFlags:
               typeof candidateField.regexFlags === 'string'
@@ -133,7 +134,7 @@ export const normalizeScrapers = (value: unknown): ScraperDefinition[] => {
                 : undefined
           };
         })
-        .filter((field): field is ScraperField => Boolean(field));
+        .filter((field): field is ScraperField => field !== null);
       return {
         id: candidate.id,
         name: candidate.name,
@@ -142,7 +143,7 @@ export const normalizeScrapers = (value: unknown): ScraperDefinition[] => {
         updatedAt: candidate.updatedAt ?? Date.now()
       };
     })
-    .filter((entry): entry is ScraperDefinition => Boolean(entry));
+    .filter((entry): entry is ScraperDefinition => entry !== null);
 };
 
 export const normalizeScraperDraft = (value: unknown): ScraperDraft => {

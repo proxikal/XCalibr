@@ -5,15 +5,15 @@ type StorageListener = (
   areaName: string
 ) => void;
 
+type RuntimeMessageListener = (
+  message: unknown,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response?: unknown) => void
+) => boolean | void;
+
 const storageData = new Map<string, unknown>();
 const storageListeners = new Set<StorageListener>();
-const runtimeListeners = new Set<
-  (
-    message: unknown,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void
-  ) => boolean | void
->();
+const runtimeListeners = new Set<RuntimeMessageListener>();
 const runtimeHandlers = new Map<string, (payload?: unknown) => unknown>();
 
 const notifyStorage = (changes: { [key: string]: chrome.storage.StorageChange }) => {
@@ -48,11 +48,11 @@ const buildChromeMocks = () => {
         });
       }),
       onMessage: {
-        addListener: vi.fn((listener: StorageListener) => {
-          runtimeListeners.add(listener as unknown as StorageListener);
+        addListener: vi.fn((listener: RuntimeMessageListener) => {
+          runtimeListeners.add(listener);
         }),
-        removeListener: vi.fn((listener: StorageListener) => {
-          runtimeListeners.delete(listener as unknown as StorageListener);
+        removeListener: vi.fn((listener: RuntimeMessageListener) => {
+          runtimeListeners.delete(listener);
         })
       }
     },

@@ -3,6 +3,14 @@ import {
   hexToRgb
 } from './helpers';
 
+interface EyeDropperResult {
+  sRGBHex: string;
+}
+
+interface EyeDropperConstructor {
+  new (): { open: () => Promise<EyeDropperResult> };
+}
+
 const ColorPickerToolComponent = ({
   data,
   onChange
@@ -19,7 +27,7 @@ const ColorPickerToolComponent = ({
   const pickFromPage = async () => {
     if (!('EyeDropper' in window)) return;
     try {
-      const dropper = new (window as Window & { EyeDropper: typeof EyeDropper })
+      const dropper = new (window as Window & { EyeDropper: EyeDropperConstructor })
         .EyeDropper();
       const result = await dropper.open();
       onChange({ color: result.sRGBHex });

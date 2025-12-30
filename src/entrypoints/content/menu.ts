@@ -1,4 +1,22 @@
-export const baseMenuBarItems = [
+export type MenuToolItem = { label: string; toolId: string };
+export type MenuScraperItem = { label: string; scraperId: string };
+export type MenuActionItem = { label: string; action: string };
+export type MenuSubMenu = {
+  label: string;
+  items: (string | MenuToolItem | MenuScraperItem | MenuActionItem)[];
+};
+export type MenuItem =
+  | string
+  | MenuToolItem
+  | MenuScraperItem
+  | MenuActionItem
+  | MenuSubMenu;
+export type MenuBarItem = {
+  label: string;
+  items: MenuItem[];
+};
+
+export const baseMenuBarItems: MenuBarItem[] = [
   {
     label: 'File',
     items: ['Help', 'Settings']

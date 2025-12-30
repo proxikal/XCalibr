@@ -13,7 +13,7 @@ import {
 import { defineContentScript } from 'wxt/sandbox';
 import tailwindStyles from '../styles/index.css?inline';
 import { DEFAULT_STATE, getState, subscribeState, updateState } from '../shared/state';
-import { baseMenuBarItems } from './content/menu';
+import { baseMenuBarItems, type MenuBarItem } from './content/menu';
 import {
   TOOL_DEFAULT_POSITION,
   ToolRegistryEntry,
@@ -33,6 +33,20 @@ import {
 import { moveItem } from '../shared/array-tools';
 import { getAutoScrollDelta } from '../shared/drag-tools';
 import { parseCookieString } from '../shared/web-tools';
+import {
+  createPreviewHost,
+  isValidPreviewUrl,
+  PREVIEW_SCALE,
+  PREVIEW_WIDTH,
+  PREVIEW_HEIGHT,
+  PREVIEW_MARGIN
+} from './content/Tools/helpers';
+import type {
+  RequestLogData,
+  DebuggerData,
+  CookieManagerData,
+  LiveLinkPreviewData
+} from './content/Tools/tool-types';
 
 const ROOT_ID = 'xcalibr-root';
 
@@ -97,7 +111,7 @@ const App = () => {
   const menuHeight = 550;
   const menuBarHeight = 32;
 
-  const menuItems = useMemo(() => {
+  const menuItems = useMemo((): MenuBarItem[] => {
     const scraperItems =
       state.scrapers.length > 0
         ? state.scrapers.map((scraper) => ({
@@ -105,14 +119,14 @@ const App = () => {
             scraperId: scraper.id
           }))
         : ['No saved scrapers'];
-    const scraperMenu = {
+    const scraperMenu: MenuBarItem = {
       label: 'Scraper',
       items: [
         { label: 'Make Scraper', action: 'makeScraper' },
         { label: 'Scraper List', items: scraperItems }
       ]
     };
-    const items = [...baseMenuBarItems];
+    const items: MenuBarItem[] = [...baseMenuBarItems];
     const cyberIndex = items.findIndex((item) => item.label === 'CyberSec');
     if (cyberIndex === -1) {
       items.push(scraperMenu);
