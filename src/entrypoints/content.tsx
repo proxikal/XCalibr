@@ -72,6 +72,7 @@ const baseMenuBarItems = [
     label: 'Web Dev',
     items: [
       { label: 'Code Injector', toolId: 'codeInjector' },
+      { label: 'Live Link Preview', toolId: 'liveLinkPreview' },
       { label: 'Debugger', toolId: 'debuggerTool' },
       'Performance Timeline',
       { label: 'Storage Explorer', toolId: 'storageExplorer' },
@@ -287,6 +288,10 @@ type CodeInjectorData = {
   mode?: 'css' | 'js';
   scope?: 'current' | 'all';
   code?: string;
+};
+
+type LiveLinkPreviewData = {
+  isActive?: boolean;
 };
 
 type HeaderInspectorData = {
@@ -3807,6 +3812,103 @@ const CookieManagerTool = ({
   );
 };
 
+const LiveLinkPreviewTool = ({
+  data,
+  onChange
+}: {
+  data: LiveLinkPreviewData | undefined;
+  onChange: (next: LiveLinkPreviewData) => void;
+}) => {
+  const isActive = data?.isActive ?? false;
+  return (
+    <div className="space-y-3">
+      <div className="text-xs text-slate-200">Live Link Preview</div>
+      <div className="text-[11px] text-slate-500">
+        Hover over links to preview destinations. Only active when toggled on.
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange({ isActive: !isActive })}
+        className={`w-full rounded px-2 py-1.5 text-xs border transition-colors ${
+          isActive
+            ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-200'
+            : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+        }`}
+      >
+        {isActive ? 'Active' : 'Inactive'}
+      </button>
+    </div>
+  );
+};
+
+const PREVIEW_SCALE = 0.5;
+const PREVIEW_WIDTH = 960;
+const PREVIEW_HEIGHT = 540;
+const PREVIEW_MARGIN = 12;
+
+const createPreviewHost = () => {
+  const host = document.createElement('div');
+  host.style.position = 'fixed';
+  host.style.zIndex = '2147483646';
+  host.style.pointerEvents = 'none';
+  const shadow = host.attachShadow({ mode: 'open' });
+  const style = document.createElement('style');
+  style.textContent = `
+    .preview-card {
+      position: fixed;
+      border-radius: 14px;
+      border: 1px solid rgba(15, 23, 42, 0.8);
+      background: rgba(15, 23, 42, 0.92);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+      padding: 8px;
+      width: ${PREVIEW_WIDTH * PREVIEW_SCALE}px;
+      height: ${PREVIEW_HEIGHT * PREVIEW_SCALE}px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .preview-frame {
+      width: ${PREVIEW_WIDTH}px;
+      height: ${PREVIEW_HEIGHT}px;
+      border: none;
+      transform: scale(${PREVIEW_SCALE});
+      transform-origin: top left;
+      background: #0f172a;
+    }
+    .preview-title {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      max-width: 100%;
+    }
+  `;
+  shadow.appendChild(style);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'preview-card';
+  const title = document.createElement('div');
+  title.className = 'preview-title';
+  wrapper.appendChild(title);
+  const frame = document.createElement('iframe');
+  frame.className = 'preview-frame';
+  frame.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms');
+  frame.setAttribute('loading', 'lazy');
+  wrapper.appendChild(frame);
+  shadow.appendChild(wrapper);
+  document.body.appendChild(host);
+  return { host, wrapper, frame, title };
+};
+
+const isValidPreviewUrl = (href: string) => {
+  try {
+    const url = new URL(href);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 const buildToolRegistry = (handlers: {
   refreshStorageExplorer: () => void;
   refreshCookies: () => void;
@@ -3828,6 +3930,20 @@ const buildToolRegistry = (handlers: {
             payload
           });
         }}
+      />
+    )
+  },
+  {
+    id: 'liveLinkPreview',
+    title: 'Live Link Preview',
+    subtitle: 'Hover link previews',
+    category: 'Web Dev',
+    icon: faLink,
+    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    render: (data, onChange) => (
+      <LiveLinkPreviewTool
+        data={data as LiveLinkPreviewData | undefined}
+        onChange={(next) => onChange(next)}
       />
     )
   },
@@ -4575,6 +4691,14 @@ const App = () => {
   const spotlightInputRef = useRef<HTMLInputElement | null>(null);
   const requestLogSeenRef = useRef<Set<string>>(new Set());
   const debuggerSeenRef = useRef<number>(0);
+  const linkPreviewHostRef = useRef<{
+    host: HTMLDivElement;
+    wrapper: HTMLDivElement;
+    frame: HTMLIFrameElement;
+    title: HTMLDivElement;
+  } | null>(null);
+  const linkPreviewAnchorRef = useRef<HTMLAnchorElement | null>(null);
+  const linkPreviewTimeoutRef = useRef<number | null>(null);
   const toolDragRef = useRef<{
     toolId: string;
     offsetX: number;
@@ -5300,6 +5424,93 @@ const App = () => {
       })).then(setState);
     }
   }, [menuBarHeight, state.showMenuBar, state.tabOffsetY]);
+
+  useEffect(() => {
+    const isActive = Boolean(
+      (state.toolData.liveLinkPreview as LiveLinkPreviewData | undefined)?.isActive
+    );
+    if (!isActive) {
+      if (linkPreviewTimeoutRef.current) {
+        window.clearTimeout(linkPreviewTimeoutRef.current);
+        linkPreviewTimeoutRef.current = null;
+      }
+      if (linkPreviewHostRef.current) {
+        linkPreviewHostRef.current.host.remove();
+        linkPreviewHostRef.current = null;
+      }
+      linkPreviewAnchorRef.current = null;
+      return;
+    }
+
+    const hidePreview = () => {
+      if (linkPreviewTimeoutRef.current) {
+        window.clearTimeout(linkPreviewTimeoutRef.current);
+        linkPreviewTimeoutRef.current = null;
+      }
+      if (linkPreviewHostRef.current) {
+        linkPreviewHostRef.current.host.remove();
+        linkPreviewHostRef.current = null;
+      }
+      linkPreviewAnchorRef.current = null;
+    };
+
+    const showPreview = (anchor: HTMLAnchorElement) => {
+      const href = anchor.getAttribute('href') ?? '';
+      if (!href || !isValidPreviewUrl(anchor.href)) return;
+      if (!linkPreviewHostRef.current) {
+        linkPreviewHostRef.current = createPreviewHost();
+      }
+      const { wrapper, frame, title } = linkPreviewHostRef.current;
+      frame.src = anchor.href;
+      title.textContent = anchor.href;
+      const rect = anchor.getBoundingClientRect();
+      const width = PREVIEW_WIDTH * PREVIEW_SCALE;
+      const height = PREVIEW_HEIGHT * PREVIEW_SCALE;
+      const fitsBelow = rect.bottom + height + PREVIEW_MARGIN < window.innerHeight;
+      const top = fitsBelow
+        ? rect.bottom + PREVIEW_MARGIN
+        : Math.max(PREVIEW_MARGIN, rect.top - height - PREVIEW_MARGIN);
+      const left = Math.min(
+        Math.max(PREVIEW_MARGIN, rect.left),
+        window.innerWidth - width - PREVIEW_MARGIN
+      );
+      wrapper.style.top = `${top}px`;
+      wrapper.style.left = `${left}px`;
+    };
+
+    const handleMouseOver = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      const host = document.getElementById(ROOT_ID);
+      if (host && host.contains(target)) return;
+      const anchor = target.closest('a') as HTMLAnchorElement | null;
+      if (!anchor || !anchor.href) return;
+      if (linkPreviewAnchorRef.current === anchor) return;
+      linkPreviewAnchorRef.current = anchor;
+      if (linkPreviewTimeoutRef.current) {
+        window.clearTimeout(linkPreviewTimeoutRef.current);
+      }
+      linkPreviewTimeoutRef.current = window.setTimeout(() => {
+        showPreview(anchor);
+      }, 500);
+    };
+
+    const handleMouseOut = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      const anchor = target.closest('a') as HTMLAnchorElement | null;
+      if (!anchor || anchor !== linkPreviewAnchorRef.current) return;
+      hidePreview();
+    };
+
+    document.addEventListener('mouseover', handleMouseOver);
+    document.addEventListener('mouseout', handleMouseOut);
+    return () => {
+      document.removeEventListener('mouseover', handleMouseOver);
+      document.removeEventListener('mouseout', handleMouseOut);
+      hidePreview();
+    };
+  }, [state.toolData.liveLinkPreview]);
 
   const handleMenuClick = (label: string) => {
     updateState((current) => ({
