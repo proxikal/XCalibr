@@ -162,6 +162,10 @@ const findButtonByText = (root: ShadowRoot, text: string) => {
   );
 };
 
+const findQuickBarButtonById = (root: ShadowRoot, toolId: string) => {
+  return root.querySelector(`button[data-quickbar-id="${toolId}"]`);
+};
+
 const findPreviewFrame = () => {
   const hosts = Array.from(document.querySelectorAll('div'));
   for (const host of hosts) {
@@ -263,6 +267,97 @@ describe('content entrypoint', () => {
     );
   });
 
+  it('reorders quick bar items via drag and drop', async () => {
+    await setState({
+      isOpen: true,
+      isVisible: true,
+      isWide: true,
+      quickBarToolIds: ['colorPicker', 'jsonMinifier', 'jsonPrettifier']
+    });
+    await mountContent();
+    const root = getShadowRoot();
+    if (!root) return;
+
+    const dragSource = await waitFor(() =>
+      findQuickBarButtonById(root, 'colorPicker')
+    );
+    const dropTarget = await waitFor(() =>
+      findQuickBarButtonById(root, 'jsonMinifier')
+    );
+    aiAssertTruthy({ name: 'QuickBarDragSource' }, dragSource);
+    aiAssertTruthy({ name: 'QuickBarDropTarget' }, dropTarget);
+    if (!dragSource || !dropTarget) return;
+
+    const originalElementFromPoint = document.elementFromPoint;
+    document.elementFromPoint = () => dropTarget as Element;
+    dragSource.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, clientY: 10 })
+    );
+    const moveEvent = new PointerEvent('pointermove', { bubbles: true, clientY: 20 });
+    Object.defineProperty(moveEvent, 'target', { value: dropTarget });
+    window.dispatchEvent(moveEvent);
+    dropTarget.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+    const upEvent = new PointerEvent('pointerup', { bubbles: true, clientY: 20 });
+    Object.defineProperty(upEvent, 'target', { value: dropTarget });
+    window.dispatchEvent(upEvent);
+    if (originalElementFromPoint) {
+      document.elementFromPoint = originalElementFromPoint;
+    } else {
+      delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    }
+    await flushPromises();
+
+    const stored = await waitForState((state) => {
+      return state.quickBarToolIds[0] === 'jsonMinifier';
+    });
+    const order = stored?.quickBarToolIds ?? [];
+    aiAssertEqual(
+      { name: 'QuickBarReorderPersist', state: order },
+      order,
+      ['jsonMinifier', 'colorPicker', 'jsonPrettifier']
+    );
+  });
+
+  it('switches pages when hovering pagination target during drag', async () => {
+    await setState({
+      isOpen: true,
+      isVisible: true,
+      isWide: true,
+      quickBarToolIds: [
+        'colorPicker',
+        'jsonMinifier',
+        'jsonPrettifier',
+        'jsonSchemaValidator',
+        'jsonPathTester',
+        'jsonDiff',
+        'codeInjector'
+      ]
+    });
+    await mountContent();
+    const root = getShadowRoot();
+    if (!root) return;
+
+    const dragSource = await waitFor(() =>
+      findQuickBarButtonById(root, 'colorPicker')
+    );
+    const pageTwoButton = await waitFor(() => findButtonByText(root, '2'));
+    aiAssertTruthy({ name: 'QuickBarPageTwoTarget' }, pageTwoButton);
+    if (!dragSource || !pageTwoButton) return;
+
+    dragSource.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, clientY: 10 })
+    );
+    pageTwoButton.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    const pageLabel = await waitFor(() =>
+      Array.from(root.querySelectorAll('span')).find((node) =>
+        node.textContent?.includes('2 /')
+      )
+    );
+    aiAssertTruthy({ name: 'QuickBarPageSwitched' }, pageLabel);
+  });
+
   it('opens spotlight overlay via cmd+shift+p and filters tools', async () => {
     await setState({ isOpen: true, isVisible: true });
     await mountContent();
@@ -272,7 +367,11 @@ describe('content entrypoint', () => {
     window.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'p', metaKey: true, shiftKey: true })
     );
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'p', metaKey: true, shiftKey: true })
+    );
     await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     const spotlightInput = (await waitFor(() =>
       root.querySelector('input[placeholder="Search tools..."]')

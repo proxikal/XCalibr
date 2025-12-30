@@ -142,6 +142,18 @@ Object.defineProperty(globalThis, 'performance', {
   writable: true
 });
 
+if (!globalThis.PointerEvent) {
+  class MockPointerEvent extends MouseEvent {
+    constructor(type: string, params?: MouseEventInit) {
+      super(type, params);
+    }
+  }
+  Object.defineProperty(globalThis, 'PointerEvent', {
+    value: MockPointerEvent,
+    writable: true
+  });
+}
+
 const buildStorageMock = () => {
   const store = new Map<string, string>();
   const storage: Record<string, unknown> = {};

@@ -51,6 +51,8 @@ import {
   suggestIndex,
   toDynamo
 } from '../shared/data-tools';
+import { moveItem } from '../shared/array-tools';
+import { getAutoScrollDelta } from '../shared/drag-tools';
 import {
   auditAccessibility,
   contrastRatio,
@@ -4687,10 +4689,24 @@ const App = () => {
   const [showScraperHelp, setShowScraperHelp] = useState(false);
   const [quickBarSearch, setQuickBarSearch] = useState('');
   const [quickBarPage, setQuickBarPage] = useState(1);
+  const [quickBarDragId, setQuickBarDragId] = useState<string | null>(null);
+  const [quickBarDragOverIndex, setQuickBarDragOverIndex] = useState<number | null>(
+    null
+  );
+  const [quickBarDragOverPage, setQuickBarDragOverPage] = useState<number | null>(
+    null
+  );
   const menuBarRef = useRef<HTMLDivElement | null>(null);
   const spotlightInputRef = useRef<HTMLInputElement | null>(null);
   const requestLogSeenRef = useRef<Set<string>>(new Set());
   const debuggerSeenRef = useRef<number>(0);
+  const quickBarDragIdRef = useRef<string | null>(null);
+  const quickBarPageHoverRef = useRef<number | null>(null);
+  const quickBarListRef = useRef<HTMLDivElement | null>(null);
+  const quickBarPageRef = useRef(quickBarPage);
+  const quickBarDragOverIndexRef = useRef<number | null>(quickBarDragOverIndex);
+  const quickBarDragOverPageRef = useRef<number | null>(quickBarDragOverPage);
+  const pagedQuickBarToolsRef = useRef(0);
   const linkPreviewHostRef = useRef<{
     host: HTMLDivElement;
     wrapper: HTMLDivElement;
@@ -5080,6 +5096,32 @@ const App = () => {
     setState(next);
   };
 
+  const updateQuickBarOrder = async (fromIndex: number, toIndex: number) => {
+    const next = await updateState((current) => ({
+      ...current,
+      quickBarToolIds: moveItem(current.quickBarToolIds, fromIndex, toIndex)
+    }));
+    setState(next);
+  };
+
+  const setQuickBarDragOver = (page: number, index: number) => {
+    setQuickBarDragOverPage(page);
+    setQuickBarDragOverIndex(index);
+    quickBarDragOverPageRef.current = page;
+    quickBarDragOverIndexRef.current = index;
+  };
+
+  const clearQuickBarDragState = () => {
+    setQuickBarDragId(null);
+    quickBarDragIdRef.current = null;
+    setQuickBarDragOverIndex(null);
+    setQuickBarDragOverPage(null);
+    if (quickBarPageHoverRef.current) {
+      window.clearTimeout(quickBarPageHoverRef.current);
+      quickBarPageHoverRef.current = null;
+    }
+  };
+
   const refreshStorageExplorer = async () => {
     const local = Object.keys(localStorage).map((key) => ({
       key,
@@ -5145,10 +5187,23 @@ const App = () => {
     1,
     Math.ceil(filteredQuickBarTools.length / quickBarPageSize)
   );
+  const quickBarDragEnabled = quickBarSearch.trim().length === 0;
   const pagedQuickBarTools = useMemo(() => {
     const start = (quickBarPage - 1) * quickBarPageSize;
     return filteredQuickBarTools.slice(start, start + quickBarPageSize);
   }, [filteredQuickBarTools, quickBarPage]);
+  useEffect(() => {
+    quickBarPageRef.current = quickBarPage;
+  }, [quickBarPage]);
+  useEffect(() => {
+    quickBarDragOverIndexRef.current = quickBarDragOverIndex;
+  }, [quickBarDragOverIndex]);
+  useEffect(() => {
+    quickBarDragOverPageRef.current = quickBarDragOverPage;
+  }, [quickBarDragOverPage]);
+  useEffect(() => {
+    pagedQuickBarToolsRef.current = pagedQuickBarTools.length;
+  }, [pagedQuickBarTools.length]);
 
   useEffect(() => {
     setQuickBarPage(1);
@@ -5159,6 +5214,25 @@ const App = () => {
       setQuickBarPage(quickBarTotalPages);
     }
   }, [quickBarPage, quickBarTotalPages]);
+
+  const handleQuickBarPageHover = (page: number) => {
+    if (!quickBarDragIdRef.current && !quickBarDragId) return;
+    if (quickBarPageHoverRef.current) {
+      window.clearTimeout(quickBarPageHoverRef.current);
+    }
+    quickBarPageHoverRef.current = window.setTimeout(() => {
+      setQuickBarPage(page);
+      setQuickBarDragOverPage(page);
+      quickBarDragOverPageRef.current = page;
+    }, 500);
+  };
+
+  const clearQuickBarPageHover = () => {
+    if (quickBarPageHoverRef.current) {
+      window.clearTimeout(quickBarPageHoverRef.current);
+      quickBarPageHoverRef.current = null;
+    }
+  };
 
   const searchableTools = useMemo(
     () =>
@@ -5563,6 +5637,7 @@ const App = () => {
     Math.max(effectiveOffset - panelTop, 0),
     menuHeight - tabHeight
   );
+  const quickBarPageStart = (quickBarPage - 1) * quickBarPageSize;
 
   return (
     <>
@@ -6466,6 +6541,31 @@ const App = () => {
               >
                 Prev
               </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: quickBarTotalPages }, (_, index) => {
+                  const page = index + 1;
+                  const isActive = page === quickBarPage;
+                  return (
+                    <button
+                      key={page}
+                      type="button"
+                      data-quickbar-page-target={page}
+                      onClick={() => setQuickBarPage(page)}
+                      onPointerEnter={() => handleQuickBarPageHover(page)}
+                      onPointerOver={() => handleQuickBarPageHover(page)}
+                      onPointerLeave={clearQuickBarPageHover}
+                      onPointerOut={clearQuickBarPageHover}
+                      className={`h-6 w-6 rounded border text-[10px] transition-colors ${
+                        isActive
+                          ? 'border-blue-500/50 text-blue-200 bg-blue-500/10'
+                          : 'border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
               <span className="text-slate-500">
                 {quickBarPage} / {quickBarTotalPages}
               </span>
@@ -6484,7 +6584,12 @@ const App = () => {
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto no-scrollbar p-1 space-y-1">
+        <div
+          ref={quickBarListRef}
+          className={`flex-1 overflow-y-auto no-scrollbar p-1 space-y-1 ${
+            quickBarDragId ? 'select-none cursor-grabbing' : ''
+          }`}
+        >
           {quickBarTools.length === 0 ? (
             <div className="px-3 py-4 text-[11px] text-slate-500">
               No favorites yet. Open a tool and press + to pin it here.
@@ -6494,37 +6599,196 @@ const App = () => {
               No matches found.
             </div>
           ) : (
-            pagedQuickBarTools.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => openTool(item.id)}
-                className="w-full flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group"
-              >
-                <div
-                  className={`w-6 h-6 rounded bg-slate-800 border border-slate-700 text-slate-400 transition-colors shrink-0 ${item.hover}`}
-                >
-                  <div className="w-full h-full flex items-center justify-center">
-                    <FontAwesomeIcon icon={item.icon} className={iconSizeClass} />
-                  </div>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <div className="text-slate-300 text-xs font-medium whitespace-nowrap">
-                    {item.title}
-                  </div>
-                  <div className="text-slate-500 text-[10px] whitespace-nowrap">
-                    {item.subtitle}
-                  </div>
-                </div>
-                {state.isWide ? (
-                  <span
-                    className={`text-[7px] uppercase tracking-[0.2em] px-2 py-1 rounded-full border ${categoryBadge(item.category)}`}
-                  >
-                    {item.category}
-                  </span>
-                ) : null}
-              </button>
-            ))
+            <>
+              {pagedQuickBarTools.map((item, index) => {
+                const isDragging = quickBarDragId === item.id;
+                const showDropIndicator =
+                  quickBarDragId &&
+                  quickBarDragOverPage === quickBarPage &&
+                  quickBarDragOverIndex === index;
+                return (
+                  <React.Fragment key={item.id}>
+                    <button
+                      type="button"
+                      data-quickbar-id={item.id}
+                      data-quickbar-index={index}
+                      data-quickbar-page={quickBarPage}
+                      onPointerDown={(event) => {
+                        if (!quickBarDragEnabled) return;
+                        event.preventDefault();
+                        setQuickBarDragId(item.id);
+                        quickBarDragIdRef.current = item.id;
+                        setQuickBarDragOver(quickBarPage, index);
+                        const handleMove = (moveEvent: PointerEvent) => {
+                          const dragId =
+                            quickBarDragIdRef.current ?? quickBarDragId;
+                          if (!dragId || !quickBarDragEnabled) return;
+                          const listEl = quickBarListRef.current;
+                          let handled = false;
+                          if (listEl) {
+                            const rect = listEl.getBoundingClientRect();
+                            const delta = getAutoScrollDelta({
+                              clientY: moveEvent.clientY,
+                              rectTop: rect.top,
+                              rectBottom: rect.bottom,
+                              threshold: 32,
+                              speed: 8
+                            });
+                            if (delta !== 0) {
+                              listEl.scrollTop += delta;
+                            }
+                          }
+                          const path =
+                            typeof moveEvent.composedPath === 'function'
+                              ? moveEvent.composedPath()
+                              : [];
+                          const pathMatch = path.find(
+                            (entry) =>
+                              entry instanceof HTMLElement &&
+                              entry.dataset?.quickbarIndex
+                          ) as HTMLElement | undefined;
+                          const targetMatch =
+                            moveEvent.target instanceof HTMLElement
+                              ? (moveEvent.target.closest(
+                                  '[data-quickbar-index]'
+                                ) as HTMLElement | null)
+                              : null;
+                          const pointMatch = document
+                            .elementFromPoint(moveEvent.clientX, moveEvent.clientY)
+                            ?.closest('[data-quickbar-index]') as HTMLElement | null;
+                          const itemEl = pathMatch ?? targetMatch ?? pointMatch ?? undefined;
+                          if (itemEl) {
+                            const nextIndex = Number(itemEl.dataset.quickbarIndex);
+                            const nextPage = Number(itemEl.dataset.quickbarPage);
+                            if (!Number.isNaN(nextIndex) && !Number.isNaN(nextPage)) {
+                              handled = true;
+                              if (
+                                quickBarDragOverPageRef.current !== nextPage ||
+                                quickBarDragOverIndexRef.current !== nextIndex
+                              ) {
+                                setQuickBarDragOver(nextPage, nextIndex);
+                              }
+                            }
+                          }
+                          if (!handled && listEl) {
+                            const items = listEl.querySelectorAll<HTMLElement>(
+                              '[data-quickbar-index]'
+                            );
+                            const lastItem = items[items.length - 1];
+                            if (lastItem) {
+                              const lastRect = lastItem.getBoundingClientRect();
+                              if (moveEvent.clientY > lastRect.bottom) {
+                                const endIndex = pagedQuickBarToolsRef.current;
+                                if (
+                                  quickBarDragOverPageRef.current !==
+                                    quickBarPageRef.current ||
+                                  quickBarDragOverIndexRef.current !== endIndex
+                                ) {
+                                  setQuickBarDragOver(
+                                    quickBarPageRef.current,
+                                    endIndex
+                                  );
+                                }
+                              }
+                            }
+                          }
+                        };
+                        const handleUp = async (upEvent: PointerEvent) => {
+                          window.removeEventListener('pointermove', handleMove);
+                          window.removeEventListener('pointerup', handleUp);
+                          const dragId =
+                            quickBarDragIdRef.current ?? quickBarDragId;
+                          if (!dragId) {
+                            clearQuickBarDragState();
+                            return;
+                          }
+                          const fromIndex = state.quickBarToolIds.indexOf(dragId);
+                          const resolveTarget = () => {
+                            const targetEl =
+                              upEvent.target instanceof HTMLElement
+                                ? (upEvent.target.closest(
+                                    '[data-quickbar-index]'
+                                  ) as HTMLElement | null)
+                                : null;
+                            const pointEl = document
+                              .elementFromPoint(upEvent.clientX, upEvent.clientY)
+                              ?.closest('[data-quickbar-index]') as HTMLElement | null;
+                            const element = targetEl ?? pointEl;
+                            if (!element) return null;
+                            const nextIndex = Number(element.dataset.quickbarIndex);
+                            const nextPage = Number(element.dataset.quickbarPage);
+                            if (Number.isNaN(nextIndex) || Number.isNaN(nextPage)) {
+                              return null;
+                            }
+                            return { nextIndex, nextPage };
+                          };
+                          const resolved = resolveTarget();
+                          const targetPage =
+                            resolved?.nextPage ??
+                            quickBarDragOverPageRef.current ??
+                            quickBarPageRef.current;
+                          const targetIndex =
+                            resolved?.nextIndex ??
+                            quickBarDragOverIndexRef.current ??
+                            0;
+                          const toIndex =
+                            (targetPage - 1) * quickBarPageSize + targetIndex;
+                          if (fromIndex >= 0 && toIndex >= 0) {
+                            await updateQuickBarOrder(fromIndex, toIndex);
+                          }
+                          clearQuickBarDragState();
+                        };
+                        window.addEventListener('pointermove', handleMove);
+                        window.addEventListener('pointerup', handleUp, { once: true });
+                      }}
+                      onClick={() => {
+                        if (quickBarDragIdRef.current || quickBarDragId) return;
+                        openTool(item.id);
+                      }}
+                      className={`relative w-full flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group ${
+                        isDragging
+                          ? 'opacity-40 pointer-events-none'
+                          : 'transition-transform duration-150 ease-out will-change-transform'
+                      }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`pointer-events-none absolute inset-0 rounded border border-blue-500/40 bg-blue-500/5 transition-opacity duration-150 ${
+                          showDropIndicator ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      />
+                      <div
+                        className={`w-6 h-6 rounded bg-slate-800 border border-slate-700 text-slate-400 transition-colors shrink-0 ${item.hover}`}
+                      >
+                        <div className="w-full h-full flex items-center justify-center">
+                          <FontAwesomeIcon icon={item.icon} className={iconSizeClass} />
+                        </div>
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <div className="text-slate-300 text-xs font-medium whitespace-nowrap">
+                          {item.title}
+                        </div>
+                        <div className="text-slate-500 text-[10px] whitespace-nowrap">
+                          {item.subtitle}
+                        </div>
+                      </div>
+                      {state.isWide ? (
+                        <span
+                          className={`text-[7px] uppercase tracking-[0.2em] px-2 py-1 rounded-full border ${categoryBadge(item.category)}`}
+                        >
+                          {item.category}
+                        </span>
+                      ) : null}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+              {quickBarDragId &&
+              quickBarDragOverPage === quickBarPage &&
+              quickBarDragOverIndex === pagedQuickBarTools.length ? (
+                <div className="h-12 rounded border border-dashed border-blue-500/40 bg-blue-500/5" />
+              ) : null}
+            </>
           )}
         </div>
 
