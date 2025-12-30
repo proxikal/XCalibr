@@ -65,6 +65,17 @@ export const openToolState = (toolId: string) => ({
 });
 
 export const TOOL_TITLES: Record<string, string> = {
+  base64Advanced: 'Base64 Advanced',
+  htmlEntityEncoder: 'HTML Entity Encoder',
+  hashesGenerator: 'Hashes Generator',
+  hmacGenerator: 'HMAC Generator',
+  passwordStrength: 'Password Strength',
+  passwordGenerator: 'Password Generator',
+  cspBuilder: 'CSP Builder',
+  sriGenerator: 'SRI Generator',
+  xssPayload: 'XSS Payload',
+  sqliPayload: 'SQLi Payload',
+  userAgent: 'User-Agent Generator',
   codeInjector: 'CSS Injector',
   liveLinkPreview: 'Live Link Preview',
   headerInspector: 'Header Inspector',
@@ -112,7 +123,17 @@ export const TOOL_TITLES: Record<string, string> = {
   oauthTokenInspector: 'OAuth Token Inspector',
   webhookTester: 'Webhook Tester',
   cookieManager: 'Cookie Manager',
-  colorPicker: 'Color Picker'
+  colorPicker: 'Color Picker',
+  whoisLookup: 'Whois Lookup',
+  dnsRecordViewer: 'DNS Record Viewer',
+  reverseIpLookup: 'Reverse IP Lookup',
+  usernameSearch: 'Username Search',
+  exifMetadataViewer: 'EXIF Metadata Viewer',
+  emailBreachChecker: 'Email Breach Checker',
+  sslCertDecoder: 'SSL Certificate Decoder',
+  googleDorkGenerator: 'Google Dork Generator',
+  subdomainFinder: 'Subdomain Finder',
+  waybackMachineViewer: 'Wayback Machine Viewer'
 };
 
 export const mountContent = async () => {

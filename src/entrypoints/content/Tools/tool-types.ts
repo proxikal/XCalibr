@@ -377,3 +377,310 @@ export type CookieManagerData = {
   value?: string;
   cookies?: { name: string; value: string }[];
 };
+
+export type WhoisLookupData = {
+  domain?: string;
+  loading?: boolean;
+  result?: {
+    domain: string;
+    status: string;
+    registrar: string;
+    registrant: string;
+    createdDate: string;
+    expiresDate: string;
+    updatedDate: string;
+    nameservers: string[];
+  };
+  error?: string;
+};
+
+export type DnsRecordViewerData = {
+  domain?: string;
+  loading?: boolean;
+  records?: {
+    type: string;
+    name: string;
+    value: string;
+    ttl?: number;
+    priority?: number;
+  }[];
+  filter?: string;
+  error?: string;
+};
+
+export type ReverseIpLookupData = {
+  ip?: string;
+  loading?: boolean;
+  domains?: string[];
+  search?: string;
+  error?: string;
+};
+
+export type PlatformResult = {
+  platform: string;
+  url: string;
+  status: 'found' | 'not_found' | 'error';
+  statusCode: number;
+  error?: string;
+};
+
+export type UsernameSearchData = {
+  username?: string;
+  loading?: boolean;
+  results?: PlatformResult[];
+  filter?: 'all' | 'found' | 'not_found';
+  progress?: { checked: number; total: number };
+  error?: string;
+};
+
+export type ExifMetadata = {
+  make?: string;
+  model?: string;
+  dateTime?: string;
+  dateTimeOriginal?: string;
+  exposureTime?: string;
+  fNumber?: string;
+  iso?: number;
+  focalLength?: string;
+  gpsLatitude?: number;
+  gpsLongitude?: number;
+  gpsAltitude?: number;
+  software?: string;
+  orientation?: number;
+  imageWidth?: number;
+  imageHeight?: number;
+  artist?: string;
+  copyright?: string;
+};
+
+export type ExifMetadataViewerData = {
+  fileName?: string;
+  metadata?: ExifMetadata;
+  loading?: boolean;
+  error?: string;
+};
+
+export type BreachInfo = {
+  name: string;
+  domain: string;
+  breachDate: string;
+  addedDate: string;
+  pwnCount: number;
+  description: string;
+  dataClasses: string[];
+  isVerified: boolean;
+  isSensitive: boolean;
+};
+
+export type EmailBreachCheckerData = {
+  email?: string;
+  loading?: boolean;
+  breaches?: BreachInfo[];
+  checkedAt?: number;
+  error?: string;
+};
+
+export type CertificateSubject = {
+  CN?: string;
+  O?: string;
+  OU?: string;
+  C?: string;
+  ST?: string;
+  L?: string;
+};
+
+export type CertificateInfo = {
+  subject: CertificateSubject;
+  issuer: CertificateSubject;
+  validFrom: string;
+  validTo: string;
+  serialNumber: string;
+  fingerprint: string;
+  signatureAlgorithm: string;
+  keySize?: number;
+  sans?: string[];
+  isExpired: boolean;
+  daysUntilExpiry: number;
+};
+
+export type SslCertDecoderData = {
+  domain?: string;
+  loading?: boolean;
+  certificate?: CertificateInfo;
+  fetchedAt?: number;
+  error?: string;
+};
+
+export type DorkTemplate = {
+  name: string;
+  template: string;
+  description: string;
+  category: string;
+};
+
+export type DorkHistoryEntry = {
+  query: string;
+  timestamp: number;
+};
+
+export type GoogleDorkGeneratorData = {
+  domain?: string;
+  keyword?: string;
+  filetype?: string;
+  selectedTemplate?: string;
+  generatedQuery?: string;
+  history?: DorkHistoryEntry[];
+};
+
+export type SubdomainFinderData = {
+  domain?: string;
+  loading?: boolean;
+  subdomains?: string[];
+  filter?: string;
+  searchedAt?: number;
+  error?: string;
+};
+
+export type WaybackSnapshot = {
+  timestamp: string;
+  original: string;
+  statuscode: string;
+  mimetype: string;
+};
+
+export type WaybackMachineViewerData = {
+  url?: string;
+  loading?: boolean;
+  snapshots?: WaybackSnapshot[];
+  yearFilter?: string;
+  searchedAt?: number;
+  error?: string;
+};
+
+export type Base64AdvancedMode = 'standard' | 'urlSafe' | 'hex' | 'image';
+
+export type Base64AdvancedData = {
+  input?: string;
+  output?: string;
+  mode?: Base64AdvancedMode;
+  error?: string;
+  imagePreview?: string;
+};
+
+export type HtmlEntityMode = 'named' | 'decimal' | 'hex';
+
+export type HtmlEntityEncoderData = {
+  input?: string;
+  output?: string;
+  mode?: HtmlEntityMode;
+  encodeAll?: boolean;
+  error?: string;
+};
+
+export type HashesGeneratorData = {
+  input?: string;
+  hashes?: Record<string, string>;
+  loading?: boolean;
+  error?: string;
+};
+
+export type HmacKeyFormat = 'text' | 'hex';
+export type HmacAlgorithm = 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512';
+
+export type HmacGeneratorData = {
+  message?: string;
+  key?: string;
+  keyFormat?: HmacKeyFormat;
+  algorithm?: HmacAlgorithm;
+  output?: string;
+  loading?: boolean;
+  error?: string;
+};
+
+export type PasswordStrengthScore = 0 | 1 | 2 | 3 | 4;
+
+export type PasswordAnalysis = {
+  score: PasswordStrengthScore;
+  label: 'Very Weak' | 'Weak' | 'Fair' | 'Strong' | 'Very Strong';
+  length: number;
+  entropy: number;
+  crackTime: string;
+  hasUppercase: boolean;
+  hasLowercase: boolean;
+  hasNumbers: boolean;
+  hasSymbols: boolean;
+  isCommon: boolean;
+  isDictionary: boolean;
+  suggestions: string[];
+};
+
+export type PasswordStrengthData = {
+  password?: string;
+  analysis?: Partial<PasswordAnalysis>;
+  showPassword?: boolean;
+};
+
+export type PasswordGeneratorData = {
+  password?: string;
+  length?: number;
+  uppercase?: boolean;
+  lowercase?: boolean;
+  numbers?: boolean;
+  symbols?: boolean;
+  history?: string[];
+  error?: string;
+};
+
+export type CspDirectives = Record<string, string[]>;
+
+export type CspBuilderData = {
+  input?: string;
+  output?: string;
+  directives?: CspDirectives;
+  warnings?: string[];
+  reportOnly?: boolean;
+  analyzed?: boolean;
+  error?: string;
+};
+
+export type SriAlgorithm = 'sha256' | 'sha384' | 'sha512';
+export type SriResourceType = 'script' | 'style';
+
+export type SriGeneratorData = {
+  content?: string;
+  url?: string;
+  algorithm?: SriAlgorithm;
+  resourceType?: SriResourceType;
+  hash?: string;
+  scriptTag?: string;
+  loading?: boolean;
+  error?: string;
+};
+
+export type XssPayloadCategory = 'basic' | 'events' | 'encoded' | 'polyglot' | 'filter-bypass';
+
+export type XssPayloadData = {
+  category?: XssPayloadCategory;
+  selectedPayload?: string;
+  customPayload?: string;
+  encodedOutput?: string;
+  encodeUrl?: boolean;
+  encodeHtml?: boolean;
+};
+
+export type SqliPayloadCategory = 'union' | 'boolean' | 'time' | 'error' | 'stacked';
+
+export type SqliPayloadData = {
+  category?: SqliPayloadCategory;
+  selectedPayload?: string;
+  customPayload?: string;
+  dbType?: 'mysql' | 'postgres' | 'mssql' | 'oracle';
+};
+
+export type UserAgentCategory = 'chrome' | 'firefox' | 'safari' | 'edge' | 'mobile' | 'bot';
+
+export type UserAgentData = {
+  category?: UserAgentCategory;
+  selectedAgent?: string;
+  customAgent?: string;
+};

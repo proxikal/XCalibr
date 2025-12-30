@@ -114,6 +114,22 @@ export const baseMenuBarItems: MenuBarItem[] = [
         ]
       },
       {
+        label: 'Encoding',
+        items: [
+          { label: 'Base64 Advanced', toolId: 'base64Advanced' },
+          { label: 'HTML Entity Encoder', toolId: 'htmlEntityEncoder' },
+          { label: 'Hashes Generator', toolId: 'hashesGenerator' },
+          { label: 'HMAC Generator', toolId: 'hmacGenerator' },
+          { label: 'Password Strength', toolId: 'passwordStrength' },
+          { label: 'Password Generator', toolId: 'passwordGenerator' },
+          { label: 'CSP Builder', toolId: 'cspBuilder' },
+          { label: 'SRI Generator', toolId: 'sriGenerator' },
+          { label: 'XSS Payload', toolId: 'xssPayload' },
+          { label: 'SQLi Payload', toolId: 'sqliPayload' },
+          { label: 'User-Agent Generator', toolId: 'userAgent' }
+        ]
+      },
+      {
         label: 'Content',
         items: [
           { label: 'Link Extractor', toolId: 'linkExtractor' },
@@ -129,6 +145,21 @@ export const baseMenuBarItems: MenuBarItem[] = [
           { label: 'CORS Check', toolId: 'corsCheck' }
         ]
       }
+    ]
+  },
+  {
+    label: 'OSINT',
+    items: [
+      { label: 'Whois Lookup', toolId: 'whoisLookup' },
+      { label: 'DNS Record Viewer', toolId: 'dnsRecordViewer' },
+      { label: 'Reverse IP Lookup', toolId: 'reverseIpLookup' },
+      { label: 'Username Search', toolId: 'usernameSearch' },
+      { label: 'EXIF Metadata Viewer', toolId: 'exifMetadataViewer' },
+      { label: 'Email Breach Checker', toolId: 'emailBreachChecker' },
+      { label: 'SSL Certificate Decoder', toolId: 'sslCertDecoder' },
+      { label: 'Google Dork Generator', toolId: 'googleDorkGenerator' },
+      { label: 'Subdomain Finder', toolId: 'subdomainFinder' },
+      { label: 'Wayback Machine Viewer', toolId: 'waybackMachineViewer' }
     ]
   }
 ];
