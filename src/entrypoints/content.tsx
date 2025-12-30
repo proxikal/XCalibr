@@ -36,6 +36,8 @@ import { parseCookieString } from '../shared/web-tools';
 import {
   createPreviewHost,
   isValidPreviewUrl,
+  isKnownBlockingSite,
+  getPreviewFallbackMessage,
   PREVIEW_SCALE,
   PREVIEW_WIDTH,
   PREVIEW_HEIGHT,
@@ -88,6 +90,7 @@ const App = () => {
     wrapper: HTMLDivElement;
     frame: HTMLIFrameElement;
     title: HTMLDivElement;
+    fallback: HTMLDivElement;
   } | null>(null);
   const linkPreviewAnchorRef = useRef<HTMLAnchorElement | null>(null);
   const linkPreviewTimeoutRef = useRef<number | null>(null);
@@ -912,9 +915,38 @@ const App = () => {
       if (!linkPreviewHostRef.current) {
         linkPreviewHostRef.current = createPreviewHost();
       }
-      const { wrapper, frame, title } = linkPreviewHostRef.current;
-      frame.src = anchor.href;
+      const { wrapper, frame, title, fallback } = linkPreviewHostRef.current;
       title.textContent = anchor.href;
+
+      // Check if this site is known to block iframe embedding
+      const isBlocked = isKnownBlockingSite(anchor.href);
+
+      if (isBlocked) {
+        // Show fallback UI for blocked sites
+        frame.classList.add('hidden');
+        frame.src = 'about:blank';
+        fallback.classList.add('visible');
+        const messageEl = fallback.querySelector('.preview-fallback-message');
+        if (messageEl) {
+          messageEl.textContent = getPreviewFallbackMessage(anchor.href);
+        }
+      } else {
+        // Try to load the iframe normally
+        frame.classList.remove('hidden');
+        fallback.classList.remove('visible');
+        frame.src = anchor.href;
+
+        // Add error handler for iframe load failures
+        frame.onerror = () => {
+          frame.classList.add('hidden');
+          fallback.classList.add('visible');
+          const messageEl = fallback.querySelector('.preview-fallback-message');
+          if (messageEl) {
+            messageEl.textContent = getPreviewFallbackMessage(anchor.href);
+          }
+        };
+      }
+
       const rect = anchor.getBoundingClientRect();
       const width = PREVIEW_WIDTH * PREVIEW_SCALE;
       const height = PREVIEW_HEIGHT * PREVIEW_SCALE;

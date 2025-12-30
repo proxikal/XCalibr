@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import { aiAssertEqual } from '../../../../test-utils/aiAssert';
-import { isValidPreviewUrl } from '../helpers';
+import { isValidPreviewUrl, isKnownBlockingSite, getPreviewFallbackMessage } from '../helpers';
 
 describe('helpers', () => {
   describe('isValidPreviewUrl', () => {
@@ -81,6 +81,93 @@ describe('helpers', () => {
         { name: 'isValidPreviewUrl', input: 'file:///etc/passwd' },
         isValidPreviewUrl('file:///etc/passwd'),
         false
+      );
+    });
+  });
+
+  describe('isKnownBlockingSite', () => {
+    it('returns true for x.com', () => {
+      aiAssertEqual(
+        { name: 'isKnownBlockingSite', input: 'https://x.com/user/status/123' },
+        isKnownBlockingSite('https://x.com/user/status/123'),
+        true
+      );
+    });
+
+    it('returns true for twitter.com', () => {
+      aiAssertEqual(
+        { name: 'isKnownBlockingSite', input: 'https://twitter.com/user' },
+        isKnownBlockingSite('https://twitter.com/user'),
+        true
+      );
+    });
+
+    it('returns true for google.com', () => {
+      aiAssertEqual(
+        { name: 'isKnownBlockingSite', input: 'https://www.google.com/search?q=test' },
+        isKnownBlockingSite('https://www.google.com/search?q=test'),
+        true
+      );
+    });
+
+    it('returns true for facebook.com', () => {
+      aiAssertEqual(
+        { name: 'isKnownBlockingSite', input: 'https://www.facebook.com/page' },
+        isKnownBlockingSite('https://www.facebook.com/page'),
+        true
+      );
+    });
+
+    it('returns true for instagram.com', () => {
+      aiAssertEqual(
+        { name: 'isKnownBlockingSite', input: 'https://www.instagram.com/user' },
+        isKnownBlockingSite('https://www.instagram.com/user'),
+        true
+      );
+    });
+
+    it('returns false for regular sites', () => {
+      aiAssertEqual(
+        { name: 'isKnownBlockingSite', input: 'https://example.com' },
+        isKnownBlockingSite('https://example.com'),
+        false
+      );
+    });
+
+    it('returns false for invalid URLs', () => {
+      aiAssertEqual(
+        { name: 'isKnownBlockingSite', input: 'not-a-url' },
+        isKnownBlockingSite('not-a-url'),
+        false
+      );
+    });
+  });
+
+  describe('getPreviewFallbackMessage', () => {
+    it('returns blocking message for x.com', () => {
+      const result = getPreviewFallbackMessage('https://x.com/user');
+      aiAssertEqual(
+        { name: 'getPreviewFallbackMessage', input: 'https://x.com/user' },
+        result.includes('blocks'),
+        true
+      );
+    });
+
+    it('returns blocking message for google.com', () => {
+      const result = getPreviewFallbackMessage('https://www.google.com/search');
+      aiAssertEqual(
+        { name: 'getPreviewFallbackMessage', input: 'https://www.google.com/search' },
+        result.includes('blocks'),
+        true
+      );
+    });
+
+    it('returns generic message for unknown sites', () => {
+      const result = getPreviewFallbackMessage('https://example.com');
+      aiAssertEqual(
+        { name: 'getPreviewFallbackMessage', input: 'https://example.com' },
+        result.includes('Unable'),
+        true
       );
     });
   });

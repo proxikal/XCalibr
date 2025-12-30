@@ -38,7 +38,6 @@ export { RequestLogTool } from './RequestLogTool';
 export { ResponsivePreviewTool } from './ResponsivePreviewTool';
 export { RestClientTool } from './RestClientTool';
 export { RobotsViewerTool } from './RobotsViewerTool';
-export { SnippetRunnerTool } from './SnippetRunnerTool';
 export { SqlFormatterTool } from './SqlFormatterTool';
 export { SqlQueryBuilderTool } from './SqlQueryBuilderTool';
 export { SqlToCsvTool } from './SqlToCsvTool';

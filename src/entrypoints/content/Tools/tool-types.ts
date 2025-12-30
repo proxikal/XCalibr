@@ -1,5 +1,4 @@
 export type CodeInjectorData = {
-  mode?: 'css' | 'js';
   scope?: 'current' | 'all';
   code?: string;
 };
@@ -211,12 +210,6 @@ export type StorageExplorerData = {
   session?: { key: string; value: string }[];
 };
 
-export type SnippetRunnerData = {
-  input?: string;
-  output?: string;
-  error?: string;
-};
-
 export type LighthouseSnapshotData = {
   metrics?: { label: string; value: string }[];
 };
@@ -233,9 +226,31 @@ export type FlexboxInspectorData = {
   output?: string[];
 };
 
+export type FontCaptureEntry = {
+  id: string;
+  timestamp: number;
+  fontFamily: string;
+  fontSize: string;
+  fontWeight: string;
+  lineHeight: string;
+  element?: string;
+};
+
 export type FontIdentifierData = {
-  selector?: string;
-  output?: string[];
+  isActive?: boolean;
+  history?: FontCaptureEntry[];
+};
+
+export type ColorHistoryEntry = {
+  id: string;
+  timestamp: number;
+  hex: string;
+  rgb: string;
+};
+
+export type ColorPickerData = {
+  color?: string;
+  history?: ColorHistoryEntry[];
 };
 
 export type ContrastCheckerData = {

@@ -62,7 +62,6 @@ import {
   ResponsivePreviewTool,
   RestClientTool,
   RobotsViewerTool,
-  SnippetRunnerTool,
   SqlFormatterTool,
   SqlQueryBuilderTool,
   SqlToCsvTool,
@@ -112,7 +111,6 @@ import type {
   ResponsivePreviewData,
   RestClientData,
   RobotsViewerData,
-  SnippetRunnerData,
   SqlFormatterData,
   SqlQueryBuilderData,
   SqlToCsvData,
@@ -155,8 +153,8 @@ export const buildToolRegistry = (handlers: {
 }): ToolRegistryEntry[] => [
   {
     id: 'codeInjector',
-    title: 'Code Injector',
-    subtitle: 'Inject CSS or JS',
+    title: 'CSS Injector',
+    subtitle: 'Inject custom CSS',
     category: 'Web Dev',
     icon: faCode,
     hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
@@ -633,20 +631,6 @@ export const buildToolRegistry = (handlers: {
     )
   },
   {
-    id: 'snippetRunner',
-    title: 'Console Snippet Runner',
-    subtitle: 'Run snippets',
-    category: 'Web Dev',
-    icon: faCode,
-    hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
-    render: (data, onChange) => (
-      <SnippetRunnerTool.Component
-        data={data as SnippetRunnerData | undefined}
-        onChange={onChange}
-      />
-    )
-  },
-  {
     id: 'lighthouseSnapshot',
     title: 'Lighthouse Snapshot',
     subtitle: 'Perf metrics',
@@ -754,6 +738,12 @@ export const buildToolRegistry = (handlers: {
       <AnimationPreviewTool.Component
         data={data as AnimationPreviewData | undefined}
         onChange={onChange}
+        onInject={async (css) => {
+          await chrome.runtime.sendMessage({
+            type: 'xcalibr-inject-code',
+            payload: { scope: 'current', code: css }
+          });
+        }}
       />
     )
   },

@@ -265,6 +265,9 @@ export const createPreviewHost = () => {
       transform-origin: top left;
       background: #0f172a;
     }
+    .preview-frame.hidden {
+      display: none;
+    }
     .preview-title {
       font-size: 10px;
       color: #94a3b8;
@@ -273,6 +276,39 @@ export const createPreviewHost = () => {
       white-space: nowrap;
       overflow: hidden;
       max-width: 100%;
+    }
+    .preview-fallback {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: ${(PREVIEW_HEIGHT * PREVIEW_SCALE) - 30}px;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 8px;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .preview-fallback.visible {
+      display: flex;
+    }
+    .preview-fallback-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.6;
+    }
+    .preview-fallback-message {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.4;
+      max-width: 90%;
+    }
+    .preview-fallback-hint {
+      font-size: 10px;
+      color: #64748b;
+      margin-top: 8px;
     }
   `;
   shadow.appendChild(style);
@@ -286,9 +322,21 @@ export const createPreviewHost = () => {
   frame.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms');
   frame.setAttribute('loading', 'lazy');
   wrapper.appendChild(frame);
+
+  const fallback = document.createElement('div');
+  fallback.className = 'preview-fallback';
+  fallback.innerHTML = `
+    <svg class="preview-fallback-icon" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5">
+      <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+    </svg>
+    <div class="preview-fallback-message"></div>
+    <div class="preview-fallback-hint">Hover another link to try again</div>
+  `;
+  wrapper.appendChild(fallback);
+
   shadow.appendChild(wrapper);
   document.body.appendChild(host);
-  return { host, wrapper, frame, title };
+  return { host, wrapper, frame, title, fallback };
 };
 
 export const isValidPreviewUrl = (href: string) => {
@@ -297,5 +345,73 @@ export const isValidPreviewUrl = (href: string) => {
     return url.protocol === 'http:' || url.protocol === 'https:';
   } catch {
     return false;
+  }
+};
+
+const KNOWN_BLOCKING_DOMAINS = [
+  'x.com',
+  'twitter.com',
+  'google.com',
+  'facebook.com',
+  'fb.com',
+  'instagram.com',
+  'linkedin.com',
+  'github.com',
+  'reddit.com',
+  'youtube.com',
+  'tiktok.com',
+  'amazon.com',
+  'netflix.com',
+  'paypal.com',
+  'stripe.com',
+  'apple.com',
+  'microsoft.com',
+  'dropbox.com',
+  'slack.com',
+  'discord.com',
+  'twitch.tv'
+];
+
+export const isKnownBlockingSite = (href: string): boolean => {
+  try {
+    const url = new URL(href);
+    const hostname = url.hostname.toLowerCase();
+    return KNOWN_BLOCKING_DOMAINS.some(
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+    );
+  } catch {
+    return false;
+  }
+};
+
+export const getPreviewFallbackMessage = (href: string): string => {
+  if (isKnownBlockingSite(href)) {
+    try {
+      const url = new URL(href);
+      const domain = url.hostname.replace(/^www\./, '');
+      return `${domain} blocks iframe embedding for security. Click to open in new tab.`;
+    } catch {
+      return 'This site blocks iframe embedding for security.';
+    }
+  }
+  return 'Unable to load preview. The site may restrict embedding.';
+};
+
+// React hook utilities are kept in this file for shared tool utilities
+export type CursorPosition = { start: number; end: number };
+
+export const saveCursorPosition = (
+  event: React.ChangeEvent<HTMLTextAreaElement>
+): CursorPosition => ({
+  start: event.target.selectionStart,
+  end: event.target.selectionEnd
+});
+
+export const restoreCursorPosition = (
+  element: HTMLTextAreaElement | null,
+  position: CursorPosition | null
+): void => {
+  if (element && position) {
+    element.setSelectionRange(position.start, position.end);
   }
 };

@@ -24,12 +24,11 @@ export const baseMenuBarItems: MenuBarItem[] = [
   {
     label: 'Web Dev',
     items: [
-      { label: 'Code Injector', toolId: 'codeInjector' },
+      { label: 'CSS Injector', toolId: 'codeInjector' },
       { label: 'Live Link Preview', toolId: 'liveLinkPreview' },
       { label: 'Debugger', toolId: 'debuggerTool' },
       'Performance Timeline',
       { label: 'Storage Explorer', toolId: 'storageExplorer' },
-      { label: 'Console Snippet Runner', toolId: 'snippetRunner' },
       { label: 'Lighthouse Snapshot', toolId: 'lighthouseSnapshot' },
       {
         label: 'Front End',

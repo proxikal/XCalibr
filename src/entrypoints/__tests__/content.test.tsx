@@ -65,7 +65,7 @@ const openToolState = (toolId: string) => ({
 });
 
 const TOOL_TITLES: Record<string, string> = {
-  codeInjector: 'Code Injector',
+  codeInjector: 'CSS Injector',
   liveLinkPreview: 'Live Link Preview',
   headerInspector: 'Header Inspector',
   techFingerprint: 'Tech Fingerprint',
@@ -95,7 +95,6 @@ const TOOL_TITLES: Record<string, string> = {
   couchDbDocExplorer: 'CouchDB Doc Explorer',
   debuggerTool: 'Debugger',
   storageExplorer: 'Storage Explorer',
-  snippetRunner: 'Console Snippet Runner',
   lighthouseSnapshot: 'Lighthouse Snapshot',
   cssGridGenerator: 'CSS Grid Generator',
   flexboxInspector: 'Flexbox Inspector',
@@ -555,7 +554,7 @@ describe('content entrypoint', () => {
     );
   });
 
-  it('runs Code Injector and sends payload via chrome runtime', async () => {
+  it('runs CSS Injector and sends payload via chrome runtime', async () => {
     let payload: unknown = null;
     setRuntimeHandler('xcalibr-inject-code', (next) => {
       payload = next;
@@ -565,13 +564,13 @@ describe('content entrypoint', () => {
       code: 'body { background: #000; }'
     });
     if (!root) return;
-    const injectButton = await waitFor(() => findButtonByText(root, 'Inject Code'));
-    aiAssertTruthy({ name: 'CodeInjectorInjectButton' }, injectButton);
+    const injectButton = await waitFor(() => findButtonByText(root, 'Inject CSS'));
+    aiAssertTruthy({ name: 'CSSInjectorInjectButton' }, injectButton);
     injectButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushPromises();
     await waitFor(() => payload as { code?: string });
     aiAssertTruthy(
-      { name: 'CodeInjectorPayload', state: payload },
+      { name: 'CSSInjectorPayload', state: payload },
       Boolean(payload && (payload as { code?: string }).code)
     );
   });
@@ -1101,25 +1100,6 @@ describe('content entrypoint', () => {
     );
   });
 
-  it('runs snippet runner', async () => {
-    const root = await mountWithTool('snippetRunner', {
-      input: 'return 2 + 2',
-      output: '',
-      error: ''
-    });
-    if (!root) return;
-    const button = findButtonByText(root, 'Run Snippet');
-    button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushPromises();
-    const stored = await waitForState((state) => {
-      const toolData = state.toolData as Record<string, { output?: string }>;
-      return (toolData.snippetRunner?.output ?? '').includes('4');
-    });
-    const output = (stored?.toolData as Record<string, { output?: string }> | undefined)
-      ?.snippetRunner?.output ?? '';
-    aiAssertIncludes({ name: 'SnippetRunnerOutput' }, output, '4');
-  });
-
   it('captures lighthouse snapshot metrics', async () => {
     const root = await mountWithTool('lighthouseSnapshot');
     if (!root) return;
@@ -1166,24 +1146,47 @@ describe('content entrypoint', () => {
   });
 
   it('identifies fonts', async () => {
-    document.body.innerHTML = '<div class=\"font-target\" style=\"font-family: Arial; font-size: 16px;\"></div>';
+    // Create a target element outside xcalibr-root for the picker to capture
+    const fontTarget = document.createElement('div');
+    fontTarget.className = 'font-target';
+    fontTarget.style.fontFamily = 'Arial';
+    fontTarget.style.fontSize = '16px';
+    fontTarget.style.fontWeight = '400';
+    fontTarget.style.lineHeight = '1.5';
+    document.body.appendChild(fontTarget);
+
     const root = await mountWithTool('fontIdentifier', {
-      selector: '.font-target',
-      output: []
+      isActive: false,
+      history: []
     });
     if (!root) return;
-    const button = findButtonByText(root, 'Inspect');
-    button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    // Click "Activate Picker" to start capturing
+    const activateButton = findButtonByText(root, 'Activate Picker');
+    aiAssertTruthy({ name: 'FontIdentifierActivateButton' }, activateButton);
+    activateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushPromises();
+
+    // Simulate clicking on the font target element (captured by document listener)
+    fontTarget.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushPromises();
+
+    // Check that history was populated
+    type FontEntry = { fontFamily: string };
     const stored = await waitForState((state) => {
-      const toolData = state.toolData as Record<string, { output?: string[] }>;
-      return (toolData.fontIdentifier?.output ?? []).some((entry) =>
-        entry.includes('font-family')
-      );
+      const toolData = state.toolData as Record<string, { history?: FontEntry[] }>;
+      return (toolData.fontIdentifier?.history ?? []).length > 0;
     });
-    const output = (stored?.toolData as Record<string, { output?: string[] }> | undefined)
-      ?.fontIdentifier?.output ?? [];
-    aiAssertTruthy({ name: 'FontIdentifierOutput', state: output }, output.length > 0);
+    const history = (stored?.toolData as Record<string, { history?: FontEntry[] }> | undefined)
+      ?.fontIdentifier?.history ?? [];
+    aiAssertTruthy({ name: 'FontIdentifierHistory', state: history }, history.length > 0);
+    aiAssertTruthy(
+      { name: 'FontIdentifierFontFamily', state: history },
+      history[0]?.fontFamily?.includes('Arial')
+    );
+
+    // Clean up
+    fontTarget.remove();
   });
 
   it('checks contrast ratio', async () => {

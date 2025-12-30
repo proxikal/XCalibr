@@ -198,30 +198,15 @@ export default defineBackground(() => {
 
     if (message?.type !== 'xcalibr-inject-code') return;
 
-    const { mode, scope, code } = message.payload as {
-      mode: 'css' | 'js';
+    const { scope, code } = message.payload as {
       scope: 'current' | 'all';
       code: string;
     };
 
-    const injectIntoTab = async (tabId: number) => {
-      if (mode === 'css') {
-        await chrome.scripting.insertCSS({
-          target: { tabId },
-          css: code
-        });
-        return;
-      }
-
-      await chrome.scripting.executeScript({
+    const injectCssIntoTab = async (tabId: number) => {
+      await chrome.scripting.insertCSS({
         target: { tabId },
-        func: (source: string) => {
-          const script = document.createElement('script');
-          script.textContent = source;
-          (document.head || document.documentElement).appendChild(script);
-          script.remove();
-        },
-        args: [code]
+        css: code
       });
     };
 
@@ -229,7 +214,7 @@ export default defineBackground(() => {
       if (scope === 'current') {
         const tabId = sender.tab?.id;
         if (typeof tabId === 'number') {
-          await injectIntoTab(tabId);
+          await injectCssIntoTab(tabId);
         }
         sendResponse({ ok: true });
         return;
@@ -240,7 +225,7 @@ export default defineBackground(() => {
         tabs
           .map((tab) => tab.id)
           .filter((tabId): tabId is number => typeof tabId === 'number')
-          .map((tabId) => injectIntoTab(tabId))
+          .map((tabId) => injectCssIntoTab(tabId))
       );
       sendResponse({ ok: true });
     };
