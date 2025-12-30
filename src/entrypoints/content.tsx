@@ -188,14 +188,34 @@ const App = () => {
             initiatorType: entry.initiatorType,
             duration: entry.duration,
             transferSize: entry.transferSize,
-            startTime: entry.startTime
+            startTime: entry.startTime,
+            // Additional timing details
+            fetchStart: entry.fetchStart,
+            domainLookupStart: entry.domainLookupStart,
+            domainLookupEnd: entry.domainLookupEnd,
+            connectStart: entry.connectStart,
+            connectEnd: entry.connectEnd,
+            secureConnectionStart: entry.secureConnectionStart,
+            requestStart: entry.requestStart,
+            responseStart: entry.responseStart,
+            responseEnd: entry.responseEnd,
+            // Size details
+            encodedBodySize: entry.encodedBodySize,
+            decodedBodySize: entry.decodedBodySize,
+            // Protocol info
+            nextHopProtocol: entry.nextHopProtocol,
+            // Response status (Chrome 109+)
+            responseStatus: (entry as PerformanceResourceTiming & { responseStatus?: number }).responseStatus
           });
         });
         return {
           ...current,
           toolData: {
             ...current.toolData,
-            requestLog: { entries: nextEntries.slice(0, 200) }
+            requestLog: {
+              ...(current.toolData.requestLog as RequestLogData | undefined),
+              entries: nextEntries.slice(0, 200)
+            }
           }
         };
       }).then(setState);
@@ -2255,11 +2275,16 @@ const App = () => {
         return (
           <div
             key={toolId}
-            className="fixed z-[80] bg-slate-900 border border-slate-700 rounded-lg shadow-2xl w-72"
-            style={{ left: toolState.x, top: toolState.y }}
+            className={`fixed z-[80] bg-slate-900 border border-slate-700 rounded-lg shadow-2xl ${entry.width ? '' : 'w-72'} ${entry.height ? 'flex flex-col' : ''}`}
+            style={{
+              left: toolState.x,
+              top: toolState.y,
+              ...(entry.width ? { width: entry.width } : {}),
+              ...(entry.height ? { height: entry.height } : {})
+            }}
           >
             <div
-              className="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-900 cursor-move"
+              className="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-900 cursor-move flex-shrink-0 rounded-t-lg"
               style={{ touchAction: 'none' }}
               onPointerDown={(event) => {
                 if (
@@ -2336,7 +2361,7 @@ const App = () => {
                 </button>
               </div>
             </div>
-            <div className="p-3 text-slate-200 text-sm">
+            <div className={`p-3 text-slate-200 text-sm ${entry.height ? 'flex-1 overflow-hidden min-h-0' : ''}`}>
               {entry.render(state.toolData[toolId], (next) =>
                 updateToolData(toolId, next)
               )}

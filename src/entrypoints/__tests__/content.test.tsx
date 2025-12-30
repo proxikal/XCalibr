@@ -650,13 +650,11 @@ describe('content entrypoint', () => {
     aiAssertTruthy({ name: 'RobotsViewerFetch' }, fetchButton);
     fetchButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushPromises();
-    const textarea = (await waitFor(() =>
-      root.querySelector('textarea[placeholder=\"robots.txt will appear here...\"]')
-    )) as HTMLTextAreaElement | null;
-    aiAssertIncludes(
+    // The new component shows parsed lines with user-agent directive
+    const userAgentLine = await waitFor(() => queryAllByText(root, 'user-agent')[0]);
+    aiAssertTruthy(
       { name: 'RobotsViewerContent' },
-      textarea?.value ?? '',
-      'User-agent'
+      userAgentLine
     );
   });
 
@@ -664,10 +662,17 @@ describe('content entrypoint', () => {
     document.body.innerHTML = '<form><input name=\"email\" /></form>';
     const root = await mountWithTool('formFuzzer');
     if (!root) return;
-    const refreshButton = await waitFor(() => findButtonByText(root, 'Refresh Forms'));
+    // New button text is "Scan Forms"
+    const refreshButton = await waitFor(() => findButtonByText(root, 'Scan Forms'));
     aiAssertTruthy({ name: 'FormFuzzerRefresh' }, refreshButton);
     refreshButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushPromises();
+    // Click first payload to select it (new UI requires selection)
+    const payloadButtons = root.querySelectorAll('button.font-mono');
+    if (payloadButtons[0]) {
+      payloadButtons[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+    }
     const applyButton = await waitFor(() => findButtonByText(root, 'Apply Payload'));
     aiAssertTruthy({ name: 'FormFuzzerApply' }, applyButton);
     applyButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -767,10 +772,11 @@ describe('content entrypoint', () => {
     const refreshButton = findButtonByText(root, 'Refresh');
     refreshButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushPromises();
-    const counts = queryAllByText(root, 'images')[0];
+    // The new tabbed UI shows "Images (N)" as a button
+    const imagesTab = queryAllByText(root, 'Images')[0];
     aiAssertTruthy(
-      { name: 'AssetMapperCounts', state: { text: counts?.textContent } },
-      Boolean(counts?.textContent)
+      { name: 'AssetMapperCounts', state: { text: imagesTab?.textContent } },
+      Boolean(imagesTab?.textContent)
     );
   });
 
@@ -822,7 +828,8 @@ describe('content entrypoint', () => {
       url: 'https://example.com'
     });
     if (!root) return;
-    const runButton = findButtonByText(root, 'Run Check');
+    // New button text is just "Check"
+    const runButton = findButtonByText(root, 'Check');
     runButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushPromises();
     const stored = await waitForState((state) => {

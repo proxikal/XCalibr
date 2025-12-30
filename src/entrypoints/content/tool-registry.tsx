@@ -123,7 +123,6 @@ import type {
 import {
   applyPayloadToForm,
   auditAccessibility,
-  defaultPayloads,
   detectTechnologies,
   extractLinksFromDocument,
   getFormsSnapshot,
@@ -141,6 +140,8 @@ export type ToolRegistryEntry = {
   category: string;
   icon: typeof faBolt;
   hover: string;
+  width?: number;
+  height?: number;
   render: (
     data: unknown,
     onChange: (next: unknown) => void
@@ -192,6 +193,8 @@ export const buildToolRegistry = (handlers: {
     category: 'CyberSec',
     icon: faShieldHalved,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 576,
+    height: 450,
     render: (data, onChange) => (
       <HeaderInspectorTool.Component
         data={data as HeaderInspectorData | undefined}
@@ -232,6 +235,8 @@ export const buildToolRegistry = (handlers: {
     category: 'CyberSec',
     icon: faRobot,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 450,
+    height: 400,
     render: (data, onChange) => (
       <RobotsViewerTool.Component
         data={data as RobotsViewerData | undefined}
@@ -251,17 +256,17 @@ export const buildToolRegistry = (handlers: {
     category: 'CyberSec',
     icon: faFlask,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 600,
+    height: 608,
     render: (data, onChange) => (
       <FormFuzzerTool.Component
         data={data as FormFuzzerData | undefined}
         onChange={(next) => onChange(next)}
         onRefresh={async () => {
-          const payloads = (data as FormFuzzerData | undefined)?.payloads ?? defaultPayloads;
           onChange({
+            ...(data as FormFuzzerData | undefined),
             forms: getFormsSnapshot(),
-            payloads,
-            selectedFormIndex: 0,
-            selectedPayload: payloads[0] ?? ''
+            selectedFormIndex: 0
           });
         }}
         onApply={async (formIndex, payload) =>
@@ -306,6 +311,8 @@ export const buildToolRegistry = (handlers: {
     category: 'CyberSec',
     icon: faLink,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 700,
+    height: 400,
     render: (data, onChange) => (
       <LinkExtractorTool.Component
         data={data as LinkExtractorData | undefined}
@@ -340,6 +347,8 @@ export const buildToolRegistry = (handlers: {
     category: 'CyberSec',
     icon: faSitemap,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 550,
+    height: 450,
     render: (data, onChange) => (
       <AssetMapperTool.Component
         data={data as AssetMapperData | undefined}
@@ -357,10 +366,13 @@ export const buildToolRegistry = (handlers: {
     category: 'CyberSec',
     icon: faTable,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 480,
+    height: 550,
     render: (data, onChange) => (
       <RequestLogTool.Component
         data={data as RequestLogData | undefined}
-        onClear={async () => onChange({ entries: [] })}
+        onChange={(next) => onChange(next)}
+        onClear={async () => onChange({ entries: [], filterCategory: 'all', page: 0 })}
       />
     )
   },
@@ -623,6 +635,8 @@ export const buildToolRegistry = (handlers: {
     category: 'Web Dev',
     icon: faGear,
     hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    width: 450,
+    height: 400,
     render: (data) => (
       <StorageExplorerTool.Component
         data={data as StorageExplorerData | undefined}
@@ -880,6 +894,8 @@ export const buildToolRegistry = (handlers: {
     category: 'Back End',
     icon: faGear,
     hover: 'group-hover:border-cyan-500 group-hover:text-cyan-400',
+    width: 420,
+    height: 450,
     render: (data, onChange) => (
       <CookieManagerTool.Component
         data={data as CookieManagerData | undefined}

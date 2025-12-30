@@ -28,6 +28,22 @@ export type RobotsViewerData = {
   updatedAt?: number;
 };
 
+export type PayloadFieldResult = {
+  name: string;
+  type: string;
+  applied: boolean;
+  reason?: string;
+};
+
+export type PayloadApplicationResult = {
+  success: boolean;
+  formFound: boolean;
+  totalFields: number;
+  appliedCount: number;
+  skippedCount: number;
+  fields: PayloadFieldResult[];
+};
+
 export type FormFuzzerData = {
   forms?: {
     index: number;
@@ -40,6 +56,7 @@ export type FormFuzzerData = {
   selectedPayload?: string;
   customPayload?: string;
   status?: string;
+  lastResult?: PayloadApplicationResult;
 };
 
 export type UrlCodecData = {
@@ -72,14 +89,35 @@ export type AssetMapperData = {
   updatedAt?: number;
 };
 
+export type RequestLogEntry = {
+  name: string;
+  initiatorType: string;
+  duration: number;
+  transferSize: number;
+  startTime: number;
+  // Additional timing details
+  fetchStart?: number;
+  domainLookupStart?: number;
+  domainLookupEnd?: number;
+  connectStart?: number;
+  connectEnd?: number;
+  secureConnectionStart?: number;
+  requestStart?: number;
+  responseStart?: number;
+  responseEnd?: number;
+  // Size details
+  encodedBodySize?: number;
+  decodedBodySize?: number;
+  // Protocol info
+  nextHopProtocol?: string;
+  // Response status (if available)
+  responseStatus?: number;
+};
+
 export type RequestLogData = {
-  entries?: {
-    name: string;
-    initiatorType: string;
-    duration: number;
-    transferSize: number;
-    startTime: number;
-  }[];
+  entries?: RequestLogEntry[];
+  filterCategory?: string;
+  page?: number;
 };
 
 export type PayloadReplayData = {
@@ -219,6 +257,9 @@ export type CssGridGeneratorData = {
   rows?: string;
   gap?: string;
   output?: string;
+  isActive?: boolean;
+  drawnWidth?: number;
+  drawnHeight?: number;
 };
 
 export type FlexboxInspectorData = {
