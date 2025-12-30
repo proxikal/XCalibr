@@ -4701,6 +4701,8 @@ const App = () => {
   const requestLogSeenRef = useRef<Set<string>>(new Set());
   const debuggerSeenRef = useRef<number>(0);
   const quickBarDragIdRef = useRef<string | null>(null);
+  const quickBarDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const quickBarDidDragRef = useRef(false);
   const quickBarPageHoverRef = useRef<number | null>(null);
   const quickBarListRef = useRef<HTMLDivElement | null>(null);
   const quickBarPageRef = useRef(quickBarPage);
@@ -5114,6 +5116,8 @@ const App = () => {
   const clearQuickBarDragState = () => {
     setQuickBarDragId(null);
     quickBarDragIdRef.current = null;
+    quickBarDragStartRef.current = null;
+    quickBarDidDragRef.current = false;
     setQuickBarDragOverIndex(null);
     setQuickBarDragOverPage(null);
     if (quickBarPageHoverRef.current) {
@@ -6618,11 +6622,25 @@ const App = () => {
                         event.preventDefault();
                         setQuickBarDragId(item.id);
                         quickBarDragIdRef.current = item.id;
+                        quickBarDragStartRef.current = {
+                          x: event.clientX,
+                          y: event.clientY
+                        };
+                        quickBarDidDragRef.current = false;
                         setQuickBarDragOver(quickBarPage, index);
                         const handleMove = (moveEvent: PointerEvent) => {
                           const dragId =
                             quickBarDragIdRef.current ?? quickBarDragId;
                           if (!dragId || !quickBarDragEnabled) return;
+                          const start = quickBarDragStartRef.current;
+                          if (start && !quickBarDidDragRef.current) {
+                            const deltaX = moveEvent.clientX - start.x;
+                            const deltaY = moveEvent.clientY - start.y;
+                            const distance = Math.hypot(deltaX, deltaY);
+                            if (distance > 6) {
+                              quickBarDidDragRef.current = true;
+                            }
+                          }
                           const listEl = quickBarListRef.current;
                           let handled = false;
                           if (listEl) {
@@ -6702,6 +6720,11 @@ const App = () => {
                             clearQuickBarDragState();
                             return;
                           }
+                          if (!quickBarDidDragRef.current) {
+                            clearQuickBarDragState();
+                            openTool(dragId);
+                            return;
+                          }
                           const fromIndex = state.quickBarToolIds.indexOf(dragId);
                           const resolveTarget = () => {
                             const targetEl =
@@ -6740,10 +6763,6 @@ const App = () => {
                         };
                         window.addEventListener('pointermove', handleMove);
                         window.addEventListener('pointerup', handleUp, { once: true });
-                      }}
-                      onClick={() => {
-                        if (quickBarDragIdRef.current || quickBarDragId) return;
-                        openTool(item.id);
                       }}
                       className={`relative w-full flex items-center gap-3 p-2 rounded hover:bg-slate-800 transition-all text-left group ${
                         isDragging
