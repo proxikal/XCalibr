@@ -1,5 +1,11 @@
-import { describe, it } from 'vitest';
+import { beforeEach, describe, it } from 'vitest';
 import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  waitFor,
+  queryAllByText
+} from '../../../__tests__/integration-test-utils';
 import type { RequestLogEntry, RequestLogData } from '../tool-types';
 
 // Mock entry factory
@@ -549,6 +555,24 @@ describe('RequestLogTool', () => {
         urlInfo,
         null
       );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('renders request log entries', async () => {
+      const root = await mountWithTool('requestLog', {
+        entries: [
+          { name: 'https://example.com', initiatorType: 'fetch', duration: 1, transferSize: 0, startTime: 1 }
+        ]
+      });
+      if (!root) return;
+      const entry = await waitFor(() => queryAllByText(root, 'example.com')[0]);
+      aiAssertTruthy({ name: 'RequestLogEntry' }, entry);
     });
   });
 });

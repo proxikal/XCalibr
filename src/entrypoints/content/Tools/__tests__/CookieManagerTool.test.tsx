@@ -1,5 +1,13 @@
-import { describe, it } from 'vitest';
+import { beforeEach, describe, it } from 'vitest';
 import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  flushPromises,
+  waitFor,
+  findButtonByText,
+  queryAllByText
+} from '../../../__tests__/integration-test-utils';
 import type { CookieManagerData } from '../tool-types';
 
 type Cookie = { name: string; value: string };
@@ -300,6 +308,28 @@ describe('CookieManagerTool', () => {
         { name: 'CookiesPreserved', input: updatedData },
         updatedData.cookies!.length,
         5
+      );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('lists cookies in Cookie Manager', async () => {
+      document.cookie = 'test_cookie=hello';
+      const root = await mountWithTool('cookieManager');
+      if (!root) return;
+      const refreshButton = await waitFor(() => findButtonByText(root, 'Refresh'));
+      aiAssertTruthy({ name: 'CookieManagerRefresh' }, refreshButton);
+      refreshButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const entry = await waitFor(() => queryAllByText(root, 'test_cookie')[0]);
+      aiAssertTruthy(
+        { name: 'CookieManagerEntry' },
+        entry
       );
     });
   });

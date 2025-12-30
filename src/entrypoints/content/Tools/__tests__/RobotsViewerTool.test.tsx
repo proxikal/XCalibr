@@ -1,5 +1,14 @@
-import { describe, it } from 'vitest';
+import { beforeEach, describe, it } from 'vitest';
 import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  flushPromises,
+  waitFor,
+  findButtonByText,
+  queryAllByText,
+  setRuntimeHandler
+} from '../../../__tests__/integration-test-utils';
 import type { RobotsViewerData } from '../tool-types';
 
 type ParsedLine = {
@@ -359,6 +368,32 @@ Sitemap: https://example.com/sitemap.xml`;
         { name: 'UnknownDirectiveName', input: content },
         parsed[0].directive,
         'custom-directive'
+      );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('loads robots.txt content', async () => {
+      setRuntimeHandler('xcalibr-fetch-robots', () => ({
+        url: 'https://example.com/robots.txt',
+        content: 'User-agent: *',
+        updatedAt: Date.now()
+      }));
+      const root = await mountWithTool('robotsViewer');
+      if (!root) return;
+      const fetchButton = await waitFor(() => findButtonByText(root, 'Fetch'));
+      aiAssertTruthy({ name: 'RobotsViewerFetch' }, fetchButton);
+      fetchButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const userAgentLine = await waitFor(() => queryAllByText(root, 'user-agent')[0]);
+      aiAssertTruthy(
+        { name: 'RobotsViewerContent' },
+        userAgentLine
       );
     });
   });

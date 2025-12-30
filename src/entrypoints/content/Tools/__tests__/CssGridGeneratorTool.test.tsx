@@ -1,5 +1,12 @@
-import { describe, it } from 'vitest';
-import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import { beforeEach, describe, it } from 'vitest';
+import { aiAssertEqual, aiAssertIncludes, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  flushPromises,
+  waitFor,
+  findButtonByText
+} from '../../../__tests__/integration-test-utils';
 import type { CssGridGeneratorData } from '../tool-types';
 
 // parseGridTemplate function from the tool
@@ -383,6 +390,36 @@ describe('CssGridGeneratorTool', () => {
         nextState.gap,
         '20px'
       );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('generates CSS grid', async () => {
+      const root = await mountWithTool('cssGridGenerator', {
+        columns: 'repeat(3, 1fr)',
+        rows: 'auto',
+        gap: '16px',
+        output: ''
+      });
+      if (!root) return;
+      // First generate the CSS
+      const generateButton = await waitFor(() => findButtonByText(root, 'Generate CSS'));
+      aiAssertTruthy({ name: 'CssGridGeneratorGenerateButton' }, generateButton);
+      generateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      // Now Copy CSS button should appear
+      const copyButton = await waitFor(() => findButtonByText(root, 'Copy CSS'));
+      aiAssertTruthy({ name: 'CssGridGeneratorCopyButton' }, copyButton);
+      copyButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const css = (navigator.clipboard.writeText as unknown as { mock: { calls: string[][] } })
+        .mock.calls[0][0];
+      aiAssertIncludes({ name: 'CssGridGeneratorCSS' }, css, 'display: grid');
     });
   });
 });

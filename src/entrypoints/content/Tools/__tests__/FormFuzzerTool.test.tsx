@@ -1,5 +1,12 @@
-import { describe, it } from 'vitest';
+import { beforeEach, describe, it } from 'vitest';
 import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  flushPromises,
+  waitFor,
+  findButtonByText
+} from '../../../__tests__/integration-test-utils';
 import type { PayloadApplicationResult, PayloadFieldResult } from '../tool-types';
 
 // Mock the payload application result
@@ -335,6 +342,39 @@ describe('FormFuzzerTool Payload Application', () => {
         { name: 'FieldsArrayMatchesTotal', input: result },
         result.fields.length,
         result.totalFields
+      );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('applies payloads with Form Fuzzer', async () => {
+      document.body.innerHTML = '<form><input name="email" /></form>';
+      const root = await mountWithTool('formFuzzer');
+      if (!root) return;
+      const refreshButton = await waitFor(() => findButtonByText(root, 'Scan Forms'));
+      aiAssertTruthy({ name: 'FormFuzzerRefresh' }, refreshButton);
+      refreshButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const payloadButtons = root.querySelectorAll('button.font-mono');
+      if (payloadButtons[0]) {
+        payloadButtons[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await flushPromises();
+      }
+      const applyButton = await waitFor(() => findButtonByText(root, 'Apply Payload'));
+      aiAssertTruthy({ name: 'FormFuzzerApply' }, applyButton);
+      applyButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const input = (await waitFor(() =>
+        document.querySelector('input[name="email"]')
+      )) as HTMLInputElement | null;
+      aiAssertTruthy(
+        { name: 'FormFuzzerApplied', state: { value: input?.value } },
+        Boolean(input?.value)
       );
     });
   });

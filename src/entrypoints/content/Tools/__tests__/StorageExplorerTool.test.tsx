@@ -1,5 +1,13 @@
-import { describe, it } from 'vitest';
+import { beforeEach, describe, it } from 'vitest';
 import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  flushPromises,
+  waitFor,
+  findButtonByText,
+  waitForState
+} from '../../../__tests__/integration-test-utils';
 import type { StorageExplorerData } from '../tool-types';
 
 type StorageEntry = { key: string; value: string };
@@ -330,6 +338,34 @@ describe('StorageExplorerTool', () => {
       aiAssertTruthy(
         { name: 'ExportContainsSession', input: json },
         json.includes('session_key_0')
+      );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('refreshes storage explorer', async () => {
+      localStorage.setItem('hello', 'world');
+      sessionStorage.setItem('foo', 'bar');
+      const root = await mountWithTool('storageExplorer');
+      if (!root) return;
+      const button = await waitFor(() => findButtonByText(root, 'Refresh'));
+      aiAssertTruthy({ name: 'StorageExplorerRefresh' }, button);
+      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const stored = await waitForState((state) => {
+        const toolData = state.toolData as Record<string, { local?: { key: string }[] }>;
+        return (toolData.storageExplorer?.local ?? []).some((item) => item.key === 'hello');
+      });
+      const localEntries = (stored?.toolData as Record<string, { local?: { key: string }[] }> | undefined)
+        ?.storageExplorer?.local ?? [];
+      aiAssertTruthy(
+        { name: 'StorageExplorerEntry', state: localEntries },
+        localEntries.some((item) => item.key === 'hello')
       );
     });
   });

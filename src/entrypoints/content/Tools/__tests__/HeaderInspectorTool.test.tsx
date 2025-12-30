@@ -1,5 +1,14 @@
-import { describe, it } from 'vitest';
+import { beforeEach, describe, it } from 'vitest';
 import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  flushPromises,
+  waitFor,
+  findButtonByText,
+  waitForState,
+  setRuntimeHandler
+} from '../../../__tests__/integration-test-utils';
 import type { HeaderInspectorData } from '../tool-types';
 
 type Header = { name: string; value: string };
@@ -337,6 +346,36 @@ describe('HeaderInspectorTool', () => {
       aiAssertTruthy(
         { name: 'SpecialCharsInValue', input: header },
         header.value.includes("'") && header.value.includes(';')
+      );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('fetches headers in Header Inspector', async () => {
+      setRuntimeHandler('xcalibr-fetch-headers', () => ({
+        url: 'https://example.com',
+        headers: [{ name: 'Content-Security-Policy', value: "default-src 'self'" }],
+        updatedAt: Date.now()
+      }));
+      const root = await mountWithTool('headerInspector');
+      if (!root) return;
+      const refreshButton = await waitFor(() => findButtonByText(root, 'Refresh'));
+      aiAssertTruthy({ name: 'HeaderInspectorRefresh' }, refreshButton);
+      refreshButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const stored = await waitForState((state) => {
+        const toolData = state.toolData as Record<string, { headers?: unknown[] }>;
+        return Boolean(toolData.headerInspector?.headers?.length);
+      });
+      const toolData = stored?.toolData as Record<string, { headers?: unknown[] }>;
+      aiAssertTruthy(
+        { name: 'HeaderInspectorData', state: toolData.headerInspector },
+        (toolData.headerInspector?.headers?.length ?? 0) > 0
       );
     });
   });

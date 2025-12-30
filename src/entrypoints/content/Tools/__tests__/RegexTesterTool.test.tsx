@@ -1,5 +1,13 @@
-import { describe, it } from 'vitest';
+import { beforeEach, describe, it } from 'vitest';
 import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  flushPromises,
+  waitFor,
+  findButtonByText,
+  waitForState
+} from '../../../__tests__/integration-test-utils';
 import type { RegexTesterData } from '../tool-types';
 
 // runRegexTest function logic (from web-tools.ts)
@@ -303,6 +311,34 @@ describe('RegexTesterTool', () => {
         result.matches[0],
         '.*+?'
       );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('runs regex test', async () => {
+      const root = await mountWithTool('regexTester', {
+        pattern: 'hello',
+        flags: 'g',
+        text: 'hello world',
+        matches: []
+      });
+      if (!root) return;
+      const button = await waitFor(() => findButtonByText(root, 'Run Test'));
+      aiAssertTruthy({ name: 'RegexTesterRunButton' }, button);
+      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const stored = await waitForState((state) => {
+        const toolData = state.toolData as Record<string, { matches?: string[] }>;
+        return (toolData.regexTester?.matches?.length ?? 0) > 0;
+      });
+      const matches = (stored?.toolData as Record<string, { matches?: string[] }> | undefined)
+        ?.regexTester?.matches ?? [];
+      aiAssertTruthy({ name: 'RegexTesterMatches', state: matches }, matches.includes('hello'));
     });
   });
 });

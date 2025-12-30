@@ -1,5 +1,12 @@
-import { describe, it } from 'vitest';
+import { beforeEach, describe, it } from 'vitest';
 import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  flushPromises,
+  findButtonByText,
+  queryAllByText
+} from '../../../__tests__/integration-test-utils';
 import type { AssetMapperData } from '../tool-types';
 
 const ITEMS_PER_PAGE = 10;
@@ -346,6 +353,31 @@ describe('AssetMapperTool', () => {
       aiAssertTruthy(
         { name: 'FilenameContainsExtension', input: filename },
         filename.endsWith('.json')
+      );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('maps assets', async () => {
+      document.body.innerHTML = `
+        <img src="https://example.com/img.png" />
+        <script src="https://example.com/app.js"></script>
+        <link rel="stylesheet" href="https://example.com/app.css" />
+      `;
+      const root = await mountWithTool('assetMapper');
+      if (!root) return;
+      const refreshButton = findButtonByText(root, 'Refresh');
+      refreshButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const imagesTab = queryAllByText(root, 'Images')[0];
+      aiAssertTruthy(
+        { name: 'AssetMapperCounts', state: { text: imagesTab?.textContent } },
+        Boolean(imagesTab?.textContent)
       );
     });
   });

@@ -1,5 +1,12 @@
-import { describe, it } from 'vitest';
+import { beforeEach, describe, it } from 'vitest';
 import { aiAssertEqual, aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import {
+  resetChrome,
+  mountWithTool,
+  flushPromises,
+  findButtonByText,
+  queryAllByText
+} from '../../../__tests__/integration-test-utils';
 import type { LinkExtractorData } from '../tool-types';
 
 const ITEMS_PER_PAGE = 12;
@@ -286,6 +293,30 @@ describe('LinkExtractorTool', () => {
       aiAssertTruthy(
         { name: 'FilenameContainsExtension', input: filename },
         filename.endsWith('.json')
+      );
+    });
+  });
+
+  describe('Integration tests', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+      resetChrome();
+    });
+
+    it('extracts links with Link Extractor', async () => {
+      document.body.innerHTML = `
+        <a href="https://example.com/page">Internal</a>
+        <a href="https://external.com">External</a>
+      `;
+      const root = await mountWithTool('linkExtractor');
+      if (!root) return;
+      const refreshButton = findButtonByText(root, 'Refresh');
+      refreshButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flushPromises();
+      const countLabel = queryAllByText(root, 'internal')[0];
+      aiAssertTruthy(
+        { name: 'LinkExtractorCounts', state: { text: countLabel?.textContent } },
+        Boolean(countLabel?.textContent)
       );
     });
   });
