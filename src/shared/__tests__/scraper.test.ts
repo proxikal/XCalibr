@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
+import { aiAssertEqual, aiAssertIncludes, aiAssertTruthy } from '../../test-utils/aiAssert';
 import { generateCssSelector, generateXPath, normalizeScrapers } from '../scraper';
 
 describe('scraper selectors', () => {
@@ -12,14 +13,22 @@ describe('scraper selectors', () => {
     const target = document.querySelector('.target') as Element;
     const selector = generateCssSelector(target);
     const resolved = document.querySelector(selector);
-    expect(resolved).toBe(target);
+    aiAssertEqual(
+      { name: 'generateCssSelector', input: { selector } },
+      resolved,
+      target
+    );
   });
 
   it('builds an xpath selector for id elements', () => {
     document.body.innerHTML = `<div id="main"><span>ok</span></div>`;
     const target = document.getElementById('main') as Element;
     const xpath = generateXPath(target);
-    expect(xpath).toContain('//*[@id="main"]');
+    aiAssertIncludes(
+      { name: 'generateXPath', input: { xpath } },
+      xpath,
+      '//*[@id="main"]'
+    );
   });
 });
 
@@ -30,7 +39,14 @@ describe('scraper storage normalization', () => {
       { id: 'a', name: 'Test', fields: [] },
       { id: 'b', name: 'Bad', fields: [{ id: 'f' }] }
     ]);
-    expect(normalized.length).toBe(2);
-    expect(normalized[0].id).toBe('a');
+    aiAssertTruthy(
+      { name: 'normalizeScrapers', input: { normalized } },
+      normalized.length === 2
+    );
+    aiAssertEqual(
+      { name: 'normalizeScrapers', state: normalized },
+      normalized[0].id,
+      'a'
+    );
   });
 });

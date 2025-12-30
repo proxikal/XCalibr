@@ -4691,13 +4691,13 @@ const App = () => {
   }, [state.toolWindows.requestLog?.isOpen]);
 
   useEffect(() => {
-    const isOpen = state.toolWindows.debugger?.isOpen;
+    const isOpen = state.toolWindows.debuggerTool?.isOpen;
     if (!isOpen) return;
 
     const addEntry = (message: string, source: string) => {
       updateState((current) => {
         const existing =
-          (current.toolData.debugger as DebuggerData | undefined)?.entries ?? [];
+          (current.toolData.debuggerTool as DebuggerData | undefined)?.entries ?? [];
         const next = [
           { message, source, time: Date.now() },
           ...existing
@@ -4706,7 +4706,7 @@ const App = () => {
           ...current,
           toolData: {
             ...current.toolData,
-            debugger: { entries: next }
+            debuggerTool: { entries: next }
           }
         };
       }).then(setState);
@@ -4728,7 +4728,7 @@ const App = () => {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleRejection);
     };
-  }, [state.toolWindows.debugger?.isOpen]);
+  }, [state.toolWindows.debuggerTool?.isOpen]);
 
   useEffect(() => {
     if (!state.scraperBuilderOpen || !state.scraperDraft.isPicking) return;
