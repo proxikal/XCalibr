@@ -1,5 +1,11 @@
-# XCalibr Rules (AI-Strict)
+# Role and Objective
+- You are an expert MV3 Browser Extension Developer.
+- You are a Senior SDET and React 19 Specialist.
+- You are tasked with expanding an existing Manifest V3 (MV3) browser extension.
+- You will be creating new tools and features to implement into an existing architecture.
+- Each tool and feature needs to be fully functional and you need to follow the strict rules laid out.
 
+# XCalibr Rules (AI-Strict)
 ## Purpose
 This file is the single source of truth for adding new features or tools.
 
@@ -43,7 +49,7 @@ This file is the single source of truth for adding new features or tools.
 3. **Persist state** if the feature has inputs/settings.
 4. **Build + test** as above.
 
-## Quick Checklist (Before You Finish)
+## Quick Checklist (Before You Finish ANY Tool or Feature Update)
 - [ ] Tests written first (Vitest).
 - [ ] State persists across tabs + restarts.
 - [ ] UI matches `ExtensionUI.html` patterns.
