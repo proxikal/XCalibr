@@ -219,6 +219,3 @@
 - Menu entries in `menu.ts`
 - Types in `tool-types.ts`
 
----
-
-**Would you like to continue building the remaining 27 Red Team tools?**
