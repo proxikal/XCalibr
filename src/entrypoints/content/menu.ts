@@ -226,44 +226,89 @@ export const baseMenuBarItems: MenuBarItem[] = [
   {
     label: 'Data & Text',
     items: [
-      { label: 'CSV to JSON', toolId: 'csvToJson' },
-      { label: 'XML to JSON', toolId: 'xmlToJson' },
-      { label: 'YAML to JSON', toolId: 'yamlToJson' },
-      { label: 'JSON to YAML', toolId: 'jsonToYaml' },
-      { label: 'Text Diff', toolId: 'textDiff' },
-      { label: 'Case Converter', toolId: 'caseConverter' },
-      { label: 'Text Statistics', toolId: 'textStatistics' },
-      { label: 'Line Sorter', toolId: 'lineSorter' },
-      { label: 'List Randomizer', toolId: 'listRandomizer' },
-      { label: 'String Obfuscator', toolId: 'stringObfuscator' },
-      { label: 'Text to Binary', toolId: 'textToBinary' },
-      { label: 'Hex Viewer', toolId: 'hexViewer' },
-      { label: 'Unicode Explorer', toolId: 'unicodeExplorer' },
-      { label: 'Regex Highlighter', toolId: 'regexHighlighter' },
-      { label: 'Escaping Tool', toolId: 'escapingTool' },
-      { label: 'Unix Timestamp', toolId: 'unixTimestamp' },
-      { label: 'Timezone Converter', toolId: 'timezoneConverter' },
-      { label: 'Unit Converter', toolId: 'unitConverter' },
-      { label: 'Aspect Ratio Calculator', toolId: 'aspectRatioCalculator' },
-      { label: 'UUID Generator', toolId: 'uuidGenerator' },
-      { label: 'ObjectId Generator', toolId: 'objectIdGenerator' },
-      { label: 'Git Command Builder', toolId: 'gitCommandBuilder' },
-      { label: 'GitIgnore Generator', toolId: 'gitignoreGenerator' },
-      { label: 'License Generator', toolId: 'licenseGenerator' },
-      { label: 'JS Minifier', toolId: 'jsMinifier' },
-      { label: 'CSS Minifier', toolId: 'cssMinifier' },
-      { label: 'Python to JSON', toolId: 'pythonToJson' },
-      { label: 'TypeScript Interface', toolId: 'typescriptInterfaceGen' },
-      { label: 'Go Struct Generator', toolId: 'goStructGenerator' },
-      { label: 'SQL Schema Generator', toolId: 'sqlSchemaGenerator' },
-      { label: 'cURL to Fetch', toolId: 'curlToFetch' },
-      { label: 'QR Code Generator', toolId: 'qrCodeGenerator' },
-      { label: 'Barcode Generator', toolId: 'barcodeGenerator' },
-      { label: 'Stopwatch / Timer', toolId: 'stopwatchTimer' },
-      { label: 'Pomodoro Timer', toolId: 'pomodoroTimer' },
-      { label: 'Scratchpad', toolId: 'scratchpad' },
-      { label: 'Todo List', toolId: 'todoList' },
-      { label: 'Math Evaluator', toolId: 'mathEvaluator' }
+      {
+        label: 'Converters',
+        items: [
+          { label: 'CSV to JSON', toolId: 'csvToJson' },
+          { label: 'XML to JSON', toolId: 'xmlToJson' },
+          { label: 'YAML to JSON', toolId: 'yamlToJson' },
+          { label: 'JSON to YAML', toolId: 'jsonToYaml' },
+          { label: 'Python to JSON', toolId: 'pythonToJson' }
+        ]
+      },
+      {
+        label: 'Text Processing',
+        items: [
+          { label: 'Case Converter', toolId: 'caseConverter' },
+          { label: 'Text Statistics', toolId: 'textStatistics' },
+          { label: 'Line Sorter', toolId: 'lineSorter' },
+          { label: 'List Randomizer', toolId: 'listRandomizer' },
+          { label: 'Text Diff', toolId: 'textDiff' },
+          { label: 'String Obfuscator', toolId: 'stringObfuscator' },
+          { label: 'Escaping Tool', toolId: 'escapingTool' }
+        ]
+      },
+      {
+        label: 'Binary & Encoding',
+        items: [
+          { label: 'Text to Binary', toolId: 'textToBinary' },
+          { label: 'Hex Viewer', toolId: 'hexViewer' },
+          { label: 'Unicode Explorer', toolId: 'unicodeExplorer' },
+          { label: 'Regex Highlighter', toolId: 'regexHighlighter' }
+        ]
+      },
+      {
+        label: 'Date & Time',
+        items: [
+          { label: 'Unix Timestamp', toolId: 'unixTimestamp' },
+          { label: 'Timezone Converter', toolId: 'timezoneConverter' },
+          { label: 'Stopwatch / Timer', toolId: 'stopwatchTimer' },
+          { label: 'Pomodoro Timer', toolId: 'pomodoroTimer' }
+        ]
+      },
+      {
+        label: 'Calculators',
+        items: [
+          { label: 'Math Evaluator', toolId: 'mathEvaluator' },
+          { label: 'Unit Converter', toolId: 'unitConverter' },
+          { label: 'Aspect Ratio Calculator', toolId: 'aspectRatioCalculator' }
+        ]
+      },
+      {
+        label: 'ID Generators',
+        items: [
+          { label: 'UUID Generator', toolId: 'uuidGenerator' },
+          { label: 'ObjectId Generator', toolId: 'objectIdGenerator' },
+          { label: 'QR Code Generator', toolId: 'qrCodeGenerator' },
+          { label: 'Barcode Generator', toolId: 'barcodeGenerator' }
+        ]
+      },
+      {
+        label: 'Code Gen',
+        items: [
+          { label: 'TypeScript Interface', toolId: 'typescriptInterfaceGen' },
+          { label: 'Go Struct Generator', toolId: 'goStructGenerator' },
+          { label: 'SQL Schema Generator', toolId: 'sqlSchemaGenerator' },
+          { label: 'cURL to Fetch', toolId: 'curlToFetch' },
+          { label: 'JS Minifier', toolId: 'jsMinifier' },
+          { label: 'CSS Minifier', toolId: 'cssMinifier' }
+        ]
+      },
+      {
+        label: 'Git & Project',
+        items: [
+          { label: 'Git Command Builder', toolId: 'gitCommandBuilder' },
+          { label: 'GitIgnore Generator', toolId: 'gitignoreGenerator' },
+          { label: 'License Generator', toolId: 'licenseGenerator' }
+        ]
+      },
+      {
+        label: 'Productivity',
+        items: [
+          { label: 'Scratchpad', toolId: 'scratchpad' },
+          { label: 'Todo List', toolId: 'todoList' }
+        ]
+      }
     ]
   }
 ];
