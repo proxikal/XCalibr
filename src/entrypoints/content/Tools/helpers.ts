@@ -287,37 +287,250 @@ export const mapAssetsFromDocument = () => {
   return { images, scripts, styles };
 };
 
-export const detectTechnologies = () => {
-  const findings: { label: string; value: string }[] = [];
-  const generator = document
-    .querySelector('meta[name="generator"]')
-    ?.getAttribute('content');
+type TechConfidence = 'high' | 'medium' | 'low';
+type TechSignal = {
+  type: 'meta' | 'script' | 'header' | 'global' | 'selector' | 'cookie' | 'favicon' | 'comment';
+  evidence: string;
+  source?: string;
+};
+type TechFinding = {
+  label: string;
+  value: string;
+  version?: string;
+  confidence: TechConfidence;
+  category: 'framework' | 'library' | 'server' | 'cdn' | 'cms' | 'analytics' | 'other';
+  signals: TechSignal[];
+};
+
+export const detectTechnologies = (): TechFinding[] => {
+  const findings: TechFinding[] = [];
+
+  // Meta generator
+  const generator = document.querySelector('meta[name="generator"]')?.getAttribute('content');
   if (generator) {
-    findings.push({ label: 'Meta Generator', value: generator });
+    const versionMatch = generator.match(/[\d.]+/);
+    findings.push({
+      label: 'Meta Generator',
+      value: generator.split(/[\d]/)[0].trim() || generator,
+      version: versionMatch?.[0],
+      confidence: 'high',
+      category: 'cms',
+      signals: [{ type: 'meta', evidence: `<meta name="generator" content="${generator}">` }]
+    });
   }
-  if ((window as Window & { __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown })
-    .__REACT_DEVTOOLS_GLOBAL_HOOK__) {
-    findings.push({ label: 'Framework', value: 'React' });
+
+  // React detection
+  const reactHook = (window as Window & { __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown }).__REACT_DEVTOOLS_GLOBAL_HOOK__;
+  if (reactHook) {
+    const reactRoot = document.querySelector('[data-reactroot]');
+    const signals: TechSignal[] = [{ type: 'global', evidence: '__REACT_DEVTOOLS_GLOBAL_HOOK__' }];
+    if (reactRoot) signals.push({ type: 'selector', evidence: '[data-reactroot]' });
+    findings.push({
+      label: 'Framework',
+      value: 'React',
+      confidence: 'high',
+      category: 'framework',
+      signals
+    });
   }
-  if ((window as Window & { __VUE_DEVTOOLS_GLOBAL_HOOK__?: unknown })
-    .__VUE_DEVTOOLS_GLOBAL_HOOK__) {
-    findings.push({ label: 'Framework', value: 'Vue' });
+
+  // Vue detection
+  const vueHook = (window as Window & { __VUE_DEVTOOLS_GLOBAL_HOOK__?: unknown }).__VUE_DEVTOOLS_GLOBAL_HOOK__;
+  const vueApp = document.querySelector('[data-v-app]') || document.querySelector('[id="app"].__vue__');
+  if (vueHook || vueApp) {
+    const signals: TechSignal[] = [];
+    if (vueHook) signals.push({ type: 'global', evidence: '__VUE_DEVTOOLS_GLOBAL_HOOK__' });
+    if (vueApp) signals.push({ type: 'selector', evidence: '[data-v-app]' });
+    findings.push({
+      label: 'Framework',
+      value: 'Vue',
+      confidence: vueHook ? 'high' : 'medium',
+      category: 'framework',
+      signals
+    });
   }
-  if (document.querySelector('[ng-version]')) {
-    findings.push({ label: 'Framework', value: 'Angular' });
+
+  // Angular detection
+  const ngVersion = document.querySelector('[ng-version]');
+  const ngApp = document.querySelector('[ng-app]') || document.querySelector('.ng-scope');
+  if (ngVersion || ngApp) {
+    const signals: TechSignal[] = [];
+    const version = ngVersion?.getAttribute('ng-version');
+    if (ngVersion) signals.push({ type: 'selector', evidence: `[ng-version="${version}"]` });
+    if (ngApp) signals.push({ type: 'selector', evidence: '[ng-app] or .ng-scope' });
+    findings.push({
+      label: 'Framework',
+      value: 'Angular',
+      version: version || undefined,
+      confidence: 'high',
+      category: 'framework',
+      signals
+    });
   }
-  const scriptSources = Array.from(document.scripts)
-    .map((script) => script.src)
-    .filter(Boolean);
-  if (scriptSources.some((src) => src.includes('wp-content'))) {
-    findings.push({ label: 'CMS', value: 'WordPress' });
+
+  // Svelte detection
+  const svelteEl = document.querySelector('[class*="svelte-"]');
+  if (svelteEl) {
+    findings.push({
+      label: 'Framework',
+      value: 'Svelte',
+      confidence: 'medium',
+      category: 'framework',
+      signals: [{ type: 'selector', evidence: '[class*="svelte-"]' }]
+    });
   }
-  if (scriptSources.some((src) => src.includes('shopify'))) {
-    findings.push({ label: 'Platform', value: 'Shopify' });
+
+  // Next.js detection
+  const nextData = document.querySelector('#__NEXT_DATA__');
+  if (nextData) {
+    findings.push({
+      label: 'Framework',
+      value: 'Next.js',
+      confidence: 'high',
+      category: 'framework',
+      signals: [{ type: 'selector', evidence: '#__NEXT_DATA__' }]
+    });
   }
-  if (scriptSources.some((src) => src.includes('cdn.jsdelivr.net/npm/bootstrap'))) {
-    findings.push({ label: 'UI Library', value: 'Bootstrap' });
+
+  // Nuxt detection
+  const nuxtData = document.querySelector('#__NUXT__') || (window as Window & { __NUXT__?: unknown }).__NUXT__;
+  if (nuxtData) {
+    findings.push({
+      label: 'Framework',
+      value: 'Nuxt',
+      confidence: 'high',
+      category: 'framework',
+      signals: [{ type: nuxtData === document.querySelector('#__NUXT__') ? 'selector' : 'global', evidence: '__NUXT__' }]
+    });
   }
+
+  const scriptSources = Array.from(document.scripts).map((script) => script.src).filter(Boolean);
+
+  // WordPress
+  if (scriptSources.some((src) => src.includes('wp-content')) || scriptSources.some((src) => src.includes('wp-includes'))) {
+    const wpScript = scriptSources.find((src) => src.includes('wp-content') || src.includes('wp-includes'));
+    findings.push({
+      label: 'CMS',
+      value: 'WordPress',
+      confidence: 'high',
+      category: 'cms',
+      signals: [{ type: 'script', evidence: 'wp-content/wp-includes path', source: wpScript }]
+    });
+  }
+
+  // Shopify
+  if (scriptSources.some((src) => src.includes('shopify')) || document.querySelector('meta[name="shopify-checkout-api-token"]')) {
+    findings.push({
+      label: 'Platform',
+      value: 'Shopify',
+      confidence: 'high',
+      category: 'cms',
+      signals: [{ type: 'script', evidence: 'shopify in script src' }]
+    });
+  }
+
+  // jQuery
+  const jQueryGlobal = (window as Window & { jQuery?: { fn?: { jquery?: string } } }).jQuery;
+  if (jQueryGlobal) {
+    findings.push({
+      label: 'Library',
+      value: 'jQuery',
+      version: jQueryGlobal.fn?.jquery,
+      confidence: 'high',
+      category: 'library',
+      signals: [{ type: 'global', evidence: 'window.jQuery' }]
+    });
+  }
+
+  // Lodash
+  const lodashGlobal = (window as Window & { _?: { VERSION?: string } })._;
+  if (lodashGlobal?.VERSION) {
+    findings.push({
+      label: 'Library',
+      value: 'Lodash',
+      version: lodashGlobal.VERSION,
+      confidence: 'high',
+      category: 'library',
+      signals: [{ type: 'global', evidence: 'window._.VERSION' }]
+    });
+  }
+
+  // Bootstrap
+  const bootstrapScript = scriptSources.find((src) => src.includes('bootstrap'));
+  const bootstrapCss = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).find((l) => (l as HTMLLinkElement).href.includes('bootstrap'));
+  if (bootstrapScript || bootstrapCss) {
+    const versionMatch = (bootstrapScript || (bootstrapCss as HTMLLinkElement)?.href)?.match(/bootstrap[@/]?([\d.]+)?/i);
+    findings.push({
+      label: 'UI Library',
+      value: 'Bootstrap',
+      version: versionMatch?.[1],
+      confidence: 'high',
+      category: 'library',
+      signals: [{ type: bootstrapScript ? 'script' : 'selector', evidence: 'bootstrap in resource', source: bootstrapScript || (bootstrapCss as HTMLLinkElement)?.href }]
+    });
+  }
+
+  // Tailwind CSS
+  const tailwindClasses = document.querySelector('[class*="flex"][class*="items-"]') || document.querySelector('[class*="bg-"][class*="text-"]');
+  if (tailwindClasses) {
+    findings.push({
+      label: 'CSS Framework',
+      value: 'Tailwind CSS',
+      confidence: 'low',
+      category: 'library',
+      signals: [{ type: 'selector', evidence: 'Tailwind utility classes detected' }]
+    });
+  }
+
+  // Google Analytics
+  const gaScript = scriptSources.find((src) => src.includes('google-analytics.com') || src.includes('googletagmanager.com'));
+  const gaGlobal = (window as Window & { ga?: unknown; gtag?: unknown }).ga || (window as Window & { gtag?: unknown }).gtag;
+  if (gaScript || gaGlobal) {
+    findings.push({
+      label: 'Analytics',
+      value: 'Google Analytics',
+      confidence: 'high',
+      category: 'analytics',
+      signals: [{ type: gaScript ? 'script' : 'global', evidence: gaScript ? 'GA script' : 'window.ga/gtag', source: gaScript }]
+    });
+  }
+
+  // Cloudflare
+  const cfRay = document.querySelector('meta[name="cf-ray"]') || scriptSources.some((src) => src.includes('cloudflare'));
+  if (cfRay) {
+    findings.push({
+      label: 'CDN',
+      value: 'Cloudflare',
+      confidence: 'medium',
+      category: 'cdn',
+      signals: [{ type: 'meta', evidence: 'Cloudflare indicators' }]
+    });
+  }
+
+  // PHP detection (from common patterns)
+  const phpIndicators = document.querySelector('input[name="PHPSESSID"]') || document.cookie.includes('PHPSESSID');
+  if (phpIndicators) {
+    findings.push({
+      label: 'Server',
+      value: 'PHP',
+      confidence: 'medium',
+      category: 'server',
+      signals: [{ type: 'cookie', evidence: 'PHPSESSID cookie/input' }]
+    });
+  }
+
+  // ASP.NET detection
+  const aspNetIndicators = document.querySelector('input[name="__VIEWSTATE"]') || document.querySelector('input[name="__EVENTVALIDATION"]');
+  if (aspNetIndicators) {
+    findings.push({
+      label: 'Server',
+      value: 'ASP.NET',
+      confidence: 'high',
+      category: 'server',
+      signals: [{ type: 'selector', evidence: '__VIEWSTATE/__EVENTVALIDATION hidden fields' }]
+    });
+  }
+
   return findings;
 };
 

@@ -6,3 +6,48 @@
 <a href="https://x.com">X.com</a>
 
 <div style="background-color: black; width: 700px; height: 400px;"></div>
+
+<hr>
+<h2>Penetration Testing Test Form</h2>
+<form id="pentest-form" action="#" method="POST" style="max-width: 500px; padding: 20px; border: 1px solid #ccc; margin-top: 20px;">
+    <div style="margin-bottom: 10px;">
+        <label for="username">Username:</label><br>
+        <input type="text" id="username" name="username" placeholder="Enter username">
+    </div>
+    <div style="margin-bottom: 10px;">
+        <label for="email">Email:</label><br>
+        <input type="email" id="email" name="email" placeholder="user@example.com">
+    </div>
+    <div style="margin-bottom: 10px;">
+        <label for="password">Password:</label><br>
+        <input type="password" id="password" name="password" placeholder="********">
+    </div>
+    <div style="margin-bottom: 10px;">
+        <label for="search">Search Query:</label><br>
+        <input type="text" id="search" name="q" placeholder="XSS test here...">
+    </div>
+    <div style="margin-bottom: 10px;">
+        <label for="bio">Bio/Comments:</label><br>
+        <textarea id="bio" name="bio" rows="4" style="width: 100%;" placeholder="Enter multiline payload..."></textarea>
+    </div>
+    <div style="margin-bottom: 10px;">
+        <label>Role:</label><br>
+        <input type="radio" id="user" name="role" value="user" checked> <label for="user">User</label>
+        <input type="radio" id="admin" name="role" value="admin"> <label for="admin">Admin</label>
+    </div>
+    <div style="margin-bottom: 10px;">
+        <label for="category">Category:</label><br>
+        <select id="category" name="category">
+            <option value="general">General</option>
+            <option value="feedback">Feedback</option>
+            <option value="support">Support</option>
+        </select>
+    </div>
+    <div style="margin-bottom: 10px;">
+        <input type="checkbox" id="subscribe" name="subscribe" value="yes">
+        <label for="subscribe">Subscribe to newsletter</label>
+    </div>
+    <input type="hidden" name="csrf_token" value="dummy_token_12345">
+    <button type="submit">Submit Form</button>
+    <button type="reset">Reset</button>
+</form>

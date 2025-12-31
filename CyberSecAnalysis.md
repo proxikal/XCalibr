@@ -1,42 +1,4 @@
-### Header Inspector Analysis
-**Status:** Functional
-**Simulation Log:** On OWASP Juice Shop, I click Refresh and the tool fetches the page headers; it reports HSTS/CSP/Frame headers but the fetch is unauthenticated, so logged-in headers (e.g., auth-gated CSP) may differ.
-**Critique:**
-* **What's Missing:** Missing header baseline checks (HSTS max-age, preload, CSP strictness, XFO/CSP conflicts), request headers view, per-header guidance.
-* **Data Gaps:** No redirect chain headers, no Set-Cookie attributes, no duplicate header detection, no origin vs final URL.
-**Solution & Design:**
-* **Layout Proposal:** Split into two tabs: "Findings" (pass/fail checklist) and "Raw Headers" (current list).
-* **Data Presentation:** Use a severity badge per header and a compact policy parser for CSP/HSTS with expandable details.
 
-### Tech Fingerprint Analysis
-**Status:** Functional
-**Simulation Log:** On DVWA, a scan returns meta generator and global framework hooks; results are sparse because only a few DOM signals are checked.
-**Critique:**
-* **What's Missing:** Fingerprints for common stacks (PHP/Laravel, Express, Rails), CDN/library detection by script hash, favicon/headers hints.
-* **Data Gaps:** No confidence score, no evidence source per finding, no version extraction beyond React/Vue/Lodash.
-**Solution & Design:**
-* **Layout Proposal:** Add a "Signals" panel listing evidence per framework and a "Confidence" column.
-* **Data Presentation:** Collapsible cards with "Signal: selector/script/header" and a confidence meter.
-
-### Robots.txt Viewer Analysis
-**Status:** Functional
-**Simulation Log:** On Juice Shop, Fetch loads `/robots.txt` and parses allow/disallow lines; it correctly lists sitemaps.
-**Critique:**
-* **What's Missing:** Sitemap crawling follow-up, per-user-agent grouping, detection of disallowed admin paths.
-* **Data Gaps:** No HTTP status or redirect chain, no robots.txt last-modified or caching headers.
-**Solution & Design:**
-* **Layout Proposal:** Add a left rail for user-agent groups and a right panel for rules.
-* **Data Presentation:** Use collapsible groups and highlight high-risk paths (admin, backup, .git).
-
-### Form Fuzzer Analysis
-**Status:** Functional
-**Simulation Log:** On DVWA login, I scan forms and inject an XSS payload; the tool fills fields but does not submit, so server-side behavior is not exercised.
-**Critique:**
-* **What's Missing:** Submit option (manual/auto), per-field payload mapping, and payload templating for CSRF tokens.
-* **Data Gaps:** No response logging, no field-level validation errors, no DOM mutation tracking after injection.
-**Solution & Design:**
-* **Layout Proposal:** Add a bottom "Send" bar with submit/preview toggles and a field mapping grid.
-* **Data Presentation:** Show per-field injection status in a table with icons and tooltips.
 
 ### URL Encoder/Decoder Analysis
 **Status:** Functional

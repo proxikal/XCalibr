@@ -7,23 +7,71 @@ export type LiveLinkPreviewData = {
   isActive?: boolean;
 };
 
+export type HeaderSeverity = 'pass' | 'warn' | 'fail' | 'info';
+
+export type HeaderFinding = {
+  header: string;
+  severity: HeaderSeverity;
+  message: string;
+  recommendation?: string;
+  value?: string;
+};
+
 export type HeaderInspectorData = {
   url?: string;
+  finalUrl?: string;
   status?: number;
   headers?: { name: string; value: string }[];
+  requestHeaders?: { name: string; value: string }[];
+  redirectChain?: { url: string; status: number }[];
+  findings?: HeaderFinding[];
+  duplicateHeaders?: string[];
   error?: string;
   updatedAt?: number;
+  activeTab?: 'findings' | 'raw';
+};
+
+export type TechConfidence = 'high' | 'medium' | 'low';
+
+export type TechSignal = {
+  type: 'meta' | 'script' | 'header' | 'global' | 'selector' | 'cookie' | 'favicon' | 'comment';
+  evidence: string;
+  source?: string;
+};
+
+export type TechFinding = {
+  label: string;
+  value: string;
+  version?: string;
+  confidence: TechConfidence;
+  category: 'framework' | 'library' | 'server' | 'cdn' | 'cms' | 'analytics' | 'other';
+  signals: TechSignal[];
 };
 
 export type TechFingerprintData = {
   url?: string;
-  findings?: { label: string; value: string }[];
+  findings?: TechFinding[];
   updatedAt?: number;
+  expandedFinding?: string;
+};
+
+export type RobotsUserAgentGroup = {
+  userAgent: string;
+  rules: { type: 'allow' | 'disallow'; path: string; isHighRisk?: boolean }[];
+  crawlDelay?: number;
 };
 
 export type RobotsViewerData = {
   url?: string;
   content?: string;
+  httpStatus?: number;
+  lastModified?: string;
+  cacheControl?: string;
+  redirectedFrom?: string;
+  sitemaps?: string[];
+  userAgentGroups?: RobotsUserAgentGroup[];
+  highRiskPaths?: string[];
+  selectedUserAgent?: string;
   error?: string;
   updatedAt?: number;
 };
@@ -44,12 +92,37 @@ export type PayloadApplicationResult = {
   fields: PayloadFieldResult[];
 };
 
+export type FieldPayloadMapping = {
+  fieldName: string;
+  payload: string;
+  enabled: boolean;
+};
+
+export type DomMutation = {
+  type: 'attribute' | 'childList' | 'characterData';
+  target: string;
+  attributeName?: string;
+  oldValue?: string;
+  newValue?: string;
+  timestamp: number;
+};
+
+export type FormSubmitResponse = {
+  status?: number;
+  statusText?: string;
+  headers?: { name: string; value: string }[];
+  body?: string;
+  url?: string;
+  error?: string;
+  duration?: number;
+};
+
 export type FormFuzzerData = {
   forms?: {
     index: number;
     action: string;
     method: string;
-    inputs: { name: string; type: string; placeholder: string }[];
+    inputs: { name: string; type: string; placeholder: string; value?: string; isCsrf?: boolean }[];
   }[];
   selectedFormIndex?: number;
   payloads?: string[];
@@ -57,6 +130,13 @@ export type FormFuzzerData = {
   customPayload?: string;
   status?: string;
   lastResult?: PayloadApplicationResult;
+  submitMode?: 'inject' | 'preview' | 'submit';
+  fieldMappings?: FieldPayloadMapping[];
+  preserveCsrf?: boolean;
+  lastResponse?: FormSubmitResponse;
+  domMutations?: DomMutation[];
+  validationErrors?: { field: string; message: string }[];
+  isSubmitting?: boolean;
 };
 
 export type UrlCodecData = {

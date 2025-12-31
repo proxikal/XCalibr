@@ -103,11 +103,12 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faShieldHalved,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
-    width: 576,
-    height: 450,
+    width: 480,
+    height: 520,
     render: (data, onChange) => (
       <HeaderInspectorTool.Component
         data={data as HeaderInspectorData | undefined}
+        onChange={(next) => onChange(next)}
         onRefresh={async () => {
           const result = await chrome.runtime.sendMessage({
             type: 'xcalibr-fetch-headers'
@@ -124,9 +125,12 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faFingerprint,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 420,
+    height: 480,
     render: (data, onChange) => (
       <TechFingerprintTool.Component
         data={data as TechFingerprintData | undefined}
+        onChange={(next) => onChange(next)}
         onRefresh={async () => {
           const findings = detectTechnologies();
           onChange({
@@ -145,11 +149,12 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faRobot,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
-    width: 450,
-    height: 400,
+    width: 540,
+    height: 580,
     render: (data, onChange) => (
       <RobotsViewerTool.Component
         data={data as RobotsViewerData | undefined}
+        onChange={(next) => onChange(next)}
         onRefresh={async () => {
           const result = await chrome.runtime.sendMessage({
             type: 'xcalibr-fetch-robots'
@@ -167,7 +172,7 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     icon: faFlask,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
     width: 600,
-    height: 608,
+    height: 790,
     render: (data, onChange) => (
       <FormFuzzerTool.Component
         data={data as FormFuzzerData | undefined}
@@ -182,6 +187,19 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
         onApply={async (formIndex, payload) =>
           applyPayloadToForm(formIndex, payload)
         }
+        onSubmit={async (formIndex) => {
+          const forms = document.querySelectorAll('form');
+          const form = forms[formIndex];
+          if (!form) {
+            return { error: 'Form not found' };
+          }
+          try {
+            form.submit();
+            return { status: 200, body: 'Form submitted (page may navigate)' };
+          } catch (err) {
+            return { error: String(err) };
+          }
+        }}
       />
     )
   },
