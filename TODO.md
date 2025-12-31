@@ -215,7 +215,7 @@
 ## Notes
 - All tools follow the `data`/`onChange` pattern
 - Tests use Vitest with custom `aiAssertTruthy` assertions
-- Tools are registered in `tool-registry.tsx` with FontAwesome icons
+- Tools are registered in their specific category file located in `toolregistry` DIR and linked to a central file `index.ts` with an AwesomeFont Icon
 - Menu entries in `menu.ts`
 - Types in `tool-types.ts`
 

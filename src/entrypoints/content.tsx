@@ -5,11 +5,19 @@ import {
   faBolt,
   faChevronLeft,
   faChevronRight,
+  faCode,
   faCompress,
+  faDatabase,
   faExpand,
+  faFile,
+  faFileLines,
   faGear,
-  faSearch
+  faPuzzlePiece,
+  faSearch,
+  faShieldHalved,
+  faSpider
 } from '@fortawesome/free-solid-svg-icons';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { defineContentScript } from 'wxt/sandbox';
 import tailwindStyles from '../styles/index.css?inline';
 import { DEFAULT_STATE, getState, subscribeState, updateState } from '../shared/state';
@@ -18,7 +26,7 @@ import {
   TOOL_DEFAULT_POSITION,
   ToolRegistryEntry,
   buildToolRegistry
-} from './content/tool-registry';
+} from './content/toolregistry';
 import {
   ScraperDefinition,
   ScraperDraft,
@@ -111,6 +119,15 @@ const App = () => {
     unanchored: false
   });
   const iconSizeClass = 'w-3 h-3';
+  const menuIcons: Record<string, IconDefinition> = {
+    'File': faFile,
+    'Web Dev': faCode,
+    'Database': faDatabase,
+    'CyberSec': faShieldHalved,
+    'Extension Dev': faPuzzlePiece,
+    'Data & Text': faFileLines,
+    'Scraper': faSpider
+  };
   const menuHeight = 550;
   const menuBarHeight = 32;
 
@@ -1679,8 +1696,11 @@ const App = () => {
                   <button
                     type="button"
                     onClick={() => handleMenuClick(item.label)}
-                    className="px-2 py-1 text-xs text-slate-300 rounded hover:bg-slate-800 transition-colors"
+                    className="px-2 py-1 text-xs text-slate-300 rounded hover:bg-slate-800 transition-colors flex items-center gap-1.5"
                   >
+                    {menuIcons[item.label] && (
+                      <FontAwesomeIcon icon={menuIcons[item.label]} className="w-3 h-3 text-slate-400" />
+                    )}
                     {item.label}
                   </button>
                   <div
@@ -1704,6 +1724,7 @@ const App = () => {
                         );
                       }
                       if ('toolId' in entry) {
+                        const toolEntry = getToolEntry(entry.toolId);
                         return (
                           <button
                             key={entry.label}
@@ -1717,8 +1738,11 @@ const App = () => {
                               }));
                               setState(next);
                             }}
-                            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors flex items-center gap-2"
                           >
+                            {toolEntry?.icon && (
+                              <FontAwesomeIcon icon={toolEntry.icon} className="w-3 h-3 text-slate-500" />
+                            )}
                             {entry.label}
                           </button>
                         );
@@ -1796,6 +1820,7 @@ const App = () => {
                                   );
                                 }
                                 if ('toolId' in subItem) {
+                                  const subToolEntry = getToolEntry(subItem.toolId);
                                   return (
                                     <button
                                       key={subItem.label}
@@ -1809,8 +1834,11 @@ const App = () => {
                                         }));
                                         setState(next);
                                       }}
-                                      className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors"
+                                      className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition-colors flex items-center gap-2"
                                     >
+                                      {subToolEntry?.icon && (
+                                        <FontAwesomeIcon icon={subToolEntry.icon} className="w-3 h-3 text-slate-500" />
+                                      )}
                                       {subItem.label}
                                     </button>
                                   );
