@@ -32,7 +32,6 @@ import {
   AssetMapperTool,
   RequestLogTool,
   PayloadReplayTool,
-  CorsCheckTool,
   Base64AdvancedTool,
   HtmlEntityEncoderTool,
   HashesGeneratorTool,
@@ -64,7 +63,6 @@ import type {
   AssetMapperData,
   RequestLogData,
   PayloadReplayData,
-  CorsCheckData,
   Base64AdvancedData,
   HtmlEntityEncoderData,
   HashesGeneratorData,
@@ -286,13 +284,21 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     icon: faSitemap,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
     width: 550,
-    height: 450,
+    height: 550,
     render: (data, onChange) => (
       <AssetMapperTool.Component
         data={data as AssetMapperData | undefined}
+        onChange={(next) => onChange(next)}
         onRefresh={async () => {
-          const assets = mapAssetsFromDocument();
-          onChange({ ...assets, updatedAt: Date.now() });
+          const result = mapAssetsFromDocument();
+          onChange({
+            ...(data as AssetMapperData | undefined),
+            assets: result.assets,
+            images: result.images,
+            scripts: result.scripts,
+            styles: result.styles,
+            updatedAt: Date.now()
+          });
         }}
       />
     )
@@ -335,27 +341,13 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
       />
     )
   },
-  {
-    id: 'corsCheck',
-    title: 'CORS Check',
-    subtitle: 'Inspect CORS headers',
-    category: 'CyberSec',
-    icon: faGlobe,
-    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
-    render: (data, onChange) => (
-      <CorsCheckTool.Component
-        data={data as CorsCheckData | undefined}
-        onChange={onChange}
-        onCheck={async (url) => {
-          const result = await chrome.runtime.sendMessage({
-            type: 'xcalibr-cors-check',
-            payload: { url }
-          });
-          onChange({ url, ...result });
-        }}
-      />
-    )
-  },
+  // NOTE: CORS Check tool was removed due to MV3 limitations.
+  // In Manifest V3, background service workers cannot access response headers
+  // from cross-origin requests without declarativeNetRequest permissions.
+  // The tool could only return limited CORS header information and was
+  // often inaccurate for cross-origin checks, making it unreliable for
+  // security testing purposes. Users should use browser DevTools Network
+  // tab or dedicated proxy tools (like Burp Suite) for CORS analysis.
   {
     id: 'base64Advanced',
     title: 'Base64 Advanced',

@@ -325,17 +325,197 @@ export const sanitizeHtmlSnapshot = (rawHtml: string) => {
   return doc.documentElement.outerHTML;
 };
 
-export const mapAssetsFromDocument = () => {
+type AssetType = 'image' | 'script' | 'style' | 'preload' | 'prefetch' | 'inline-script' | 'css-background';
+
+type AssetEntry = {
+  url: string;
+  origin: string;
+  size?: number;
+  type: AssetType;
+  sourceElement?: string;
+};
+
+const getOriginFromUrl = (url: string): string => {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return window.location.origin;
+  }
+};
+
+const extractCssBackgroundUrls = (): string[] => {
+  const urls: string[] = [];
+  const urlRegex = /url\(['"]?([^'"()]+)['"]?\)/gi;
+
+  // Check inline styles on elements
+  document.querySelectorAll('[style*="url"]').forEach((el) => {
+    const style = el.getAttribute('style') || '';
+    let match: RegExpExecArray | null;
+    while ((match = urlRegex.exec(style)) !== null) {
+      if (match[1] && !match[1].startsWith('data:')) {
+        try {
+          const absoluteUrl = new URL(match[1], window.location.href).href;
+          urls.push(absoluteUrl);
+        } catch {
+          // Skip invalid URLs
+        }
+      }
+    }
+  });
+
+  // Check stylesheets
+  try {
+    Array.from(document.styleSheets).forEach((sheet) => {
+      try {
+        Array.from(sheet.cssRules || []).forEach((rule) => {
+          const cssText = rule.cssText || '';
+          let match: RegExpExecArray | null;
+          urlRegex.lastIndex = 0;
+          while ((match = urlRegex.exec(cssText)) !== null) {
+            if (match[1] && !match[1].startsWith('data:')) {
+              try {
+                const baseUrl = sheet.href || window.location.href;
+                const absoluteUrl = new URL(match[1], baseUrl).href;
+                urls.push(absoluteUrl);
+              } catch {
+                // Skip invalid URLs
+              }
+            }
+          }
+        });
+      } catch {
+        // CORS restriction on cross-origin stylesheets
+      }
+    });
+  } catch {
+    // Stylesheet access error
+  }
+
+  return [...new Set(urls)];
+};
+
+export const mapAssetsFromDocument = (): {
+  assets: AssetEntry[];
+  images: string[];
+  scripts: string[];
+  styles: string[];
+} => {
+  const assets: AssetEntry[] = [];
+  const seen = new Set<string>();
+
+  // External images
   const images = Array.from(document.images)
     .map((img) => img.currentSrc || img.src)
     .filter(Boolean);
+
+  images.forEach((url) => {
+    if (!seen.has(url)) {
+      seen.add(url);
+      assets.push({
+        url,
+        origin: getOriginFromUrl(url),
+        type: 'image',
+        sourceElement: 'img'
+      });
+    }
+  });
+
+  // External scripts
   const scripts = Array.from(document.scripts)
     .map((script) => script.src)
     .filter(Boolean);
+
+  scripts.forEach((url) => {
+    if (!seen.has(url)) {
+      seen.add(url);
+      assets.push({
+        url,
+        origin: getOriginFromUrl(url),
+        type: 'script',
+        sourceElement: 'script[src]'
+      });
+    }
+  });
+
+  // Inline scripts (count them by hash or content snippet)
+  const inlineScripts = Array.from(document.scripts).filter((s) => !s.src && s.textContent?.trim());
+  inlineScripts.forEach((script, idx) => {
+    const content = script.textContent?.trim() || '';
+    const snippet = content.substring(0, 50).replace(/\s+/g, ' ');
+    const id = `inline-script-${idx}:${snippet}...`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      assets.push({
+        url: id,
+        origin: window.location.origin,
+        type: 'inline-script',
+        size: content.length,
+        sourceElement: 'script (inline)'
+      });
+    }
+  });
+
+  // External stylesheets
   const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
     .map((link) => (link as HTMLLinkElement).href)
     .filter(Boolean);
-  return { images, scripts, styles };
+
+  styles.forEach((url) => {
+    if (!seen.has(url)) {
+      seen.add(url);
+      assets.push({
+        url,
+        origin: getOriginFromUrl(url),
+        type: 'style',
+        sourceElement: 'link[rel=stylesheet]'
+      });
+    }
+  });
+
+  // Preload links
+  document.querySelectorAll('link[rel="preload"]').forEach((link) => {
+    const href = (link as HTMLLinkElement).href;
+    if (href && !seen.has(href)) {
+      seen.add(href);
+      const asType = link.getAttribute('as') || 'unknown';
+      assets.push({
+        url: href,
+        origin: getOriginFromUrl(href),
+        type: 'preload',
+        sourceElement: `link[rel=preload][as=${asType}]`
+      });
+    }
+  });
+
+  // Prefetch links
+  document.querySelectorAll('link[rel="prefetch"]').forEach((link) => {
+    const href = (link as HTMLLinkElement).href;
+    if (href && !seen.has(href)) {
+      seen.add(href);
+      assets.push({
+        url: href,
+        origin: getOriginFromUrl(href),
+        type: 'prefetch',
+        sourceElement: 'link[rel=prefetch]'
+      });
+    }
+  });
+
+  // CSS background URLs
+  const cssBackgrounds = extractCssBackgroundUrls();
+  cssBackgrounds.forEach((url) => {
+    if (!seen.has(url)) {
+      seen.add(url);
+      assets.push({
+        url,
+        origin: getOriginFromUrl(url),
+        type: 'css-background',
+        sourceElement: 'css url()'
+      });
+    }
+  });
+
+  return { assets, images, scripts, styles };
 };
 
 type TechConfidence = 'high' | 'medium' | 'low';

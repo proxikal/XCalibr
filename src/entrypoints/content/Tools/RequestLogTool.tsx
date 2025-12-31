@@ -78,6 +78,84 @@ const getStatusColor = (status: number | undefined): string => {
   return 'text-slate-400';
 };
 
+const getStatusBgColor = (status: number | undefined): string => {
+  if (!status) return 'bg-slate-700';
+  if (status >= 200 && status < 300) return 'bg-emerald-500/20';
+  if (status >= 300 && status < 400) return 'bg-amber-500/20';
+  if (status >= 400) return 'bg-red-500/20';
+  return 'bg-slate-700';
+};
+
+type DetailsTab = 'timing' | 'headers' | 'initiator';
+
+const WaterfallBar = ({ entry, maxDuration }: { entry: RequestLogEntry; maxDuration: number }) => {
+  const dnsTime = (entry.domainLookupEnd ?? 0) - (entry.domainLookupStart ?? 0);
+  const connectTime = (entry.connectEnd ?? 0) - (entry.connectStart ?? 0);
+  const tlsTime = entry.secureConnectionStart
+    ? (entry.connectEnd ?? 0) - entry.secureConnectionStart
+    : 0;
+  const waitingTime = (entry.responseStart ?? 0) - (entry.requestStart ?? 0);
+  const downloadTime = (entry.responseEnd ?? 0) - (entry.responseStart ?? 0);
+
+  const scale = maxDuration > 0 ? 100 / maxDuration : 0;
+
+  // Calculate actual widths
+  const dnsWidth = dnsTime * scale;
+  const connectWidth = (connectTime - tlsTime) * scale;
+  const tlsWidth = tlsTime * scale;
+  const waitingWidth = waitingTime * scale;
+  const downloadWidth = downloadTime * scale;
+  const totalWidth = dnsWidth + connectWidth + tlsWidth + waitingWidth + downloadWidth;
+
+  return (
+    <div className="relative h-2 bg-slate-800 rounded overflow-hidden w-full">
+      <div className="absolute h-full flex left-0" style={{ width: `${Math.min(totalWidth, 100)}%` }}>
+        {dnsTime > 0 && (
+          <div
+            className="h-full bg-cyan-500"
+            style={{ width: `${(dnsTime / entry.duration) * 100}%` }}
+            title={`DNS: ${formatTiming(dnsTime)}`}
+          />
+        )}
+        {connectTime > 0 && (
+          <div
+            className="h-full bg-amber-500"
+            style={{ width: `${((connectTime - tlsTime) / entry.duration) * 100}%` }}
+            title={`Connect: ${formatTiming(connectTime - tlsTime)}`}
+          />
+        )}
+        {tlsTime > 0 && (
+          <div
+            className="h-full bg-purple-500"
+            style={{ width: `${(tlsTime / entry.duration) * 100}%` }}
+            title={`TLS: ${formatTiming(tlsTime)}`}
+          />
+        )}
+        {waitingTime > 0 && (
+          <div
+            className="h-full bg-blue-500"
+            style={{ width: `${(waitingTime / entry.duration) * 100}%` }}
+            title={`Waiting (TTFB): ${formatTiming(waitingTime)}`}
+          />
+        )}
+        {downloadTime > 0 && (
+          <div
+            className="h-full bg-emerald-500"
+            style={{ width: `${(downloadTime / entry.duration) * 100}%` }}
+            title={`Download: ${formatTiming(downloadTime)}`}
+          />
+        )}
+        {dnsTime === 0 && connectTime === 0 && waitingTime === 0 && downloadTime === 0 && entry.duration > 0 && (
+          <div
+            className="h-full bg-slate-500 w-full"
+            title={`Total: ${formatTiming(entry.duration)}`}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
 const TimingBar = ({ label, value, max, color }: { label: string; value: number; max: number; color: string }) => {
   const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
@@ -94,7 +172,58 @@ const TimingBar = ({ label, value, max, color }: { label: string; value: number;
   );
 };
 
-const RequestDetails = ({ entry }: { entry: RequestLogEntry }) => {
+const RequestBadges = ({ entry }: { entry: RequestLogEntry }) => {
+  const badges: { label: string; color: string; bg: string }[] = [];
+
+  // Check if cached (transferSize === 0 or very small compared to decoded)
+  const isCached = entry.isCached ||
+    (entry.transferSize === 0 && (entry.decodedBodySize ?? 0) > 0);
+  if (isCached) {
+    badges.push({ label: 'cached', color: 'text-cyan-400', bg: 'bg-cyan-500/20' });
+  }
+
+  // Check for redirect
+  if (entry.isRedirect || (entry.responseStatus && entry.responseStatus >= 300 && entry.responseStatus < 400)) {
+    badges.push({ label: 'redirect', color: 'text-amber-400', bg: 'bg-amber-500/20' });
+  }
+
+  // Check for error
+  if (entry.responseStatus && entry.responseStatus >= 400) {
+    badges.push({ label: 'error', color: 'text-red-400', bg: 'bg-red-500/20' });
+  }
+
+  // Check for slow (> 1000ms)
+  if (entry.duration > 1000) {
+    badges.push({ label: 'slow', color: 'text-orange-400', bg: 'bg-orange-500/20' });
+  }
+
+  if (badges.length === 0) return null;
+
+  return (
+    <div className="flex gap-1 mt-1">
+      {badges.map((badge) => (
+        <span
+          key={badge.label}
+          className={`text-[8px] px-1 rounded ${badge.color} ${badge.bg}`}
+        >
+          {badge.label}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+const DetailsDrawer = ({
+  entry,
+  activeTab,
+  onTabChange,
+  onClose
+}: {
+  entry: RequestLogEntry;
+  activeTab: DetailsTab;
+  onTabChange: (tab: DetailsTab) => void;
+  onClose: () => void;
+}) => {
   const dnsTime = (entry.domainLookupEnd ?? 0) - (entry.domainLookupStart ?? 0);
   const connectTime = (entry.connectEnd ?? 0) - (entry.connectStart ?? 0);
   const tlsTime = entry.secureConnectionStart
@@ -104,7 +233,6 @@ const RequestDetails = ({ entry }: { entry: RequestLogEntry }) => {
   const downloadTime = (entry.responseEnd ?? 0) - (entry.responseStart ?? 0);
   const maxTime = Math.max(dnsTime, connectTime, tlsTime, waitingTime, downloadTime, 1);
 
-  // Parse URL for details
   let urlInfo: { protocol: string; host: string; pathname: string; search: string } | null = null;
   try {
     const url = new URL(entry.name);
@@ -118,101 +246,178 @@ const RequestDetails = ({ entry }: { entry: RequestLogEntry }) => {
     // Invalid URL
   }
 
+  const tabs: { key: DetailsTab; label: string }[] = [
+    { key: 'timing', label: 'Timing' },
+    { key: 'headers', label: 'Headers' },
+    { key: 'initiator', label: 'Initiator' }
+  ];
+
   return (
-    <div className="mt-2 pt-2 border-t border-slate-700 space-y-3">
-      {/* URL Info */}
-      {urlInfo && (
-        <div className="space-y-1">
-          <div className="text-[9px] uppercase tracking-widest text-slate-500">URL Details</div>
-          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px]">
-            <span className="text-slate-500">Protocol</span>
-            <span className="text-slate-300">{urlInfo.protocol}</span>
-            <span className="text-slate-500">Host</span>
-            <span className="text-slate-300 truncate" title={urlInfo.host}>{urlInfo.host}</span>
-            <span className="text-slate-500">Path</span>
-            <span className="text-slate-300 truncate" title={urlInfo.pathname}>{urlInfo.pathname}</span>
-            {urlInfo.search && (
-              <>
-                <span className="text-slate-500">Query</span>
-                <span className="text-slate-300 truncate" title={urlInfo.search}>{urlInfo.search}</span>
-              </>
+    <div className="border-t border-slate-700 mt-2 pt-2">
+      {/* Tabs */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex gap-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => onTabChange(tab.key)}
+              className={`px-2 py-1 text-[10px] rounded transition-colors ${
+                activeTab === tab.key
+                  ? 'bg-blue-500/20 text-blue-300'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-[10px] text-slate-500 hover:text-slate-300 px-1"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Timing Tab */}
+      {activeTab === 'timing' && (
+        <div className="space-y-3">
+          {/* Waterfall Legend */}
+          <div className="flex flex-wrap gap-2 text-[9px]">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded bg-cyan-500" />
+              <span className="text-slate-400">DNS</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded bg-amber-500" />
+              <span className="text-slate-400">Connect</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded bg-purple-500" />
+              <span className="text-slate-400">TLS</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded bg-blue-500" />
+              <span className="text-slate-400">Waiting</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded bg-emerald-500" />
+              <span className="text-slate-400">Download</span>
+            </span>
+          </div>
+
+          {/* Timing Waterfall */}
+          <div className="space-y-1.5">
+            {dnsTime > 0 && (
+              <TimingBar label="DNS" value={dnsTime} max={maxTime} color="bg-cyan-500" />
+            )}
+            {connectTime > 0 && (
+              <TimingBar label="Connect" value={connectTime} max={maxTime} color="bg-amber-500" />
+            )}
+            {tlsTime > 0 && (
+              <TimingBar label="TLS" value={tlsTime} max={maxTime} color="bg-purple-500" />
+            )}
+            {waitingTime > 0 && (
+              <TimingBar label="TTFB" value={waitingTime} max={maxTime} color="bg-blue-500" />
+            )}
+            {downloadTime > 0 && (
+              <TimingBar label="Download" value={downloadTime} max={maxTime} color="bg-emerald-500" />
+            )}
+            {dnsTime === 0 && connectTime === 0 && waitingTime === 0 && downloadTime === 0 && (
+              <div className="text-[10px] text-slate-500 italic">No timing data (cached or cross-origin)</div>
+            )}
+          </div>
+
+          {/* Summary */}
+          <div className="grid grid-cols-2 gap-2 text-[10px] pt-2 border-t border-slate-700">
+            <div>
+              <span className="text-slate-500">Total: </span>
+              <span className="text-slate-300">{entry.duration.toFixed(1)}ms</span>
+            </div>
+            {entry.ttfb !== undefined && entry.ttfb > 0 && (
+              <div>
+                <span className="text-slate-500">TTFB: </span>
+                <span className="text-slate-300">{entry.ttfb.toFixed(1)}ms</span>
+              </div>
+            )}
+            <div>
+              <span className="text-slate-500">Transfer: </span>
+              <span className="text-slate-300">{formatBytes(entry.transferSize)}</span>
+            </div>
+            {entry.decodedBodySize !== undefined && entry.decodedBodySize > 0 && (
+              <div>
+                <span className="text-slate-500">Decoded: </span>
+                <span className="text-slate-300">{formatBytes(entry.decodedBodySize)}</span>
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {/* General Info */}
-      <div className="space-y-1">
-        <div className="text-[9px] uppercase tracking-widest text-slate-500">Request Info</div>
-        <div className="grid grid-cols-2 gap-2 text-[10px]">
-          <div>
-            <span className="text-slate-500">Type: </span>
+      {/* Headers Tab */}
+      {activeTab === 'headers' && (
+        <div className="space-y-2">
+          <div className="text-[10px] text-slate-500 italic">
+            Note: Full headers unavailable in MV3. Use DevTools Network tab for complete header inspection.
+          </div>
+          {urlInfo && (
+            <div className="space-y-1">
+              <div className="text-[9px] uppercase tracking-widest text-slate-500">Request Details</div>
+              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px]">
+                <span className="text-slate-500">Protocol</span>
+                <span className="text-slate-300">{entry.nextHopProtocol || urlInfo.protocol}</span>
+                <span className="text-slate-500">Host</span>
+                <span className="text-slate-300 truncate">{urlInfo.host}</span>
+                <span className="text-slate-500">Path</span>
+                <span className="text-slate-300 truncate">{urlInfo.pathname}</span>
+                {urlInfo.search && (
+                  <>
+                    <span className="text-slate-500">Query</span>
+                    <span className="text-slate-300 truncate">{urlInfo.search}</span>
+                  </>
+                )}
+                {entry.responseStatus !== undefined && entry.responseStatus > 0 && (
+                  <>
+                    <span className="text-slate-500">Status</span>
+                    <span className={getStatusColor(entry.responseStatus)}>{entry.responseStatus}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Initiator Tab */}
+      {activeTab === 'initiator' && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px]">
+            <span className="text-slate-500">Type</span>
             <span className={getInitiatorColor(entry.initiatorType)}>{entry.initiatorType}</span>
+            {entry.initiatorUrl && (
+              <>
+                <span className="text-slate-500">Source</span>
+                <span className="text-slate-300 truncate" title={entry.initiatorUrl}>
+                  {entry.initiatorUrl}
+                </span>
+              </>
+            )}
+            {entry.initiatorLine !== undefined && (
+              <>
+                <span className="text-slate-500">Line</span>
+                <span className="text-slate-300">{entry.initiatorLine}</span>
+              </>
+            )}
           </div>
-          {entry.responseStatus !== undefined && entry.responseStatus > 0 && (
-            <div>
-              <span className="text-slate-500">Status: </span>
-              <span className={getStatusColor(entry.responseStatus)}>{entry.responseStatus}</span>
-            </div>
-          )}
-          {entry.nextHopProtocol && (
-            <div>
-              <span className="text-slate-500">Protocol: </span>
-              <span className="text-slate-300">{entry.nextHopProtocol}</span>
-            </div>
-          )}
-          <div>
-            <span className="text-slate-500">Duration: </span>
-            <span className="text-slate-300">{entry.duration.toFixed(1)}ms</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Size Info */}
-      <div className="space-y-1">
-        <div className="text-[9px] uppercase tracking-widest text-slate-500">Size</div>
-        <div className="grid grid-cols-3 gap-2 text-[10px]">
-          <div>
-            <span className="text-slate-500">Transfer: </span>
-            <span className="text-slate-300">{formatBytes(entry.transferSize)}</span>
-          </div>
-          {entry.encodedBodySize !== undefined && entry.encodedBodySize > 0 && (
-            <div>
-              <span className="text-slate-500">Encoded: </span>
-              <span className="text-slate-300">{formatBytes(entry.encodedBodySize)}</span>
-            </div>
-          )}
-          {entry.decodedBodySize !== undefined && entry.decodedBodySize > 0 && (
-            <div>
-              <span className="text-slate-500">Decoded: </span>
-              <span className="text-slate-300">{formatBytes(entry.decodedBodySize)}</span>
+          {!entry.initiatorUrl && (
+            <div className="text-[10px] text-slate-500 italic">
+              Initiator details unavailable. Use DevTools for full call stack.
             </div>
           )}
         </div>
-      </div>
-
-      {/* Timing Waterfall */}
-      <div className="space-y-1.5">
-        <div className="text-[9px] uppercase tracking-widest text-slate-500">Timing Waterfall</div>
-        {dnsTime > 0 && (
-          <TimingBar label="DNS" value={dnsTime} max={maxTime} color="bg-cyan-500" />
-        )}
-        {connectTime > 0 && (
-          <TimingBar label="Connect" value={connectTime} max={maxTime} color="bg-amber-500" />
-        )}
-        {tlsTime > 0 && (
-          <TimingBar label="TLS" value={tlsTime} max={maxTime} color="bg-purple-500" />
-        )}
-        {waitingTime > 0 && (
-          <TimingBar label="Waiting" value={waitingTime} max={maxTime} color="bg-blue-500" />
-        )}
-        {downloadTime > 0 && (
-          <TimingBar label="Download" value={downloadTime} max={maxTime} color="bg-emerald-500" />
-        )}
-        {dnsTime === 0 && connectTime === 0 && waitingTime === 0 && downloadTime === 0 && (
-          <div className="text-[10px] text-slate-500 italic">No timing data available (cached or cross-origin)</div>
-        )}
-      </div>
+      )}
     </div>
   );
 };
@@ -226,11 +431,18 @@ const RequestLogToolComponent = ({
   onChange: (next: RequestLogData) => void;
   onClear: () => Promise<void>;
 }) => {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [localTab, setLocalTab] = useState<DetailsTab>('timing');
 
   const entries = data?.entries ?? [];
   const filterCategory = data?.filterCategory ?? 'all';
   const page = data?.page ?? 0;
+  const selectedEntryIndex = data?.selectedEntryIndex;
+
+  // Calculate max duration for waterfall scaling
+  const maxDuration = useMemo(() => {
+    if (entries.length === 0) return 0;
+    return Math.max(...entries.map(e => e.duration ?? 0));
+  }, [entries]);
 
   // Get unique categories from entries
   const categories = useMemo(() => {
@@ -253,18 +465,32 @@ const RequestLogToolComponent = ({
   );
 
   const handleCategoryChange = (category: string) => {
-    onChange({ ...data, filterCategory: category, page: 0 });
-    setExpandedIndex(null);
+    onChange({ ...data, filterCategory: category, page: 0, selectedEntryIndex: undefined });
   };
 
   const handlePageChange = (newPage: number) => {
-    onChange({ ...data, page: newPage });
-    setExpandedIndex(null);
+    onChange({ ...data, page: newPage, selectedEntryIndex: undefined });
   };
 
   const handleClear = async () => {
     await onClear();
-    setExpandedIndex(null);
+    onChange({ entries: [], filterCategory: 'all', page: 0, selectedEntryIndex: undefined });
+  };
+
+  const handleSelectEntry = (index: number) => {
+    const newIndex = selectedEntryIndex === index ? undefined : index;
+    onChange({ ...data, selectedEntryIndex: newIndex });
+    if (newIndex !== undefined) {
+      setLocalTab('timing');
+    }
+  };
+
+  const handleTabChange = (tab: DetailsTab) => {
+    setLocalTab(tab);
+  };
+
+  const handleCloseDetails = () => {
+    onChange({ ...data, selectedEntryIndex: undefined });
   };
 
   const handleSavePlainText = () => {
@@ -291,9 +517,9 @@ const RequestLogToolComponent = ({
     URL.revokeObjectURL(url);
   };
 
-  const toggleExpand = (index: number) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
-  };
+  const selectedEntry = selectedEntryIndex !== undefined
+    ? filteredEntries[selectedEntryIndex]
+    : undefined;
 
   return (
     <div className="flex flex-col h-full">
@@ -357,12 +583,12 @@ const RequestLogToolComponent = ({
         ) : (
           paginatedEntries.map((entry, index) => {
             const globalIndex = page * ENTRIES_PER_PAGE + index;
-            const isExpanded = expandedIndex === globalIndex;
+            const isSelected = selectedEntryIndex === globalIndex;
             return (
               <div
                 key={`${entry.name}-${entry.startTime}-${globalIndex}`}
                 className={`rounded border transition-colors ${
-                  isExpanded
+                  isSelected
                     ? 'border-blue-500/50 bg-slate-800/80'
                     : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
                 }`}
@@ -370,15 +596,16 @@ const RequestLogToolComponent = ({
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={() => toggleExpand(globalIndex)}
+                  onClick={() => handleSelectEntry(globalIndex)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      toggleExpand(globalIndex);
+                      handleSelectEntry(globalIndex);
                     }
                   }}
                   className="w-full p-2 text-left cursor-pointer"
                 >
+                  {/* Compact Summary Row */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -389,7 +616,7 @@ const RequestLogToolComponent = ({
                           {entry.name.split('/').pop() || entry.name}
                         </span>
                         {entry.responseStatus !== undefined && entry.responseStatus > 0 && (
-                          <span className={`text-[9px] ${getStatusColor(entry.responseStatus)}`}>
+                          <span className={`text-[9px] px-1 rounded ${getStatusColor(entry.responseStatus)} ${getStatusBgColor(entry.responseStatus)}`}>
                             {entry.responseStatus}
                           </span>
                         )}
@@ -407,6 +634,7 @@ const RequestLogToolComponent = ({
                           </span>
                         )}
                       </div>
+                      <RequestBadges entry={entry} />
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
@@ -421,14 +649,26 @@ const RequestLogToolComponent = ({
                         ⧉
                       </button>
                       <span className="text-[9px] text-slate-600">
-                        {isExpanded ? '▼' : '▶'}
+                        {isSelected ? '▼' : '▶'}
                       </span>
                     </div>
                   </div>
+
+                  {/* Mini Waterfall */}
+                  <div className="mt-2">
+                    <WaterfallBar entry={entry} maxDuration={maxDuration} />
+                  </div>
                 </div>
-                {isExpanded && (
+
+                {/* Details Drawer */}
+                {isSelected && selectedEntry && (
                   <div className="px-2 pb-2">
-                    <RequestDetails entry={entry} />
+                    <DetailsDrawer
+                      entry={selectedEntry}
+                      activeTab={localTab}
+                      onTabChange={handleTabChange}
+                      onClose={handleCloseDetails}
+                    />
                   </div>
                 )}
               </div>
@@ -446,7 +686,7 @@ const RequestLogToolComponent = ({
             disabled={page === 0}
             className="text-[10px] text-slate-400 hover:text-slate-200 disabled:opacity-30"
           >
-            ← Prev
+            Prev
           </button>
           <span className="text-[10px] text-slate-500">
             Page {page + 1} of {totalPages}
@@ -457,7 +697,7 @@ const RequestLogToolComponent = ({
             disabled={page >= totalPages - 1}
             className="text-[10px] text-slate-400 hover:text-slate-200 disabled:opacity-30"
           >
-            Next →
+            Next
           </button>
         </div>
       )}
@@ -484,6 +724,7 @@ const RequestLogToolComponent = ({
     </div>
   );
 };
+
 export class RequestLogTool {
   static Component = RequestLogToolComponent;
 }

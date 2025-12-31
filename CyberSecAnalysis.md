@@ -1,37 +1,3 @@
-### Asset Mapper Analysis
-**Status:** Functional
-**Simulation Log:** On Juice Shop, Refresh lists images/scripts/styles from the DOM; preloads and CSS background assets are not captured.
-**Critique:**
-* **What's Missing:** Discovery of CSS background URLs, prefetch/preload, and inline scripts.
-* **Data Gaps:** No asset sizes, caching headers, or origin grouping.
-**Solution & Design:**
-* **Layout Proposal:** Add a filter bar for type/origin and a size column.
-* **Data Presentation:** Use grouped lists by origin with expandable asset metadata.
-
-### Request Log Analysis
-**Status:** Limited by MV3
-**Simulation Log:** With the tool open, resource timing entries appear; cross-origin responses show limited timing and often no status.
-**Critique:**
-* **What's Missing:** Full request/response headers, request bodies, and websocket visibility.
-* **Data Gaps:** Missing TTFB in many cases, no redirect chain, no cache hit indicators.
-**Solution & Design:**
-* **Layout Proposal:** Add a "Details" drawer with tabs for Timing, Headers, and Initiator.
-* **Data Presentation:** Waterfall chart plus a compact request summary row with badges (cached, redirect, error).
-
-### Payload Replay Analysis
-**Status:** Functional
-**Simulation Log:** I replay a POST to a DVWA endpoint; the request succeeds but does not include user cookies by default, so authenticated APIs may fail.
-**Critique:**
-* **What's Missing:** Cookie/session include toggle, redirects visibility, and raw HTTP preview.
-* **Data Gaps:** No latency metrics, no request/response size, no TLS/cert info.
-**Solution & Design:**
-* **Layout Proposal:** Add a "Session" section with credentials toggle and a raw request preview.
-* **Data Presentation:** Response panel should support JSON tree view with syntax highlighting and collapsible headers.
-
-### CORS Check Analysis
-**Status:** Limited by MV3
-**Action:** Remove this tool from the extension as it's severely limited by MV3 Restrictions. Make sure to remove all entries of the tool, the tools test units and edit the tool out of the registry. Add a note in the code somewhere in the cyber security tools explaining why this tool had to be removed.
-
 ### Base64 Advanced Analysis
 **Status:** Functional
 **Simulation Log:** I encode a JWT segment and decode it; URL-safe mode works and image mode produces a data URL.

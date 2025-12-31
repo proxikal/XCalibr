@@ -84,22 +84,46 @@ export default defineBackground(() => {
           method: string;
           headers: { name: string; value: string }[];
           body: string;
+          includeCredentials?: boolean;
+          followRedirects?: boolean;
         };
+
+        const requestBody = payload.method === 'GET' || payload.method === 'HEAD' ? undefined : payload.body;
+        const requestSize = new TextEncoder().encode(
+          `${payload.method} ${payload.url}\n${payload.headers.map(h => `${h.name}: ${h.value}`).join('\n')}\n\n${requestBody || ''}`
+        ).length;
+
+        const startTime = performance.now();
         const response = await fetch(payload.url, {
           method: payload.method,
           headers: Object.fromEntries(
             payload.headers.map((header) => [header.name, header.value])
           ),
-          body: payload.method === 'GET' || payload.method === 'HEAD' ? undefined : payload.body
+          body: requestBody,
+          credentials: payload.includeCredentials ? 'include' : 'omit',
+          redirect: payload.followRedirects !== false ? 'follow' : 'manual'
         });
+        const latencyMs = performance.now() - startTime;
+
         const responseBody = await response.text();
+        const responseSize = new TextEncoder().encode(responseBody).length;
         const responseHeaders = Array.from(response.headers.entries()).map(
           ([name, value]) => ({ name, value })
         );
+
+        // Check for redirects (if we followed them)
+        const wasRedirected = response.redirected;
+        const finalUrl = response.url !== payload.url ? response.url : undefined;
+
         sendResponse({
           responseStatus: response.status,
           responseHeaders,
           responseBody,
+          latencyMs,
+          requestSize,
+          responseSize,
+          redirectCount: wasRedirected ? 1 : 0,
+          finalUrl,
           error: undefined
         });
       };
@@ -112,29 +136,9 @@ export default defineBackground(() => {
       return true;
     }
 
-    if (message?.type === 'xcalibr-cors-check') {
-      const run = async () => {
-        const { url } = message.payload as { url: string };
-        const response = await fetch(url, { method: 'GET' });
-        sendResponse({
-          result: {
-            status: response.status,
-            acao: response.headers.get('access-control-allow-origin'),
-            acc: response.headers.get('access-control-allow-credentials'),
-            methods: response.headers.get('access-control-allow-methods'),
-            headers: response.headers.get('access-control-allow-headers')
-          },
-          updatedAt: Date.now()
-        });
-      };
-
-      run().catch((error) => {
-        sendResponse({
-          error: error instanceof Error ? error.message : 'CORS check failed.'
-        });
-      });
-      return true;
-    }
+    // NOTE: xcalibr-cors-check handler was removed due to MV3 limitations.
+    // In Manifest V3, cross-origin CORS header inspection is severely limited.
+    // Users should use browser DevTools or proxy tools for CORS analysis.
 
     if (message?.type === 'xcalibr-couchdb-fetch') {
       const run = async () => {

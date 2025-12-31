@@ -207,11 +207,24 @@ export type DomSnapshotData = {
   showDiff?: boolean;
 };
 
+export type AssetEntry = {
+  url: string;
+  origin: string;
+  size?: number;
+  type: 'image' | 'script' | 'style' | 'preload' | 'prefetch' | 'inline-script' | 'css-background';
+  sourceElement?: string;
+};
+
 export type AssetMapperData = {
+  assets?: AssetEntry[];
+  filterType?: 'all' | 'image' | 'script' | 'style' | 'preload' | 'prefetch' | 'inline-script' | 'css-background';
+  filterOrigin?: string;
+  groupByOrigin?: boolean;
+  updatedAt?: number;
+  // Legacy fields for backwards compatibility
   images?: string[];
   scripts?: string[];
   styles?: string[];
-  updatedAt?: number;
 };
 
 export type RequestLogEntry = {
@@ -237,12 +250,23 @@ export type RequestLogEntry = {
   nextHopProtocol?: string;
   // Response status (if available)
   responseStatus?: number;
+  // Cache and redirect indicators
+  isCached?: boolean;
+  isRedirect?: boolean;
+  redirectCount?: number;
+  // TTFB (Time to First Byte)
+  ttfb?: number;
+  // Initiator details (for initiator tab)
+  initiatorUrl?: string;
+  initiatorLine?: number;
 };
 
 export type RequestLogData = {
   entries?: RequestLogEntry[];
   filterCategory?: string;
   page?: number;
+  selectedEntryIndex?: number;
+  detailsTab?: 'timing' | 'headers' | 'initiator';
 };
 
 export type PayloadReplayData = {
@@ -250,24 +274,27 @@ export type PayloadReplayData = {
   method?: string;
   headers?: string;
   body?: string;
+  // Session options
+  includeCredentials?: boolean;
+  followRedirects?: boolean;
+  // Response data
   responseStatus?: number;
   responseHeaders?: { name: string; value: string }[];
   responseBody?: string;
   error?: string;
+  // Metrics
+  latencyMs?: number;
+  requestSize?: number;
+  responseSize?: number;
+  // Redirect info
+  redirectCount?: number;
+  finalUrl?: string;
+  // View options
+  showRawRequest?: boolean;
+  responseViewMode?: 'raw' | 'json' | 'headers';
 };
 
-export type CorsCheckData = {
-  url?: string;
-  result?: {
-    status?: number;
-    acao?: string | null;
-    acc?: string | null;
-    methods?: string | null;
-    headers?: string | null;
-  };
-  error?: string;
-  updatedAt?: number;
-};
+// CorsCheckData type was removed - CORS Check tool deprecated due to MV3 limitations
 
 export type JsonMinifierData = {
   input?: string;

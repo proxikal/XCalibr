@@ -178,7 +178,6 @@ export const baseMenuBarItems: MenuBarItem[] = [
         items: [
           { label: 'Request Log', toolId: 'requestLog' },
           { label: 'Payload Replay', toolId: 'payloadReplay' },
-          { label: 'CORS Check', toolId: 'corsCheck' },
           { label: 'WebSocket Tester', toolId: 'websocketTester' },
           { label: 'CIDR Calculator', toolId: 'cidrCalculator' },
           { label: 'Subnet Cheat Sheet', toolId: 'subnetCheatSheet' },
