@@ -377,3 +377,988 @@ export type CookieManagerData = {
   value?: string;
   cookies?: { name: string; value: string }[];
 };
+
+export type WhoisLookupData = {
+  domain?: string;
+  loading?: boolean;
+  result?: {
+    domain: string;
+    status: string;
+    registrar: string;
+    registrant: string;
+    createdDate: string;
+    expiresDate: string;
+    updatedDate: string;
+    nameservers: string[];
+  };
+  error?: string;
+};
+
+export type DnsRecordViewerData = {
+  domain?: string;
+  loading?: boolean;
+  records?: {
+    type: string;
+    name: string;
+    value: string;
+    ttl?: number;
+    priority?: number;
+  }[];
+  filter?: string;
+  error?: string;
+};
+
+export type ReverseIpLookupData = {
+  ip?: string;
+  loading?: boolean;
+  domains?: string[];
+  search?: string;
+  error?: string;
+};
+
+export type PlatformResult = {
+  platform: string;
+  url: string;
+  status: 'found' | 'not_found' | 'error';
+  statusCode: number;
+  error?: string;
+};
+
+export type UsernameSearchData = {
+  username?: string;
+  loading?: boolean;
+  results?: PlatformResult[];
+  filter?: 'all' | 'found' | 'not_found';
+  progress?: { checked: number; total: number };
+  error?: string;
+};
+
+export type ExifMetadata = {
+  make?: string;
+  model?: string;
+  dateTime?: string;
+  dateTimeOriginal?: string;
+  exposureTime?: string;
+  fNumber?: string;
+  iso?: number;
+  focalLength?: string;
+  gpsLatitude?: number;
+  gpsLongitude?: number;
+  gpsAltitude?: number;
+  software?: string;
+  orientation?: number;
+  imageWidth?: number;
+  imageHeight?: number;
+  artist?: string;
+  copyright?: string;
+};
+
+export type ExifMetadataViewerData = {
+  fileName?: string;
+  metadata?: ExifMetadata;
+  loading?: boolean;
+  error?: string;
+};
+
+export type BreachInfo = {
+  name: string;
+  domain: string;
+  breachDate: string;
+  addedDate: string;
+  pwnCount: number;
+  description: string;
+  dataClasses: string[];
+  isVerified: boolean;
+  isSensitive: boolean;
+};
+
+export type EmailBreachCheckerData = {
+  email?: string;
+  loading?: boolean;
+  breaches?: BreachInfo[];
+  checkedAt?: number;
+  error?: string;
+};
+
+export type CertificateSubject = {
+  CN?: string;
+  O?: string;
+  OU?: string;
+  C?: string;
+  ST?: string;
+  L?: string;
+};
+
+export type CertificateInfo = {
+  subject: CertificateSubject;
+  issuer: CertificateSubject;
+  validFrom: string;
+  validTo: string;
+  serialNumber: string;
+  fingerprint: string;
+  signatureAlgorithm: string;
+  keySize?: number;
+  sans?: string[];
+  isExpired: boolean;
+  daysUntilExpiry: number;
+};
+
+export type SslCertDecoderData = {
+  domain?: string;
+  loading?: boolean;
+  certificate?: CertificateInfo;
+  fetchedAt?: number;
+  error?: string;
+};
+
+export type DorkTemplate = {
+  name: string;
+  template: string;
+  description: string;
+  category: string;
+};
+
+export type DorkHistoryEntry = {
+  query: string;
+  timestamp: number;
+};
+
+export type GoogleDorkGeneratorData = {
+  domain?: string;
+  keyword?: string;
+  filetype?: string;
+  selectedTemplate?: string;
+  generatedQuery?: string;
+  history?: DorkHistoryEntry[];
+};
+
+export type SubdomainFinderData = {
+  domain?: string;
+  loading?: boolean;
+  subdomains?: string[];
+  filter?: string;
+  searchedAt?: number;
+  error?: string;
+};
+
+export type WaybackSnapshot = {
+  timestamp: string;
+  original: string;
+  statuscode: string;
+  mimetype: string;
+};
+
+export type WaybackMachineViewerData = {
+  url?: string;
+  loading?: boolean;
+  snapshots?: WaybackSnapshot[];
+  yearFilter?: string;
+  searchedAt?: number;
+  error?: string;
+};
+
+export type Base64AdvancedMode = 'standard' | 'urlSafe' | 'hex' | 'image';
+
+export type Base64AdvancedData = {
+  input?: string;
+  output?: string;
+  mode?: Base64AdvancedMode;
+  error?: string;
+  imagePreview?: string;
+};
+
+export type HtmlEntityMode = 'named' | 'decimal' | 'hex';
+
+export type HtmlEntityEncoderData = {
+  input?: string;
+  output?: string;
+  mode?: HtmlEntityMode;
+  encodeAll?: boolean;
+  error?: string;
+};
+
+export type HashesGeneratorData = {
+  input?: string;
+  hashes?: Record<string, string>;
+  loading?: boolean;
+  error?: string;
+};
+
+export type HmacKeyFormat = 'text' | 'hex';
+export type HmacAlgorithm = 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512';
+
+export type HmacGeneratorData = {
+  message?: string;
+  key?: string;
+  keyFormat?: HmacKeyFormat;
+  algorithm?: HmacAlgorithm;
+  output?: string;
+  loading?: boolean;
+  error?: string;
+};
+
+export type PasswordStrengthScore = 0 | 1 | 2 | 3 | 4;
+
+export type PasswordAnalysis = {
+  score: PasswordStrengthScore;
+  label: 'Very Weak' | 'Weak' | 'Fair' | 'Strong' | 'Very Strong';
+  length: number;
+  entropy: number;
+  crackTime: string;
+  hasUppercase: boolean;
+  hasLowercase: boolean;
+  hasNumbers: boolean;
+  hasSymbols: boolean;
+  isCommon: boolean;
+  isDictionary: boolean;
+  suggestions: string[];
+};
+
+export type PasswordStrengthData = {
+  password?: string;
+  analysis?: Partial<PasswordAnalysis>;
+  showPassword?: boolean;
+};
+
+export type PasswordGeneratorData = {
+  password?: string;
+  length?: number;
+  uppercase?: boolean;
+  lowercase?: boolean;
+  numbers?: boolean;
+  symbols?: boolean;
+  history?: string[];
+  error?: string;
+};
+
+export type CspDirectives = Record<string, string[]>;
+
+export type CspBuilderData = {
+  input?: string;
+  output?: string;
+  directives?: CspDirectives;
+  warnings?: string[];
+  reportOnly?: boolean;
+  analyzed?: boolean;
+  error?: string;
+};
+
+export type SriAlgorithm = 'sha256' | 'sha384' | 'sha512';
+export type SriResourceType = 'script' | 'style';
+
+export type SriGeneratorData = {
+  content?: string;
+  url?: string;
+  algorithm?: SriAlgorithm;
+  resourceType?: SriResourceType;
+  hash?: string;
+  scriptTag?: string;
+  loading?: boolean;
+  error?: string;
+};
+
+export type XssPayloadCategory = 'basic' | 'events' | 'encoded' | 'polyglot' | 'filter-bypass';
+
+export type XssPayloadData = {
+  category?: XssPayloadCategory;
+  selectedPayload?: string;
+  customPayload?: string;
+  encodedOutput?: string;
+  encodeUrl?: boolean;
+  encodeHtml?: boolean;
+};
+
+export type SqliPayloadCategory = 'union' | 'boolean' | 'time' | 'error' | 'stacked';
+
+export type SqliPayloadData = {
+  category?: SqliPayloadCategory;
+  selectedPayload?: string;
+  customPayload?: string;
+  dbType?: 'mysql' | 'postgres' | 'mssql' | 'oracle';
+};
+
+export type UserAgentCategory = 'chrome' | 'firefox' | 'safari' | 'edge' | 'mobile' | 'bot';
+
+export type UserAgentData = {
+  category?: UserAgentCategory;
+  selectedAgent?: string;
+  customAgent?: string;
+};
+
+export type JwtCrackerData = {
+  token?: string;
+  wordlist?: string;
+  algorithm?: 'HS256' | 'HS384' | 'HS512';
+  cracking?: boolean;
+  progress?: number;
+  attemptCount?: number;
+  foundSecret?: string;
+  cracked?: boolean;
+  error?: string;
+};
+
+export type PemDerConverterData = {
+  input?: string;
+  output?: string;
+  inputFormat?: 'pem' | 'der';
+  outputFormat?: 'pem' | 'der';
+  certInfo?: {
+    subject?: string;
+    issuer?: string;
+    validFrom?: string;
+    validTo?: string;
+    serialNumber?: string;
+  };
+  error?: string;
+};
+
+export type WebSocketMessage = {
+  type: 'sent' | 'received';
+  data: string;
+  timestamp: number;
+};
+
+export type WebSocketTesterData = {
+  url?: string;
+  status?: 'disconnected' | 'connecting' | 'connected' | 'error';
+  message?: string;
+  messages?: WebSocketMessage[];
+  error?: string;
+};
+
+export type MetadataField = {
+  key: string;
+  value: string;
+};
+
+export type MetadataScrubberData = {
+  fileName?: string;
+  fileSize?: number;
+  fileType?: string;
+  metadata?: MetadataField[];
+  scrubbed?: boolean;
+  scrubbedSize?: number;
+  scrubbedUrl?: string;
+  loading?: boolean;
+  error?: string;
+};
+
+export type CidrCalculatorData = {
+  cidr?: string;
+  networkAddress?: string;
+  broadcastAddress?: string;
+  netmask?: string;
+  wildcardMask?: string;
+  firstHost?: string;
+  lastHost?: string;
+  hosts?: number;
+  error?: string;
+};
+
+export type SubnetCheatSheetData = {
+  selectedPrefix?: number;
+};
+
+export type MacVendorLookupData = {
+  mac?: string;
+  vendor?: string;
+  loading?: boolean;
+  error?: string;
+};
+
+export type PortReferenceData = {
+  search?: string;
+  selectedPort?: number;
+};
+
+export type HttpStatusReferenceData = {
+  search?: string;
+  selectedCode?: number;
+};
+
+export type CronGeneratorData = {
+  minute?: string;
+  hour?: string;
+  dayOfMonth?: string;
+  month?: string;
+  dayOfWeek?: string;
+  expression?: string;
+  description?: string;
+};
+
+export type ChmodCalculatorData = {
+  ownerRead?: boolean;
+  ownerWrite?: boolean;
+  ownerExecute?: boolean;
+  groupRead?: boolean;
+  groupWrite?: boolean;
+  groupExecute?: boolean;
+  publicRead?: boolean;
+  publicWrite?: boolean;
+  publicExecute?: boolean;
+  octal?: string;
+  symbolic?: string;
+};
+
+export type DockerfileLinterData = {
+  input?: string;
+  warnings?: string[];
+  error?: string;
+};
+
+export type YamlValidatorData = {
+  input?: string;
+  valid?: boolean;
+  error?: string;
+};
+
+export type NginxConfigGeneratorData = {
+  serverName?: string;
+  port?: string;
+  root?: string;
+  proxyPass?: string;
+  ssl?: boolean;
+  output?: string;
+};
+
+export type HtaccessGeneratorData = {
+  redirects?: boolean;
+  compression?: boolean;
+  caching?: boolean;
+  output?: string;
+};
+
+export type MetaTagGeneratorData = {
+  title?: string;
+  description?: string;
+  keywords?: string;
+  author?: string;
+  viewport?: boolean;
+  robots?: string;
+  output?: string;
+};
+
+export type OpenGraphPreviewerData = {
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+  siteName?: string;
+  url?: string;
+  platform?: 'facebook' | 'twitter' | 'linkedin';
+};
+
+export type BoxShadowGeneratorData = {
+  horizontalOffset?: number;
+  verticalOffset?: number;
+  blurRadius?: number;
+  spreadRadius?: number;
+  color?: string;
+  inset?: boolean;
+  output?: string;
+};
+
+export type BorderRadiusGeneratorData = {
+  topLeft?: number;
+  topRight?: number;
+  bottomRight?: number;
+  bottomLeft?: number;
+  unit?: 'px' | '%';
+  output?: string;
+};
+
+export type FaviconGeneratorData = {
+  character?: string;
+  bgColor?: string;
+  textColor?: string;
+  size?: 16 | 32 | 64 | 128;
+  shape?: 'square' | 'circle';
+};
+
+export type ColorStop = {
+  color: string;
+  position: number;
+};
+
+export type CssGradientGeneratorData = {
+  type?: 'linear' | 'radial' | 'conic';
+  angle?: number;
+  colorStops?: ColorStop[];
+  output?: string;
+};
+
+export type CssFilterGeneratorData = {
+  blur?: number;
+  brightness?: number;
+  contrast?: number;
+  grayscale?: number;
+  hueRotate?: number;
+  invert?: number;
+  opacity?: number;
+  saturate?: number;
+  sepia?: number;
+};
+
+export type CssTransformGeneratorData = {
+  translateX?: number;
+  translateY?: number;
+  rotate?: number;
+  scaleX?: number;
+  scaleY?: number;
+  skewX?: number;
+  skewY?: number;
+};
+
+export type HtmlTableGeneratorData = {
+  rows?: number;
+  columns?: number;
+  includeHeader?: boolean;
+  includeBorder?: boolean;
+  headerLabels?: string[];
+  cellContent?: string;
+};
+
+export type MarkdownToHtmlData = {
+  input?: string;
+  output?: string;
+};
+
+export type HtmlToMarkdownData = {
+  input?: string;
+  output?: string;
+};
+
+export type LoremIpsumGeneratorData = {
+  count?: number;
+  type?: 'paragraphs' | 'sentences' | 'words';
+  output?: string;
+};
+
+export type PlaceholderImageData = {
+  width?: number;
+  height?: number;
+  bgColor?: string;
+  textColor?: string;
+  text?: string;
+  format?: 'png' | 'jpg' | 'gif' | 'webp';
+};
+
+export type Base64ImageConverterData = {
+  mode?: 'imageToBase64' | 'base64ToImage';
+  input?: string;
+  output?: string;
+  error?: string;
+};
+
+export type KeycodeInfoData = {
+  lastKey?: string;
+  lastCode?: string;
+  lastKeyCode?: number;
+  ctrlKey?: boolean;
+  shiftKey?: boolean;
+  altKey?: boolean;
+  metaKey?: boolean;
+  history?: Array<{
+    key: string;
+    code: string;
+    keyCode: number;
+    timestamp: number;
+  }>;
+};
+
+export type ClampCalculatorData = {
+  minViewport?: number;
+  maxViewport?: number;
+  minFontSize?: number;
+  maxFontSize?: number;
+  unit?: 'px' | 'rem';
+};
+
+export type ImageCompressorData = {
+  quality?: number;
+  format?: 'jpeg' | 'png' | 'webp';
+  originalSize?: number;
+  compressedSize?: number;
+  compressedUrl?: string;
+  fileName?: string;
+};
+
+export type ColorPaletteExtractorData = {
+  colorCount?: number;
+  colors?: string[];
+  imageUrl?: string;
+};
+
+export type ManifestValidatorData = {
+  input?: string;
+  errors?: string[];
+  warnings?: string[];
+  valid?: boolean;
+};
+
+export type PermissionsReferenceData = {
+  search?: string;
+  selectedPermission?: string;
+};
+
+export type I18nHelperData = {
+  newKey?: string;
+  newMessage?: string;
+  newDescription?: string;
+  messages?: Array<{
+    key: string;
+    message: string;
+    description?: string;
+  }>;
+  locale?: string;
+};
+
+export type CsvToJsonData = {
+  input?: string;
+  output?: string;
+  delimiter?: string;
+  hasHeader?: boolean;
+  error?: string;
+};
+
+export type CaseConverterData = {
+  input?: string;
+  outputs?: Record<string, string>;
+};
+
+export type TextStatisticsData = {
+  input?: string;
+  stats?: {
+    characters: number;
+    charactersNoSpaces: number;
+    words: number;
+    sentences: number;
+    paragraphs: number;
+    lines: number;
+    readingTime: string;
+    speakingTime: string;
+  };
+};
+
+export type LineSorterData = {
+  input?: string;
+  output?: string;
+  sortType?: 'asc' | 'desc' | 'numeric' | 'random' | 'reverse';
+  removeDuplicates?: boolean;
+  trimLines?: boolean;
+  removeEmpty?: boolean;
+};
+
+export type ListRandomizerData = {
+  input?: string;
+  output?: string;
+  winner?: string;
+  pickCount?: number;
+};
+
+export type TextDiffData = {
+  text1?: string;
+  text2?: string;
+  diffResult?: { type: 'equal' | 'added' | 'removed'; value: string }[];
+};
+
+export type XmlToJsonData = {
+  input?: string;
+  output?: string;
+  error?: string;
+};
+
+export type YamlToJsonData = {
+  input?: string;
+  output?: string;
+  error?: string;
+};
+
+export type JsonToYamlData = {
+  input?: string;
+  output?: string;
+  error?: string;
+};
+
+export type StringObfuscatorData = {
+  input?: string;
+  output?: string;
+  method?: 'hex' | 'unicode' | 'octal' | 'base64' | 'charCode';
+};
+
+export type TextToBinaryData = {
+  input?: string;
+  output?: string;
+  mode?: 'encode' | 'decode';
+  separator?: string;
+};
+
+export type HexViewerData = {
+  input?: string;
+  hexOutput?: string;
+  asciiOutput?: string;
+  bytesPerLine?: number;
+};
+
+export type UnicodeExplorerData = {
+  search?: string;
+  category?: string;
+  selectedChar?: string;
+  charCode?: number;
+};
+
+export type RegexHighlighterData = {
+  pattern?: string;
+  text?: string;
+  flags?: string;
+  matches?: string[];
+  matchCount?: number;
+  error?: string;
+};
+
+export type EscapingToolData = {
+  input?: string;
+  output?: string;
+  language?: 'json' | 'javascript' | 'python' | 'sql' | 'html' | 'url' | 'regex';
+  mode?: 'escape' | 'unescape';
+};
+
+export type UnixTimestampData = {
+  timestamp?: number;
+  humanDate?: string;
+  inputTimestamp?: string;
+  inputDate?: string;
+  format?: 'seconds' | 'milliseconds';
+};
+
+export type TimezoneConverterData = {
+  inputTime?: string;
+  sourceTimezone?: string;
+  conversions?: { timezone: string; time: string; offset: string }[];
+};
+
+export type UnitConverterData = {
+  value?: number;
+  category?: string;
+  fromUnit?: string;
+  results?: { unit: string; value: string }[];
+};
+
+export type AspectRatioCalculatorData = {
+  width?: number;
+  height?: number;
+  ratio?: string;
+  newWidth?: number;
+  newHeight?: number;
+  mode?: 'calculate' | 'resize';
+};
+
+export type UuidGeneratorData = {
+  uuid?: string;
+  uuids?: string[];
+  version?: 'v4' | 'v1';
+  count?: number;
+  uppercase?: boolean;
+};
+
+export type ObjectIdGeneratorData = {
+  objectId?: string;
+  objectIds?: string[];
+  count?: number;
+  timestamp?: string;
+  showParts?: boolean;
+};
+
+export type GitCommandBuilderData = {
+  category?: string;
+  command?: string;
+  options?: Record<string, boolean | string>;
+};
+
+export type GitIgnoreGeneratorData = {
+  selectedTemplates?: string[];
+  output?: string;
+  customRules?: string;
+};
+
+export type LicenseGeneratorData = {
+  license?: string;
+  name?: string;
+  year?: string;
+  output?: string;
+};
+
+export type JsMinifierData = {
+  input?: string;
+  output?: string;
+  originalSize?: number;
+  minifiedSize?: number;
+  error?: string;
+};
+
+export type CssMinifierData = {
+  input?: string;
+  output?: string;
+  originalSize?: number;
+  minifiedSize?: number;
+  error?: string;
+};
+
+export type PythonToJsonData = {
+  input?: string;
+  output?: string;
+  error?: string;
+};
+
+export type TypescriptInterfaceGenData = {
+  input?: string;
+  output?: string;
+  interfaceName?: string;
+  useType?: boolean;
+  error?: string;
+};
+
+export type GoStructGeneratorData = {
+  input?: string;
+  output?: string;
+  structName?: string;
+  includeJsonTags?: boolean;
+  omitempty?: boolean;
+  error?: string;
+};
+
+export type SqlSchemaGeneratorData = {
+  input?: string;
+  output?: string;
+  tableName?: string;
+  dialect?: 'mysql' | 'postgresql' | 'sqlite';
+  includePrimaryKey?: boolean;
+  error?: string;
+};
+
+export type CurlToFetchData = {
+  input?: string;
+  output?: string;
+  useAsync?: boolean;
+  error?: string;
+};
+
+export type QrCodeGeneratorData = {
+  text?: string;
+  size?: number;
+  foreground?: string;
+  background?: string;
+  generated?: boolean;
+};
+
+export type BarcodeGeneratorData = {
+  text?: string;
+  format?: 'CODE128' | 'CODE39' | 'EAN13' | 'EAN8' | 'UPC';
+  height?: number;
+  width?: number;
+  generated?: boolean;
+};
+
+export type StopwatchTimerData = {
+  mode?: 'stopwatch' | 'timer';
+  elapsedMs?: number;
+  timerDurationMs?: number;
+  isRunning?: boolean;
+  laps?: number[];
+};
+
+export type PomodoroTimerData = {
+  phase?: 'work' | 'break' | 'longBreak';
+  remainingMs?: number;
+  isRunning?: boolean;
+  sessionsCompleted?: number;
+  workDuration?: number;
+  breakDuration?: number;
+  longBreakDuration?: number;
+  sessionsUntilLongBreak?: number;
+};
+
+export type ScratchpadData = {
+  content?: string;
+  lastSaved?: number;
+};
+
+export type TodoItem = {
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt: number;
+};
+
+export type TodoListData = {
+  items?: TodoItem[];
+  filter?: 'all' | 'active' | 'completed';
+};
+
+export type MathEvaluatorData = {
+  expression?: string;
+  result?: string;
+  history?: { expr: string; result: string }[];
+  error?: string;
+};
+
+export type ColorBlindnessSimulatorData = {
+  simulationType?: 'normal' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia';
+  isActive?: boolean;
+};
+
+export type GridCell = {
+  id: string;
+  row: number;
+  col: number;
+  rowSpan: number;
+  colSpan: number;
+  name: string;
+};
+
+export type VisualGridBuilderData = {
+  rows?: number;
+  cols?: number;
+  gap?: number;
+  cells?: GridCell[];
+  selectedCell?: string;
+};
+
+export type ClickjackingTesterData = {
+  url?: string;
+  tested?: boolean;
+  isVulnerable?: boolean;
+  error?: string;
+  opacity?: number;
+};
+
+export type IdorResult = {
+  id: number | string;
+  status: number;
+  size?: number;
+  url: string;
+};
+
+export type IdorIteratorData = {
+  urlPattern?: string;
+  startId?: number;
+  endId?: number;
+  results?: IdorResult[];
+  isRunning?: boolean;
+  progress?: number;
+  error?: string;
+};
+
+export type DirectoryResult = {
+  path: string;
+  status: number;
+  size?: number;
+};
+
+export type DirectoryBusterData = {
+  baseUrl?: string;
+  customPaths?: string;
+  results?: DirectoryResult[];
+  isRunning?: boolean;
+  progress?: number;
+  delay?: number;
+};
