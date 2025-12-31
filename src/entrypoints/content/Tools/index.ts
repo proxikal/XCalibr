@@ -146,3 +146,45 @@ export { VisualGridBuilderTool } from './VisualGridBuilderTool';
 export { ClickjackingTesterTool } from './ClickjackingTesterTool';
 export { IdorIteratorTool } from './IdorIteratorTool';
 export { DirectoryBusterTool } from './DirectoryBusterTool';
+
+// === BATCH B: Red Team Tools #11-17 ===
+export { ProtoPollutionFuzzerTool } from './ProtoPollutionFuzzerTool';
+export { OpenRedirectTesterTool } from './OpenRedirectTesterTool';
+export { ApiEndpointScraperTool } from './ApiEndpointScraperTool';
+export { CsrfPocGeneratorTool } from './CsrfPocGeneratorTool';
+export { WafDetectorTool } from './WafDetectorTool';
+export { SubdomainTakeoverCheckerTool } from './SubdomainTakeoverCheckerTool';
+export { PostMessageLoggerTool } from './PostMessageLoggerTool';
+
+// === BATCH C: Red Team Tools #18-23 ===
+export { SourceMapDetectorTool } from './SourceMapDetectorTool';
+export { AdminPanelFinderTool } from './AdminPanelFinderTool';
+export { HttpMethodTesterTool } from './HttpMethodTesterTool';
+export { DefaultCredentialCheckerTool } from './DefaultCredentialCheckerTool';
+export { GraphqlIntrospectionTesterTool } from './GraphqlIntrospectionTesterTool';
+export { CorsExploitGeneratorTool } from './CorsExploitGeneratorTool';
+
+// === BATCH A: Red Team Tools #4-10 ===
+export { CommentSecretScraperTool } from './CommentSecretScraperTool';
+export { HiddenFieldRevealerTool } from './HiddenFieldRevealerTool';
+export { S3BucketFinderTool } from './S3BucketFinderTool';
+export { GitExposureCheckerTool } from './GitExposureCheckerTool';
+export { TargetBlankAuditorTool } from './TargetBlankAuditorTool';
+export { StorageSecretHunterTool } from './StorageSecretHunterTool';
+export { MetafileScannerTool } from './MetafileScannerTool';
+
+// === BATCH D: Red Team Tools #24-30 ===
+export { CookieSecurityAuditorTool } from './CookieSecurityAuditorTool';
+export { BrokenLinkHijackerTool } from './BrokenLinkHijackerTool';
+export { SpfDmarcAnalyzerTool } from './SpfDmarcAnalyzerTool';
+export { EnvVariableScannerTool } from './EnvVariableScannerTool';
+export { XxePayloadGeneratorTool } from './XxePayloadGeneratorTool';
+export { CommandInjectionPayloadTool } from './CommandInjectionPayloadTool';
+export { JwtAttackAdvisorTool } from './JwtAttackAdvisorTool';
+
+// === BATCH E: New P0 Red Team Tools ===
+export { SstiPayloadGeneratorTool } from './SstiPayloadGeneratorTool';
+export { SsrfTesterTool } from './SsrfTesterTool';
+export { PayloadEncoderTool } from './PayloadEncoderTool';
+export { DeserializationScannerTool } from './DeserializationScannerTool';
+export { ReportGeneratorTool } from './ReportGeneratorTool';

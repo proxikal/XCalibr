@@ -13,6 +13,12 @@ import { buildDevopsTools } from './devops-tools';
 import { buildDatabaseTools } from './database-tools';
 import { buildDataTextTools } from './datatext-tools';
 import { buildExtensionDevTools } from './extensiondev-tools';
+// Red Team batch registries
+import { buildRedteamBatchATools } from './redteam-batch-a-tools';
+import { buildRedTeamBatchBTools } from './redteam-batch-b-tools';
+import { buildRedteamBatchCTools } from './redteam-batch-c-tools';
+import { buildRedteamBatchDTools } from './redteam-batch-d-tools';
+import { buildRedteamBatchETools } from './redteam-batch-e-tools';
 
 import type { ToolRegistryEntry, ToolRegistryHandlers } from './types';
 
@@ -30,7 +36,13 @@ export const buildToolRegistry = (handlers: ToolRegistryHandlers): ToolRegistryE
   ...buildDevopsTools(),
   ...buildDatabaseTools(),
   ...buildDataTextTools(),
-  ...buildExtensionDevTools()
+  ...buildExtensionDevTools(),
+  // Red Team tools (batches A-E)
+  ...buildRedteamBatchATools(),
+  ...buildRedTeamBatchBTools(),
+  ...buildRedteamBatchCTools(),
+  ...buildRedteamBatchDTools(),
+  ...buildRedteamBatchETools()
 ];
 
 // Re-export individual category builders for direct access if needed
@@ -44,5 +56,11 @@ export {
   buildDevopsTools,
   buildDatabaseTools,
   buildDataTextTools,
-  buildExtensionDevTools
+  buildExtensionDevTools,
+  // Red Team batch builders
+  buildRedteamBatchATools,
+  buildRedTeamBatchBTools,
+  buildRedteamBatchCTools,
+  buildRedteamBatchDTools,
+  buildRedteamBatchETools
 };

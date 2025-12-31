@@ -1362,3 +1362,684 @@ export type DirectoryBusterData = {
   progress?: number;
   delay?: number;
 };
+
+// === BATCH B: Red Team Tools #11-17 ===
+
+export type PollutionCategory = 'basic' | 'json' | 'framework' | 'url' | 'bypass' | 'advanced';
+
+export type PollutionResult = {
+  payload: string;
+  vulnerable: boolean;
+  propertyChecked: string;
+  category?: PollutionCategory;
+  description?: string;
+  error?: string;
+};
+
+export type GadgetInfo = {
+  name: string;
+  library: string;
+  version: string;
+  property: string;
+  impact: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description: string;
+  payload: string;
+};
+
+export type ProtoPollutionFuzzerData = {
+  selectedPayload?: string;
+  customPayload?: string;
+  results?: PollutionResult[];
+  isRunning?: boolean;
+  filterCategory?: PollutionCategory | 'all';
+  activeTab?: 'test' | 'gadgets';
+};
+
+export type OpenRedirectTesterData = {
+  targetUrl?: string;
+  paramName?: string;
+  results?: {
+    payload: string;
+    testUrl: string;
+    vulnerable: boolean;
+  }[];
+  isRunning?: boolean;
+};
+
+export type ApiEndpoint = {
+  url: string;
+  method?: string;
+  source: 'script' | 'fetch' | 'xhr' | 'inline' | 'attribute';
+};
+
+export type ApiEndpointScraperData = {
+  endpoints?: ApiEndpoint[];
+  filter?: string;
+  showMethods?: boolean;
+  scannedAt?: number;
+};
+
+export type FormInfo = {
+  index: number;
+  action: string;
+  method: string;
+  fields: { name: string; type: string; value: string }[];
+};
+
+export type CsrfPocGeneratorData = {
+  forms?: FormInfo[];
+  selectedFormIndex?: number;
+  output?: string;
+  autoSubmit?: boolean;
+  customAction?: string;
+};
+
+export type WafSignature = {
+  name: string;
+  detected: boolean;
+  indicators: string[];
+};
+
+export type WafDetectorData = {
+  url?: string;
+  signatures?: WafSignature[];
+  detectedWaf?: string | null;
+  isScanning?: boolean;
+  scannedAt?: number;
+  error?: string;
+};
+
+export type TakeoverResult = {
+  subdomain: string;
+  cname?: string;
+  vulnerable: boolean;
+  service?: string;
+  fingerprint?: string;
+  error?: string;
+};
+
+export type SubdomainTakeoverCheckerData = {
+  subdomains?: string;
+  results?: TakeoverResult[];
+  isChecking?: boolean;
+  checkedAt?: number;
+};
+
+export type PostMessageEntry = {
+  id: string;
+  timestamp: number;
+  origin: string;
+  data: string;
+  dataType: string;
+  source: string;
+};
+
+export type PostMessageLoggerData = {
+  isListening?: boolean;
+  messages?: PostMessageEntry[];
+  filter?: string;
+  expandedId?: string | null;
+};
+
+// === BATCH C: Red Team Tools #18-23 ===
+
+export type SourceMapEntry = {
+  url: string;
+  scriptUrl: string;
+  size?: number;
+  accessible?: boolean;
+};
+
+export type SourceMapDetectorData = {
+  sourceMaps?: SourceMapEntry[];
+  scannedAt?: number;
+  isScanning?: boolean;
+  error?: string;
+};
+
+export type PathCategory = 'cms' | 'database' | 'api' | 'framework' | 'generic' | 'hosting' | 'security';
+
+export type AdminPathResult = {
+  path: string;
+  status: number;
+  exists: boolean;
+  redirectUrl?: string;
+  category: PathCategory;
+  contentHints?: string[];
+};
+
+export type AdminPanelFinderData = {
+  baseUrl?: string;
+  results?: AdminPathResult[];
+  isRunning?: boolean;
+  progress?: number;
+  scannedAt?: number;
+  customPaths?: string;
+  delay?: number;
+  filterCategory?: PathCategory | 'all';
+  concurrent?: number;
+};
+
+export type HttpMethodResult = {
+  method: string;
+  status: number;
+  allowed: boolean;
+  headers?: Record<string, string>;
+  error?: string;
+};
+
+export type HttpMethodTesterData = {
+  url?: string;
+  results?: HttpMethodResult[];
+  testedAt?: number;
+  isTesting?: boolean;
+  error?: string;
+};
+
+export type DefaultCredential = {
+  vendor: string;
+  product: string;
+  username: string;
+  password: string;
+  port?: number;
+  notes?: string;
+};
+
+export type DefaultCredentialCheckerData = {
+  selectedCategory?: string;
+  search?: string;
+};
+
+export type GraphqlIntrospectionSchema = {
+  types?: string[];
+  queryFields?: string[];
+  mutationFields?: string[];
+  subscriptionFields?: string[];
+};
+
+export type GraphqlIntrospectionTesterData = {
+  url?: string;
+  isEnabled?: boolean;
+  schema?: GraphqlIntrospectionSchema;
+  rawResponse?: string;
+  testedAt?: number;
+  isTesting?: boolean;
+  error?: string;
+};
+
+export type CorsExploitType =
+  | 'reflected-origin'
+  | 'null-origin'
+  | 'wildcard-credentials'
+  | 'wildcard-subdomain'
+  | 'prefix-match'
+  | 'suffix-match'
+  | 'dot-escape'
+  | 'underscore-bypass'
+  | 'protocol-bypass'
+  | 'port-bypass'
+  | 'pre-domain'
+  | 'post-domain'
+  | 'special-chars'
+  | 'dns-rebinding';
+
+export type CorsOutputFormat = 'html' | 'javascript' | 'python' | 'curl' | 'burp';
+
+export type CorsTestResult = {
+  acao?: string;
+  acac?: string;
+  acam?: string;
+  status?: number;
+  error?: string;
+};
+
+export type CorsExploitGeneratorData = {
+  targetUrl?: string;
+  exploitType?: CorsExploitType;
+  generatedCode?: string;
+  withCredentials?: boolean;
+  customOrigin?: string;
+  outputFormat?: CorsOutputFormat;
+  httpMethod?: string;
+  filterCategory?: 'all' | 'origin' | 'regex' | 'special';
+  testResult?: CorsTestResult;
+  testRunning?: boolean;
+};
+
+// === BATCH A: Red Team Tools #4-10 ===
+
+export type CommentEntry = {
+  type: 'html' | 'script' | 'css';
+  content: string;
+  location?: string;
+};
+
+export type SecretEntry = {
+  type: string;
+  value: string;
+  source: string;
+  line?: number;
+  confidence: 'high' | 'medium' | 'low';
+  entropy?: number;
+};
+
+export type CommentSecretScraperData = {
+  comments?: CommentEntry[];
+  secrets?: SecretEntry[];
+  scannedAt?: number;
+  error?: string;
+  filterConfidence?: 'all' | 'high' | 'medium';
+};
+
+export type HiddenType = 'input-hidden' | 'css-hidden' | 'css-invisible' | 'css-offscreen' | 'aria-hidden';
+
+export type ValueType = 'token' | 'uuid' | 'json' | 'base64' | 'number' | 'boolean' | 'empty' | 'text';
+
+export type HiddenField = {
+  name: string;
+  value: string;
+  formIndex: number;
+  formAction?: string;
+  id?: string;
+  hiddenType: HiddenType;
+  valueType: ValueType;
+  element?: string;
+};
+
+export type HiddenFieldRevealerData = {
+  fields?: HiddenField[];
+  scannedAt?: number;
+  error?: string;
+  watchingMutations?: boolean;
+  showCssHidden?: boolean;
+};
+
+export type CloudProvider = 'aws' | 'gcp' | 'azure' | 'digitalocean' | 'alibaba';
+
+export type CloudBucket = {
+  url: string;
+  bucketName: string;
+  region?: string;
+  provider: CloudProvider;
+  source: string;
+};
+
+// Legacy alias for backward compatibility
+export type S3Bucket = CloudBucket;
+
+export type S3BucketFinderData = {
+  buckets?: CloudBucket[];
+  scannedAt?: number;
+  error?: string;
+  filterProvider?: CloudProvider | 'all';
+};
+
+export type VcsType = 'git' | 'svn' | 'hg' | 'bzr';
+
+export type VcsCheckResult = {
+  path: string;
+  status: number;
+  accessible: boolean;
+  contentType?: string;
+  vcsType: VcsType;
+  category: string;
+  riskLevel: 'critical' | 'high' | 'medium' | 'low';
+};
+
+// Legacy alias for backward compatibility
+export type GitCheckResult = VcsCheckResult;
+
+export type GitExposureCheckerData = {
+  checked?: boolean;
+  exposed?: boolean;
+  results?: VcsCheckResult[];
+  domain?: string;
+  scannedAt?: number;
+  error?: string;
+  filterVcs?: VcsType | 'all';
+};
+
+export type VulnerableLink = {
+  href: string;
+  text: string;
+  hasNoopener: boolean;
+  hasNoreferrer: boolean;
+  element?: string;
+};
+
+export type TargetBlankAuditorData = {
+  vulnerableLinks?: VulnerableLink[];
+  totalLinks?: number;
+  totalBlankLinks?: number;
+  scannedAt?: number;
+  error?: string;
+};
+
+export type StorageType = 'localStorage' | 'sessionStorage' | 'indexedDB' | 'cacheAPI' | 'cookie';
+
+export type StorageFinding = {
+  storage: StorageType;
+  key: string;
+  value: string;
+  secretType: string;
+  confidence: 'high' | 'medium' | 'low';
+  entropy?: number;
+  dbName?: string;
+  storeName?: string;
+};
+
+export type StorageSecretHunterData = {
+  findings?: StorageFinding[];
+  totalLocalItems?: number;
+  totalSessionItems?: number;
+  totalIndexedDBItems?: number;
+  totalCacheItems?: number;
+  totalCookies?: number;
+  scannedAt?: number;
+  error?: string;
+  filterStorage?: StorageType | 'all';
+  filterConfidence?: 'all' | 'high' | 'medium';
+};
+
+export type MetafileResult = {
+  file: string;
+  path: string;
+  status: number;
+  found: boolean;
+  contentPreview?: string;
+  contentType?: string;
+  size?: number;
+};
+
+export type MetafileScannerData = {
+  results?: MetafileResult[];
+  domain?: string;
+  scannedAt?: number;
+  scanning?: boolean;
+  error?: string;
+};
+
+// === BATCH D: Red Team Tools #24-30 ===
+
+export type CookieAuditResult = {
+  name: string;
+  value: string;
+  domain?: string;
+  path?: string;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'Strict' | 'Lax' | 'None' | 'Unknown';
+  expires?: string;
+  issues: string[];
+};
+
+export type CookieSecurityAuditorData = {
+  cookies?: CookieAuditResult[];
+  scannedAt?: number;
+  error?: string;
+};
+
+export type LinkCheckResult = {
+  url: string;
+  domain: string;
+  status: 'checking' | 'active' | 'expired' | 'error' | 'potential';
+  statusCode?: number;
+  message?: string;
+};
+
+export type BrokenLinkHijackerData = {
+  links?: LinkCheckResult[];
+  scannedAt?: number;
+  isScanning?: boolean;
+  progress?: { checked: number; total: number };
+  error?: string;
+};
+
+export type SpfAnalysis = {
+  valid: boolean;
+  version?: string;
+  mechanisms: string[];
+  modifiers: string[];
+  includes: string[];
+  allQualifier?: string;
+  warnings: string[];
+};
+
+export type DmarcAnalysis = {
+  valid: boolean;
+  version?: string;
+  policy?: string;
+  subdomainPolicy?: string;
+  percentage?: number;
+  reportUri?: string;
+  reportUriAggregate?: string;
+  warnings: string[];
+};
+
+export type SpfDmarcAnalyzerData = {
+  domain?: string;
+  spfRecord?: string;
+  dmarcRecord?: string;
+  spfAnalysis?: SpfAnalysis;
+  dmarcAnalysis?: DmarcAnalysis;
+  loading?: boolean;
+  error?: string;
+  analyzedAt?: number;
+};
+
+export type EnvFinding = {
+  key: string;
+  value: string;
+  source: 'window' | 'meta' | 'script' | 'data-attr';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description?: string;
+};
+
+export type EnvVariableScannerData = {
+  findings?: EnvFinding[];
+  scannedAt?: number;
+  error?: string;
+};
+
+export type XxeCategory = 'basic' | 'file-read' | 'ssrf' | 'oob' | 'blind' | 'parameter-entity' | 'filter-bypass' | 'dos';
+
+export type XxePayloadGeneratorData = {
+  category?: XxeCategory;
+  selectedPayload?: string;
+  customTarget?: string;
+  customFile?: string;
+  output?: string;
+  copiedPayload?: string;
+  showDtd?: boolean;
+};
+
+export type CmdCategory = 'basic' | 'chained' | 'blind' | 'time-based' | 'oob' | 'filter-bypass';
+export type OsType = 'unix' | 'windows' | 'both';
+
+export type CommandInjectionPayloadData = {
+  category?: CmdCategory;
+  osType?: OsType;
+  selectedPayload?: string;
+  customCommand?: string;
+  output?: string;
+};
+
+export type JwtHeader = {
+  alg?: string;
+  typ?: string;
+  kid?: string;
+  jku?: string;
+  x5u?: string;
+  x5c?: string[];
+  jwk?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+export type JwtAttack = {
+  name: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description: string;
+  payload?: string;
+  applicable: boolean;
+  reason?: string;
+  category: 'algorithm' | 'header' | 'signature' | 'claims' | 'key';
+};
+
+export type GeneratedToken = {
+  name: string;
+  token: string;
+  description: string;
+};
+
+export type JwtAttackAdvisorData = {
+  token?: string;
+  header?: JwtHeader;
+  payload?: Record<string, unknown>;
+  attacks?: JwtAttack[];
+  analyzedAt?: number;
+  error?: string;
+  generatedTokens?: GeneratedToken[];
+  activeTab?: 'analyze' | 'generate';
+};
+
+// === SSTI Payload Generator ===
+
+export type SstiTemplateEngine =
+  | 'jinja2' | 'twig' | 'freemarker' | 'velocity' | 'smarty'
+  | 'mako' | 'erb' | 'pebble' | 'thymeleaf' | 'handlebars'
+  | 'ejs' | 'pug' | 'nunjucks' | 'blade' | 'generic';
+
+export type SstiPayloadCategory =
+  | 'detection' | 'rce' | 'file-read' | 'info-disclosure'
+  | 'bypass' | 'blind' | 'sandbox-escape';
+
+export type SstiPayload = {
+  name: string;
+  payload: string;
+  engine: SstiTemplateEngine;
+  category: SstiPayloadCategory;
+  description: string;
+  expectedOutput?: string;
+};
+
+export type SstiPayloadGeneratorData = {
+  selectedEngine?: SstiTemplateEngine | 'all';
+  selectedCategory?: SstiPayloadCategory | 'all';
+  customTarget?: string;
+  customCommand?: string;
+  copiedPayload?: string;
+  filterSearch?: string;
+};
+
+// === SSRF Tester ===
+
+export type SsrfProtocol = 'http' | 'https' | 'gopher' | 'file' | 'dict' | 'ftp' | 'ldap';
+
+export type SsrfBypassTechnique =
+  | 'ip-decimal' | 'ip-hex' | 'ip-octal' | 'ip-overflow'
+  | 'dns-rebinding' | 'url-encoding' | 'parser-differential'
+  | 'redirect' | 'tld-bypass' | 'localhost-variants';
+
+export type SsrfPayload = {
+  name: string;
+  payload: string;
+  technique: SsrfBypassTechnique;
+  protocol: SsrfProtocol;
+  description: string;
+};
+
+export type SsrfTesterData = {
+  targetUrl?: string;
+  internalTarget?: string;
+  selectedTechnique?: SsrfBypassTechnique | 'all';
+  selectedProtocol?: SsrfProtocol | 'all';
+  generatedPayloads?: SsrfPayload[];
+  customCallbackUrl?: string;
+  copiedPayload?: string;
+};
+
+// === Deserialization Scanner ===
+
+export type DeserializationLanguage = 'java' | 'php' | 'python' | 'ruby' | 'dotnet' | 'nodejs';
+
+export type DeserializationGadget = {
+  name: string;
+  language: DeserializationLanguage;
+  library: string;
+  payload: string;
+  description: string;
+  severity: 'critical' | 'high' | 'medium';
+};
+
+export type DeserializationSignature = {
+  name: string;
+  pattern: string;
+  language: DeserializationLanguage;
+  description: string;
+};
+
+export type DeserializationScannerData = {
+  selectedLanguage?: DeserializationLanguage | 'all';
+  scanResults?: {
+    found: boolean;
+    signatures: string[];
+    gadgets: DeserializationGadget[];
+  };
+  isScanning?: boolean;
+  scannedAt?: number;
+  activeTab?: 'scan' | 'gadgets' | 'generate';
+  customCommand?: string;
+  copiedPayload?: string;
+};
+
+// === Payload Encoder ===
+
+export type EncodingType =
+  | 'url' | 'double-url' | 'unicode' | 'html-entity' | 'hex'
+  | 'base64' | 'base32' | 'rot13' | 'binary' | 'octal'
+  | 'js-escape' | 'js-unicode' | 'css-escape' | 'sql-char';
+
+export type PayloadEncoderData = {
+  input?: string;
+  output?: string;
+  selectedEncodings?: EncodingType[];
+  chainOrder?: EncodingType[];
+  mode?: 'encode' | 'decode';
+  preserveCase?: boolean;
+};
+
+// === Report Generator ===
+
+export type ReportSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
+
+export type ReportFinding = {
+  id: string;
+  title: string;
+  severity: ReportSeverity;
+  category: string;
+  description: string;
+  impact?: string;
+  remediation?: string;
+  evidence?: string;
+  cvss?: string;
+  cwe?: string;
+  references?: string[];
+};
+
+export type ReportTemplate = 'executive' | 'technical' | 'compliance' | 'pentest' | 'bugbounty';
+
+export type ReportFormat = 'markdown' | 'html' | 'json' | 'csv';
+
+export type ReportGeneratorData = {
+  projectName?: string;
+  targetUrl?: string;
+  tester?: string;
+  date?: string;
+  findings?: ReportFinding[];
+  selectedTemplate?: ReportTemplate;
+  outputFormat?: ReportFormat;
+  generatedReport?: string;
+  activeTab?: 'findings' | 'generate' | 'export';
+  editingFindingId?: string | null;
+};
