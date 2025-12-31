@@ -267,7 +267,11 @@ export const baseMenuBarItems: MenuBarItem[] = [
           { label: 'CSRF PoC Generator', toolId: 'csrfPocGenerator' },
           { label: 'CORS Exploit Generator', toolId: 'corsExploitGenerator' },
           { label: 'XXE Payload Generator', toolId: 'xxePayloadGenerator' },
-          { label: 'Command Injection Payload', toolId: 'commandInjectionPayload' }
+          { label: 'Command Injection Payload', toolId: 'commandInjectionPayload' },
+          { label: 'SSTI Payload Generator', toolId: 'sstiPayloadGenerator' },
+          { label: 'SSRF Tester', toolId: 'ssrfTester' },
+          { label: 'Payload Encoder', toolId: 'payloadEncoder' },
+          { label: 'Deserialization Scanner', toolId: 'deserializationScanner' }
         ]
       },
       {
@@ -281,6 +285,12 @@ export const baseMenuBarItems: MenuBarItem[] = [
         label: 'Email Security',
         items: [
           { label: 'SPF/DMARC Analyzer', toolId: 'spfDmarcAnalyzer' }
+        ]
+      },
+      {
+        label: 'Reporting',
+        items: [
+          { label: 'Report Generator', toolId: 'reportGenerator' }
         ]
       }
     ]

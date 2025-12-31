@@ -18,6 +18,7 @@ import { buildRedteamBatchATools } from './redteam-batch-a-tools';
 import { buildRedTeamBatchBTools } from './redteam-batch-b-tools';
 import { buildRedteamBatchCTools } from './redteam-batch-c-tools';
 import { buildRedteamBatchDTools } from './redteam-batch-d-tools';
+import { buildRedteamBatchETools } from './redteam-batch-e-tools';
 
 import type { ToolRegistryEntry, ToolRegistryHandlers } from './types';
 
@@ -36,11 +37,12 @@ export const buildToolRegistry = (handlers: ToolRegistryHandlers): ToolRegistryE
   ...buildDatabaseTools(),
   ...buildDataTextTools(),
   ...buildExtensionDevTools(),
-  // Red Team tools (batches A-D)
+  // Red Team tools (batches A-E)
   ...buildRedteamBatchATools(),
   ...buildRedTeamBatchBTools(),
   ...buildRedteamBatchCTools(),
-  ...buildRedteamBatchDTools()
+  ...buildRedteamBatchDTools(),
+  ...buildRedteamBatchETools()
 ];
 
 // Re-export individual category builders for direct access if needed
@@ -59,5 +61,6 @@ export {
   buildRedteamBatchATools,
   buildRedTeamBatchBTools,
   buildRedteamBatchCTools,
-  buildRedteamBatchDTools
+  buildRedteamBatchDTools,
+  buildRedteamBatchETools
 };

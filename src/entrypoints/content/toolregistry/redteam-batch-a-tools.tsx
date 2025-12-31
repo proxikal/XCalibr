@@ -116,8 +116,8 @@ export const buildRedteamBatchATools = (): ToolRegistryEntry[] => [
     category: 'Red Team',
     icon: faKey,
     hover: 'group-hover:border-red-500 group-hover:text-red-400',
-    width: 450,
-    height: 520,
+    width: 520,
+    height: 650,
     render: (data, onChange) => (
       <StorageSecretHunterTool.Component
         data={data as StorageSecretHunterData | undefined}

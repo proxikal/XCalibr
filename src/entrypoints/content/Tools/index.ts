@@ -181,3 +181,10 @@ export { EnvVariableScannerTool } from './EnvVariableScannerTool';
 export { XxePayloadGeneratorTool } from './XxePayloadGeneratorTool';
 export { CommandInjectionPayloadTool } from './CommandInjectionPayloadTool';
 export { JwtAttackAdvisorTool } from './JwtAttackAdvisorTool';
+
+// === BATCH E: New P0 Red Team Tools ===
+export { SstiPayloadGeneratorTool } from './SstiPayloadGeneratorTool';
+export { SsrfTesterTool } from './SsrfTesterTool';
+export { PayloadEncoderTool } from './PayloadEncoderTool';
+export { DeserializationScannerTool } from './DeserializationScannerTool';
+export { ReportGeneratorTool } from './ReportGeneratorTool';
