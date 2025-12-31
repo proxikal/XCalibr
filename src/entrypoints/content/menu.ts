@@ -56,7 +56,37 @@ export const baseMenuBarItems: MenuBarItem[] = [
           { label: 'Webhook Tester', toolId: 'webhookTester' },
           { label: 'Cookie Manager', toolId: 'cookieManager' }
         ]
-      }
+      },
+      {
+        label: 'Generators',
+        items: [
+          { label: 'Meta Tag Generator', toolId: 'metaTagGenerator' },
+          { label: 'Open Graph Preview', toolId: 'openGraphPreviewer' },
+          { label: 'Box Shadow Generator', toolId: 'boxShadowGenerator' },
+          { label: 'Border Radius Generator', toolId: 'borderRadiusGenerator' },
+          { label: 'Favicon Generator', toolId: 'faviconGenerator' },
+          { label: 'CSS Gradient Generator', toolId: 'cssGradientGenerator' },
+          { label: 'CSS Filter Generator', toolId: 'cssFilterGenerator' },
+          { label: 'CSS Transform Generator', toolId: 'cssTransformGenerator' },
+          { label: 'HTML Table Generator', toolId: 'htmlTableGenerator' },
+          { label: 'Lorem Ipsum Generator', toolId: 'loremIpsumGenerator' },
+          { label: 'Placeholder Image', toolId: 'placeholderImage' },
+          { label: 'Clamp Calculator', toolId: 'clampCalculator' }
+        ]
+      },
+      {
+        label: 'Converters',
+        items: [
+          { label: 'Markdown to HTML', toolId: 'markdownToHtml' },
+          { label: 'HTML to Markdown', toolId: 'htmlToMarkdown' },
+          { label: 'Base64 Image Converter', toolId: 'base64ImageConverter' },
+          { label: 'Image Compressor', toolId: 'imageCompressor' },
+          { label: 'Color Palette Extractor', toolId: 'colorPaletteExtractor' }
+        ]
+      },
+      { label: 'Keycode Info', toolId: 'keycodeInfo' },
+      { label: 'Color Blindness Sim', toolId: 'colorBlindnessSimulator' },
+      { label: 'Visual Grid Builder', toolId: 'visualGridBuilder' }
     ]
   },
   {
@@ -110,7 +140,10 @@ export const baseMenuBarItems: MenuBarItem[] = [
         items: [
           { label: 'Form Fuzzer', toolId: 'formFuzzer' },
           { label: 'URL Encoder/Decoder', toolId: 'urlCodec' },
-          { label: 'Param Analyzer', toolId: 'paramAnalyzer' }
+          { label: 'Param Analyzer', toolId: 'paramAnalyzer' },
+          { label: 'Clickjacking Tester', toolId: 'clickjackingTester' },
+          { label: 'IDOR Iterator', toolId: 'idorIterator' },
+          { label: 'Directory Buster', toolId: 'directoryBuster' }
         ]
       },
       {
@@ -126,7 +159,9 @@ export const baseMenuBarItems: MenuBarItem[] = [
           { label: 'SRI Generator', toolId: 'sriGenerator' },
           { label: 'XSS Payload', toolId: 'xssPayload' },
           { label: 'SQLi Payload', toolId: 'sqliPayload' },
-          { label: 'User-Agent Generator', toolId: 'userAgent' }
+          { label: 'User-Agent Generator', toolId: 'userAgent' },
+          { label: 'JWT Cracker', toolId: 'jwtCracker' },
+          { label: 'PEM/DER Converter', toolId: 'pemDerConverter' }
         ]
       },
       {
@@ -134,7 +169,8 @@ export const baseMenuBarItems: MenuBarItem[] = [
         items: [
           { label: 'Link Extractor', toolId: 'linkExtractor' },
           { label: 'DOM Snapshot', toolId: 'domSnapshot' },
-          { label: 'Asset Mapper', toolId: 'assetMapper' }
+          { label: 'Asset Mapper', toolId: 'assetMapper' },
+          { label: 'Metadata Scrubber', toolId: 'metadataScrubber' }
         ]
       },
       {
@@ -142,24 +178,92 @@ export const baseMenuBarItems: MenuBarItem[] = [
         items: [
           { label: 'Request Log', toolId: 'requestLog' },
           { label: 'Payload Replay', toolId: 'payloadReplay' },
-          { label: 'CORS Check', toolId: 'corsCheck' }
+          { label: 'CORS Check', toolId: 'corsCheck' },
+          { label: 'WebSocket Tester', toolId: 'websocketTester' },
+          { label: 'CIDR Calculator', toolId: 'cidrCalculator' },
+          { label: 'Subnet Cheat Sheet', toolId: 'subnetCheatSheet' },
+          { label: 'MAC Vendor Lookup', toolId: 'macVendorLookup' },
+          { label: 'Port Reference', toolId: 'portReference' },
+          { label: 'HTTP Status Reference', toolId: 'httpStatusReference' }
+        ]
+      },
+      {
+        label: 'OSINT',
+        items: [
+          { label: 'Whois Lookup', toolId: 'whoisLookup' },
+          { label: 'DNS Record Viewer', toolId: 'dnsRecordViewer' },
+          { label: 'Reverse IP Lookup', toolId: 'reverseIpLookup' },
+          { label: 'Username Search', toolId: 'usernameSearch' },
+          { label: 'EXIF Metadata Viewer', toolId: 'exifMetadataViewer' },
+          { label: 'Email Breach Checker', toolId: 'emailBreachChecker' },
+          { label: 'SSL Certificate Decoder', toolId: 'sslCertDecoder' },
+          { label: 'Google Dork Generator', toolId: 'googleDorkGenerator' },
+          { label: 'Subdomain Finder', toolId: 'subdomainFinder' },
+          { label: 'Wayback Machine Viewer', toolId: 'waybackMachineViewer' }
+        ]
+      },
+      {
+        label: 'DevOps',
+        items: [
+          { label: 'Cron Generator', toolId: 'cronGenerator' },
+          { label: 'Chmod Calculator', toolId: 'chmodCalculator' },
+          { label: 'Dockerfile Linter', toolId: 'dockerfileLinter' },
+          { label: 'YAML Validator', toolId: 'yamlValidator' },
+          { label: 'Nginx Config Generator', toolId: 'nginxConfigGenerator' },
+          { label: 'Htaccess Generator', toolId: 'htaccessGenerator' }
         ]
       }
     ]
   },
   {
-    label: 'OSINT',
+    label: 'Extension Dev',
     items: [
-      { label: 'Whois Lookup', toolId: 'whoisLookup' },
-      { label: 'DNS Record Viewer', toolId: 'dnsRecordViewer' },
-      { label: 'Reverse IP Lookup', toolId: 'reverseIpLookup' },
-      { label: 'Username Search', toolId: 'usernameSearch' },
-      { label: 'EXIF Metadata Viewer', toolId: 'exifMetadataViewer' },
-      { label: 'Email Breach Checker', toolId: 'emailBreachChecker' },
-      { label: 'SSL Certificate Decoder', toolId: 'sslCertDecoder' },
-      { label: 'Google Dork Generator', toolId: 'googleDorkGenerator' },
-      { label: 'Subdomain Finder', toolId: 'subdomainFinder' },
-      { label: 'Wayback Machine Viewer', toolId: 'waybackMachineViewer' }
+      { label: 'Manifest V3 Validator', toolId: 'manifestValidator' },
+      { label: 'Permissions Reference', toolId: 'permissionsReference' },
+      { label: 'i18n Message Helper', toolId: 'i18nHelper' }
+    ]
+  },
+  {
+    label: 'Data & Text',
+    items: [
+      { label: 'CSV to JSON', toolId: 'csvToJson' },
+      { label: 'XML to JSON', toolId: 'xmlToJson' },
+      { label: 'YAML to JSON', toolId: 'yamlToJson' },
+      { label: 'JSON to YAML', toolId: 'jsonToYaml' },
+      { label: 'Text Diff', toolId: 'textDiff' },
+      { label: 'Case Converter', toolId: 'caseConverter' },
+      { label: 'Text Statistics', toolId: 'textStatistics' },
+      { label: 'Line Sorter', toolId: 'lineSorter' },
+      { label: 'List Randomizer', toolId: 'listRandomizer' },
+      { label: 'String Obfuscator', toolId: 'stringObfuscator' },
+      { label: 'Text to Binary', toolId: 'textToBinary' },
+      { label: 'Hex Viewer', toolId: 'hexViewer' },
+      { label: 'Unicode Explorer', toolId: 'unicodeExplorer' },
+      { label: 'Regex Highlighter', toolId: 'regexHighlighter' },
+      { label: 'Escaping Tool', toolId: 'escapingTool' },
+      { label: 'Unix Timestamp', toolId: 'unixTimestamp' },
+      { label: 'Timezone Converter', toolId: 'timezoneConverter' },
+      { label: 'Unit Converter', toolId: 'unitConverter' },
+      { label: 'Aspect Ratio Calculator', toolId: 'aspectRatioCalculator' },
+      { label: 'UUID Generator', toolId: 'uuidGenerator' },
+      { label: 'ObjectId Generator', toolId: 'objectIdGenerator' },
+      { label: 'Git Command Builder', toolId: 'gitCommandBuilder' },
+      { label: 'GitIgnore Generator', toolId: 'gitignoreGenerator' },
+      { label: 'License Generator', toolId: 'licenseGenerator' },
+      { label: 'JS Minifier', toolId: 'jsMinifier' },
+      { label: 'CSS Minifier', toolId: 'cssMinifier' },
+      { label: 'Python to JSON', toolId: 'pythonToJson' },
+      { label: 'TypeScript Interface', toolId: 'typescriptInterfaceGen' },
+      { label: 'Go Struct Generator', toolId: 'goStructGenerator' },
+      { label: 'SQL Schema Generator', toolId: 'sqlSchemaGenerator' },
+      { label: 'cURL to Fetch', toolId: 'curlToFetch' },
+      { label: 'QR Code Generator', toolId: 'qrCodeGenerator' },
+      { label: 'Barcode Generator', toolId: 'barcodeGenerator' },
+      { label: 'Stopwatch / Timer', toolId: 'stopwatchTimer' },
+      { label: 'Pomodoro Timer', toolId: 'pomodoroTimer' },
+      { label: 'Scratchpad', toolId: 'scratchpad' },
+      { label: 'Todo List', toolId: 'todoList' },
+      { label: 'Math Evaluator', toolId: 'mathEvaluator' }
     ]
   }
 ];
