@@ -242,12 +242,16 @@ export const buildUrlWithParams = (url: string, params: { key: string; value: st
 };
 
 export const extractLinksFromDocument = () => {
-  const anchors = Array.from(document.querySelectorAll('a[href]'));
-  const internal: string[] = [];
-  const external: string[] = [];
+  type LinkSource = 'anchor' | 'onclick' | 'script' | 'router' | 'form' | 'meta' | 'sitemap';
+  type ExtractedLink = { url: string; source: LinkSource; context?: string; text?: string };
+
+  const internal: ExtractedLink[] = [];
+  const external: ExtractedLink[] = [];
   const origin = window.location.origin;
   const seen = new Set<string>();
-  anchors.forEach((anchor) => {
+
+  // Extract from anchor tags
+  document.querySelectorAll('a[href]').forEach((anchor) => {
     const href = anchor.getAttribute('href');
     if (!href) return;
     let absolute: string;
@@ -258,12 +262,59 @@ export const extractLinksFromDocument = () => {
     }
     if (seen.has(absolute)) return;
     seen.add(absolute);
+    const link: ExtractedLink = {
+      url: absolute,
+      source: 'anchor',
+      text: (anchor as HTMLAnchorElement).textContent?.trim().slice(0, 100) || undefined
+    };
     if (absolute.startsWith(origin)) {
-      internal.push(absolute);
+      internal.push(link);
     } else {
-      external.push(absolute);
+      external.push(link);
     }
   });
+
+  // Extract from form actions
+  document.querySelectorAll('form[action]').forEach((form) => {
+    const action = form.getAttribute('action');
+    if (!action) return;
+    let absolute: string;
+    try {
+      absolute = new URL(action, origin).toString();
+    } catch {
+      return;
+    }
+    if (seen.has(absolute)) return;
+    seen.add(absolute);
+    const link: ExtractedLink = { url: absolute, source: 'form' };
+    if (absolute.startsWith(origin)) {
+      internal.push(link);
+    } else {
+      external.push(link);
+    }
+  });
+
+  // Extract from meta refresh/redirects
+  document.querySelectorAll('meta[http-equiv="refresh"]').forEach((meta) => {
+    const content = meta.getAttribute('content');
+    const match = content?.match(/url=(.+)/i);
+    if (!match) return;
+    let absolute: string;
+    try {
+      absolute = new URL(match[1].trim(), origin).toString();
+    } catch {
+      return;
+    }
+    if (seen.has(absolute)) return;
+    seen.add(absolute);
+    const link: ExtractedLink = { url: absolute, source: 'meta' };
+    if (absolute.startsWith(origin)) {
+      internal.push(link);
+    } else {
+      external.push(link);
+    }
+  });
+
   return { internal, external };
 };
 
@@ -274,50 +325,443 @@ export const sanitizeHtmlSnapshot = (rawHtml: string) => {
   return doc.documentElement.outerHTML;
 };
 
-export const mapAssetsFromDocument = () => {
+type AssetType = 'image' | 'script' | 'style' | 'preload' | 'prefetch' | 'inline-script' | 'css-background';
+
+type AssetEntry = {
+  url: string;
+  origin: string;
+  size?: number;
+  type: AssetType;
+  sourceElement?: string;
+};
+
+const getOriginFromUrl = (url: string): string => {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return window.location.origin;
+  }
+};
+
+const extractCssBackgroundUrls = (): string[] => {
+  const urls: string[] = [];
+  const urlRegex = /url\(['"]?([^'"()]+)['"]?\)/gi;
+
+  // Check inline styles on elements
+  document.querySelectorAll('[style*="url"]').forEach((el) => {
+    const style = el.getAttribute('style') || '';
+    let match: RegExpExecArray | null;
+    while ((match = urlRegex.exec(style)) !== null) {
+      if (match[1] && !match[1].startsWith('data:')) {
+        try {
+          const absoluteUrl = new URL(match[1], window.location.href).href;
+          urls.push(absoluteUrl);
+        } catch {
+          // Skip invalid URLs
+        }
+      }
+    }
+  });
+
+  // Check stylesheets
+  try {
+    Array.from(document.styleSheets).forEach((sheet) => {
+      try {
+        Array.from(sheet.cssRules || []).forEach((rule) => {
+          const cssText = rule.cssText || '';
+          let match: RegExpExecArray | null;
+          urlRegex.lastIndex = 0;
+          while ((match = urlRegex.exec(cssText)) !== null) {
+            if (match[1] && !match[1].startsWith('data:')) {
+              try {
+                const baseUrl = sheet.href || window.location.href;
+                const absoluteUrl = new URL(match[1], baseUrl).href;
+                urls.push(absoluteUrl);
+              } catch {
+                // Skip invalid URLs
+              }
+            }
+          }
+        });
+      } catch {
+        // CORS restriction on cross-origin stylesheets
+      }
+    });
+  } catch {
+    // Stylesheet access error
+  }
+
+  return [...new Set(urls)];
+};
+
+export const mapAssetsFromDocument = (): {
+  assets: AssetEntry[];
+  images: string[];
+  scripts: string[];
+  styles: string[];
+} => {
+  const assets: AssetEntry[] = [];
+  const seen = new Set<string>();
+
+  // External images
   const images = Array.from(document.images)
     .map((img) => img.currentSrc || img.src)
     .filter(Boolean);
+
+  images.forEach((url) => {
+    if (!seen.has(url)) {
+      seen.add(url);
+      assets.push({
+        url,
+        origin: getOriginFromUrl(url),
+        type: 'image',
+        sourceElement: 'img'
+      });
+    }
+  });
+
+  // External scripts
   const scripts = Array.from(document.scripts)
     .map((script) => script.src)
     .filter(Boolean);
+
+  scripts.forEach((url) => {
+    if (!seen.has(url)) {
+      seen.add(url);
+      assets.push({
+        url,
+        origin: getOriginFromUrl(url),
+        type: 'script',
+        sourceElement: 'script[src]'
+      });
+    }
+  });
+
+  // Inline scripts (count them by hash or content snippet)
+  const inlineScripts = Array.from(document.scripts).filter((s) => !s.src && s.textContent?.trim());
+  inlineScripts.forEach((script, idx) => {
+    const content = script.textContent?.trim() || '';
+    const snippet = content.substring(0, 50).replace(/\s+/g, ' ');
+    const id = `inline-script-${idx}:${snippet}...`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      assets.push({
+        url: id,
+        origin: window.location.origin,
+        type: 'inline-script',
+        size: content.length,
+        sourceElement: 'script (inline)'
+      });
+    }
+  });
+
+  // External stylesheets
   const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
     .map((link) => (link as HTMLLinkElement).href)
     .filter(Boolean);
-  return { images, scripts, styles };
+
+  styles.forEach((url) => {
+    if (!seen.has(url)) {
+      seen.add(url);
+      assets.push({
+        url,
+        origin: getOriginFromUrl(url),
+        type: 'style',
+        sourceElement: 'link[rel=stylesheet]'
+      });
+    }
+  });
+
+  // Preload links
+  document.querySelectorAll('link[rel="preload"]').forEach((link) => {
+    const href = (link as HTMLLinkElement).href;
+    if (href && !seen.has(href)) {
+      seen.add(href);
+      const asType = link.getAttribute('as') || 'unknown';
+      assets.push({
+        url: href,
+        origin: getOriginFromUrl(href),
+        type: 'preload',
+        sourceElement: `link[rel=preload][as=${asType}]`
+      });
+    }
+  });
+
+  // Prefetch links
+  document.querySelectorAll('link[rel="prefetch"]').forEach((link) => {
+    const href = (link as HTMLLinkElement).href;
+    if (href && !seen.has(href)) {
+      seen.add(href);
+      assets.push({
+        url: href,
+        origin: getOriginFromUrl(href),
+        type: 'prefetch',
+        sourceElement: 'link[rel=prefetch]'
+      });
+    }
+  });
+
+  // CSS background URLs
+  const cssBackgrounds = extractCssBackgroundUrls();
+  cssBackgrounds.forEach((url) => {
+    if (!seen.has(url)) {
+      seen.add(url);
+      assets.push({
+        url,
+        origin: getOriginFromUrl(url),
+        type: 'css-background',
+        sourceElement: 'css url()'
+      });
+    }
+  });
+
+  return { assets, images, scripts, styles };
 };
 
-export const detectTechnologies = () => {
-  const findings: { label: string; value: string }[] = [];
-  const generator = document
-    .querySelector('meta[name="generator"]')
-    ?.getAttribute('content');
+type TechConfidence = 'high' | 'medium' | 'low';
+type TechSignal = {
+  type: 'meta' | 'script' | 'header' | 'global' | 'selector' | 'cookie' | 'favicon' | 'comment';
+  evidence: string;
+  source?: string;
+};
+type TechFinding = {
+  label: string;
+  value: string;
+  version?: string;
+  confidence: TechConfidence;
+  category: 'framework' | 'library' | 'server' | 'cdn' | 'cms' | 'analytics' | 'other';
+  signals: TechSignal[];
+};
+
+export const detectTechnologies = (): TechFinding[] => {
+  const findings: TechFinding[] = [];
+
+  // Meta generator
+  const generator = document.querySelector('meta[name="generator"]')?.getAttribute('content');
   if (generator) {
-    findings.push({ label: 'Meta Generator', value: generator });
+    const versionMatch = generator.match(/[\d.]+/);
+    findings.push({
+      label: 'Meta Generator',
+      value: generator.split(/[\d]/)[0].trim() || generator,
+      version: versionMatch?.[0],
+      confidence: 'high',
+      category: 'cms',
+      signals: [{ type: 'meta', evidence: `<meta name="generator" content="${generator}">` }]
+    });
   }
-  if ((window as Window & { __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown })
-    .__REACT_DEVTOOLS_GLOBAL_HOOK__) {
-    findings.push({ label: 'Framework', value: 'React' });
+
+  // React detection
+  const reactHook = (window as Window & { __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown }).__REACT_DEVTOOLS_GLOBAL_HOOK__;
+  if (reactHook) {
+    const reactRoot = document.querySelector('[data-reactroot]');
+    const signals: TechSignal[] = [{ type: 'global', evidence: '__REACT_DEVTOOLS_GLOBAL_HOOK__' }];
+    if (reactRoot) signals.push({ type: 'selector', evidence: '[data-reactroot]' });
+    findings.push({
+      label: 'Framework',
+      value: 'React',
+      confidence: 'high',
+      category: 'framework',
+      signals
+    });
   }
-  if ((window as Window & { __VUE_DEVTOOLS_GLOBAL_HOOK__?: unknown })
-    .__VUE_DEVTOOLS_GLOBAL_HOOK__) {
-    findings.push({ label: 'Framework', value: 'Vue' });
+
+  // Vue detection
+  const vueHook = (window as Window & { __VUE_DEVTOOLS_GLOBAL_HOOK__?: unknown }).__VUE_DEVTOOLS_GLOBAL_HOOK__;
+  const vueApp = document.querySelector('[data-v-app]') || document.querySelector('[id="app"].__vue__');
+  if (vueHook || vueApp) {
+    const signals: TechSignal[] = [];
+    if (vueHook) signals.push({ type: 'global', evidence: '__VUE_DEVTOOLS_GLOBAL_HOOK__' });
+    if (vueApp) signals.push({ type: 'selector', evidence: '[data-v-app]' });
+    findings.push({
+      label: 'Framework',
+      value: 'Vue',
+      confidence: vueHook ? 'high' : 'medium',
+      category: 'framework',
+      signals
+    });
   }
-  if (document.querySelector('[ng-version]')) {
-    findings.push({ label: 'Framework', value: 'Angular' });
+
+  // Angular detection
+  const ngVersion = document.querySelector('[ng-version]');
+  const ngApp = document.querySelector('[ng-app]') || document.querySelector('.ng-scope');
+  if (ngVersion || ngApp) {
+    const signals: TechSignal[] = [];
+    const version = ngVersion?.getAttribute('ng-version');
+    if (ngVersion) signals.push({ type: 'selector', evidence: `[ng-version="${version}"]` });
+    if (ngApp) signals.push({ type: 'selector', evidence: '[ng-app] or .ng-scope' });
+    findings.push({
+      label: 'Framework',
+      value: 'Angular',
+      version: version || undefined,
+      confidence: 'high',
+      category: 'framework',
+      signals
+    });
   }
-  const scriptSources = Array.from(document.scripts)
-    .map((script) => script.src)
-    .filter(Boolean);
-  if (scriptSources.some((src) => src.includes('wp-content'))) {
-    findings.push({ label: 'CMS', value: 'WordPress' });
+
+  // Svelte detection
+  const svelteEl = document.querySelector('[class*="svelte-"]');
+  if (svelteEl) {
+    findings.push({
+      label: 'Framework',
+      value: 'Svelte',
+      confidence: 'medium',
+      category: 'framework',
+      signals: [{ type: 'selector', evidence: '[class*="svelte-"]' }]
+    });
   }
-  if (scriptSources.some((src) => src.includes('shopify'))) {
-    findings.push({ label: 'Platform', value: 'Shopify' });
+
+  // Next.js detection
+  const nextData = document.querySelector('#__NEXT_DATA__');
+  if (nextData) {
+    findings.push({
+      label: 'Framework',
+      value: 'Next.js',
+      confidence: 'high',
+      category: 'framework',
+      signals: [{ type: 'selector', evidence: '#__NEXT_DATA__' }]
+    });
   }
-  if (scriptSources.some((src) => src.includes('cdn.jsdelivr.net/npm/bootstrap'))) {
-    findings.push({ label: 'UI Library', value: 'Bootstrap' });
+
+  // Nuxt detection
+  const nuxtData = document.querySelector('#__NUXT__') || (window as Window & { __NUXT__?: unknown }).__NUXT__;
+  if (nuxtData) {
+    findings.push({
+      label: 'Framework',
+      value: 'Nuxt',
+      confidence: 'high',
+      category: 'framework',
+      signals: [{ type: nuxtData === document.querySelector('#__NUXT__') ? 'selector' : 'global', evidence: '__NUXT__' }]
+    });
   }
+
+  const scriptSources = Array.from(document.scripts).map((script) => script.src).filter(Boolean);
+
+  // WordPress
+  if (scriptSources.some((src) => src.includes('wp-content')) || scriptSources.some((src) => src.includes('wp-includes'))) {
+    const wpScript = scriptSources.find((src) => src.includes('wp-content') || src.includes('wp-includes'));
+    findings.push({
+      label: 'CMS',
+      value: 'WordPress',
+      confidence: 'high',
+      category: 'cms',
+      signals: [{ type: 'script', evidence: 'wp-content/wp-includes path', source: wpScript }]
+    });
+  }
+
+  // Shopify
+  if (scriptSources.some((src) => src.includes('shopify')) || document.querySelector('meta[name="shopify-checkout-api-token"]')) {
+    findings.push({
+      label: 'Platform',
+      value: 'Shopify',
+      confidence: 'high',
+      category: 'cms',
+      signals: [{ type: 'script', evidence: 'shopify in script src' }]
+    });
+  }
+
+  // jQuery
+  const jQueryGlobal = (window as Window & { jQuery?: { fn?: { jquery?: string } } }).jQuery;
+  if (jQueryGlobal) {
+    findings.push({
+      label: 'Library',
+      value: 'jQuery',
+      version: jQueryGlobal.fn?.jquery,
+      confidence: 'high',
+      category: 'library',
+      signals: [{ type: 'global', evidence: 'window.jQuery' }]
+    });
+  }
+
+  // Lodash
+  const lodashGlobal = (window as Window & { _?: { VERSION?: string } })._;
+  if (lodashGlobal?.VERSION) {
+    findings.push({
+      label: 'Library',
+      value: 'Lodash',
+      version: lodashGlobal.VERSION,
+      confidence: 'high',
+      category: 'library',
+      signals: [{ type: 'global', evidence: 'window._.VERSION' }]
+    });
+  }
+
+  // Bootstrap
+  const bootstrapScript = scriptSources.find((src) => src.includes('bootstrap'));
+  const bootstrapCss = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).find((l) => (l as HTMLLinkElement).href.includes('bootstrap'));
+  if (bootstrapScript || bootstrapCss) {
+    const versionMatch = (bootstrapScript || (bootstrapCss as HTMLLinkElement)?.href)?.match(/bootstrap[@/]?([\d.]+)?/i);
+    findings.push({
+      label: 'UI Library',
+      value: 'Bootstrap',
+      version: versionMatch?.[1],
+      confidence: 'high',
+      category: 'library',
+      signals: [{ type: bootstrapScript ? 'script' : 'selector', evidence: 'bootstrap in resource', source: bootstrapScript || (bootstrapCss as HTMLLinkElement)?.href }]
+    });
+  }
+
+  // Tailwind CSS
+  const tailwindClasses = document.querySelector('[class*="flex"][class*="items-"]') || document.querySelector('[class*="bg-"][class*="text-"]');
+  if (tailwindClasses) {
+    findings.push({
+      label: 'CSS Framework',
+      value: 'Tailwind CSS',
+      confidence: 'low',
+      category: 'library',
+      signals: [{ type: 'selector', evidence: 'Tailwind utility classes detected' }]
+    });
+  }
+
+  // Google Analytics
+  const gaScript = scriptSources.find((src) => src.includes('google-analytics.com') || src.includes('googletagmanager.com'));
+  const gaGlobal = (window as Window & { ga?: unknown; gtag?: unknown }).ga || (window as Window & { gtag?: unknown }).gtag;
+  if (gaScript || gaGlobal) {
+    findings.push({
+      label: 'Analytics',
+      value: 'Google Analytics',
+      confidence: 'high',
+      category: 'analytics',
+      signals: [{ type: gaScript ? 'script' : 'global', evidence: gaScript ? 'GA script' : 'window.ga/gtag', source: gaScript }]
+    });
+  }
+
+  // Cloudflare
+  const cfRay = document.querySelector('meta[name="cf-ray"]') || scriptSources.some((src) => src.includes('cloudflare'));
+  if (cfRay) {
+    findings.push({
+      label: 'CDN',
+      value: 'Cloudflare',
+      confidence: 'medium',
+      category: 'cdn',
+      signals: [{ type: 'meta', evidence: 'Cloudflare indicators' }]
+    });
+  }
+
+  // PHP detection (from common patterns)
+  const phpIndicators = document.querySelector('input[name="PHPSESSID"]') || document.cookie.includes('PHPSESSID');
+  if (phpIndicators) {
+    findings.push({
+      label: 'Server',
+      value: 'PHP',
+      confidence: 'medium',
+      category: 'server',
+      signals: [{ type: 'cookie', evidence: 'PHPSESSID cookie/input' }]
+    });
+  }
+
+  // ASP.NET detection
+  const aspNetIndicators = document.querySelector('input[name="__VIEWSTATE"]') || document.querySelector('input[name="__EVENTVALIDATION"]');
+  if (aspNetIndicators) {
+    findings.push({
+      label: 'Server',
+      value: 'ASP.NET',
+      confidence: 'high',
+      category: 'server',
+      signals: [{ type: 'selector', evidence: '__VIEWSTATE/__EVENTVALIDATION hidden fields' }]
+    });
+  }
+
   return findings;
 };
 

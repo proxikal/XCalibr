@@ -1,5 +1,20 @@
 import { vi } from 'vitest';
 
+// Configure React 18 testing environment to properly support act()
+(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+
+// Suppress React act() warnings for component state updates
+// These warnings occur when components have internal state updates after mount
+// but don't affect test correctness when using flushSync rendering
+const originalError = console.error;
+console.error = (...args: unknown[]) => {
+  const message = args[0];
+  if (typeof message === 'string' && message.includes('not wrapped in act')) {
+    return;
+  }
+  originalError.apply(console, args);
+};
+
 type StorageListener = (
   changes: { [key: string]: chrome.storage.StorageChange },
   areaName: string

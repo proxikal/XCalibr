@@ -32,7 +32,6 @@ import {
   AssetMapperTool,
   RequestLogTool,
   PayloadReplayTool,
-  CorsCheckTool,
   Base64AdvancedTool,
   HtmlEntityEncoderTool,
   HashesGeneratorTool,
@@ -64,7 +63,6 @@ import type {
   AssetMapperData,
   RequestLogData,
   PayloadReplayData,
-  CorsCheckData,
   Base64AdvancedData,
   HtmlEntityEncoderData,
   HashesGeneratorData,
@@ -103,11 +101,12 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faShieldHalved,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
-    width: 576,
-    height: 450,
+    width: 480,
+    height: 520,
     render: (data, onChange) => (
       <HeaderInspectorTool.Component
         data={data as HeaderInspectorData | undefined}
+        onChange={(next) => onChange(next)}
         onRefresh={async () => {
           const result = await chrome.runtime.sendMessage({
             type: 'xcalibr-fetch-headers'
@@ -124,9 +123,12 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faFingerprint,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 420,
+    height: 480,
     render: (data, onChange) => (
       <TechFingerprintTool.Component
         data={data as TechFingerprintData | undefined}
+        onChange={(next) => onChange(next)}
         onRefresh={async () => {
           const findings = detectTechnologies();
           onChange({
@@ -145,11 +147,12 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faRobot,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
-    width: 450,
-    height: 400,
+    width: 540,
+    height: 580,
     render: (data, onChange) => (
       <RobotsViewerTool.Component
         data={data as RobotsViewerData | undefined}
+        onChange={(next) => onChange(next)}
         onRefresh={async () => {
           const result = await chrome.runtime.sendMessage({
             type: 'xcalibr-fetch-robots'
@@ -167,7 +170,7 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     icon: faFlask,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
     width: 600,
-    height: 608,
+    height: 790,
     render: (data, onChange) => (
       <FormFuzzerTool.Component
         data={data as FormFuzzerData | undefined}
@@ -182,6 +185,19 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
         onApply={async (formIndex, payload) =>
           applyPayloadToForm(formIndex, payload)
         }
+        onSubmit={async (formIndex) => {
+          const forms = document.querySelectorAll('form');
+          const form = forms[formIndex];
+          if (!form) {
+            return { error: 'Form not found' };
+          }
+          try {
+            form.submit();
+            return { status: 200, body: 'Form submitted (page may navigate)' };
+          } catch (err) {
+            return { error: String(err) };
+          }
+        }}
       />
     )
   },
@@ -192,6 +208,8 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faWaveSquare,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 420,
+    height: 520,
     render: (data, onChange) => (
       <UrlCodecTool.Component data={data as UrlCodecData | undefined} onChange={onChange} />
     )
@@ -203,6 +221,8 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faSliders,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 480,
+    height: 500,
     render: (data, onChange) => (
       <ParamAnalyzerTool.Component
         data={data as ParamAnalyzerData | undefined}
@@ -222,10 +242,11 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     icon: faLink,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
     width: 700,
-    height: 400,
+    height: 560,
     render: (data, onChange) => (
       <LinkExtractorTool.Component
         data={data as LinkExtractorData | undefined}
+        onChange={onChange}
         onRefresh={async () => {
           const links = extractLinksFromDocument();
           onChange({ ...links, updatedAt: Date.now() });
@@ -240,12 +261,17 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faFileCode,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 420,
+    height: 480,
     render: (data, onChange) => (
       <DomSnapshotTool.Component
         data={data as DomSnapshotData | undefined}
-        onCapture={async () => {
+        onChange={onChange}
+        onRefresh={async () => {
+          const typedData = data as DomSnapshotData | undefined;
           const raw = document.documentElement.outerHTML;
-          onChange({ html: sanitizeHtmlSnapshot(raw), updatedAt: Date.now() });
+          const html = typedData?.showRaw ? raw : sanitizeHtmlSnapshot(raw);
+          onChange({ ...typedData, html, updatedAt: Date.now() });
         }}
       />
     )
@@ -258,13 +284,21 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     icon: faSitemap,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
     width: 550,
-    height: 450,
+    height: 550,
     render: (data, onChange) => (
       <AssetMapperTool.Component
         data={data as AssetMapperData | undefined}
+        onChange={(next) => onChange(next)}
         onRefresh={async () => {
-          const assets = mapAssetsFromDocument();
-          onChange({ ...assets, updatedAt: Date.now() });
+          const result = mapAssetsFromDocument();
+          onChange({
+            ...(data as AssetMapperData | undefined),
+            assets: result.assets,
+            images: result.images,
+            scripts: result.scripts,
+            styles: result.styles,
+            updatedAt: Date.now()
+          });
         }}
       />
     )
@@ -307,27 +341,13 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
       />
     )
   },
-  {
-    id: 'corsCheck',
-    title: 'CORS Check',
-    subtitle: 'Inspect CORS headers',
-    category: 'CyberSec',
-    icon: faGlobe,
-    hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
-    render: (data, onChange) => (
-      <CorsCheckTool.Component
-        data={data as CorsCheckData | undefined}
-        onChange={onChange}
-        onCheck={async (url) => {
-          const result = await chrome.runtime.sendMessage({
-            type: 'xcalibr-cors-check',
-            payload: { url }
-          });
-          onChange({ url, ...result });
-        }}
-      />
-    )
-  },
+  // NOTE: CORS Check tool was removed due to MV3 limitations.
+  // In Manifest V3, background service workers cannot access response headers
+  // from cross-origin requests without declarativeNetRequest permissions.
+  // The tool could only return limited CORS header information and was
+  // often inaccurate for cross-origin checks, making it unreliable for
+  // security testing purposes. Users should use browser DevTools Network
+  // tab or dedicated proxy tools (like Burp Suite) for CORS analysis.
   {
     id: 'base64Advanced',
     title: 'Base64 Advanced',

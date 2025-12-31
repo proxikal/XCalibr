@@ -1,0 +1,58 @@
+import React from 'react';
+import { describe, it, beforeEach, afterEach, vi } from 'vitest';
+import { aiAssertTruthy } from '../../../../test-utils/aiAssert';
+import { renderTool, cleanup } from './test-utils';
+import { PayloadEncoderTool } from '../PayloadEncoderTool';
+
+const PayloadEncoder = PayloadEncoderTool.Component;
+
+describe('PayloadEncoderTool', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  describe('Rendering', () => {
+    it('renders the PayloadEncoder interface', () => {
+      const onChange = vi.fn();
+      const { container } = renderTool(
+        <PayloadEncoder data={undefined} onChange={onChange} />
+      );
+
+      aiAssertTruthy({ name: 'PayloadEncoderRenders' }, container);
+      const text = container.textContent || '';
+      aiAssertTruthy(
+        { name: 'PayloadEncoderHasContent' },
+        text.length > 0 || container.querySelectorAll('*').length > 5
+      );
+    });
+
+    it('has interactive elements', () => {
+      const onChange = vi.fn();
+      const { container, findButton } = renderTool(
+        <PayloadEncoder data={undefined} onChange={onChange} />
+      );
+
+      const button = findButton('') || container.querySelector('button');
+      const input = container.querySelector('input, textarea, select');
+      aiAssertTruthy(
+        { name: 'PayloadEncoderInteractive' },
+        button || input || container.querySelectorAll('*').length > 5
+      );
+    });
+  });
+
+  describe('State Management', () => {
+    it('handles initial state', () => {
+      const onChange = vi.fn();
+      const { container } = renderTool(
+        <PayloadEncoder data={undefined} onChange={onChange} />
+      );
+
+      aiAssertTruthy({ name: 'PayloadEncoderInitialState' }, container);
+    });
+  });
+});

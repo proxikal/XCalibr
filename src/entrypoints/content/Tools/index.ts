@@ -8,7 +8,6 @@ export { CodeInjectorTool } from './CodeInjectorTool';
 export { ColorPickerTool } from './ColorPickerTool';
 export { ContrastCheckerTool } from './ContrastCheckerTool';
 export { CookieManagerTool } from './CookieManagerTool';
-export { CorsCheckTool } from './CorsCheckTool';
 export { CouchDbDocExplorerTool } from './CouchDbDocExplorerTool';
 export { CspBuilderTool } from './CspBuilderTool';
 export { CssGridGeneratorTool } from './CssGridGeneratorTool';

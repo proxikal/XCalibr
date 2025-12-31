@@ -7,23 +7,71 @@ export type LiveLinkPreviewData = {
   isActive?: boolean;
 };
 
+export type HeaderSeverity = 'pass' | 'warn' | 'fail' | 'info';
+
+export type HeaderFinding = {
+  header: string;
+  severity: HeaderSeverity;
+  message: string;
+  recommendation?: string;
+  value?: string;
+};
+
 export type HeaderInspectorData = {
   url?: string;
+  finalUrl?: string;
   status?: number;
   headers?: { name: string; value: string }[];
+  requestHeaders?: { name: string; value: string }[];
+  redirectChain?: { url: string; status: number }[];
+  findings?: HeaderFinding[];
+  duplicateHeaders?: string[];
   error?: string;
   updatedAt?: number;
+  activeTab?: 'findings' | 'raw';
+};
+
+export type TechConfidence = 'high' | 'medium' | 'low';
+
+export type TechSignal = {
+  type: 'meta' | 'script' | 'header' | 'global' | 'selector' | 'cookie' | 'favicon' | 'comment';
+  evidence: string;
+  source?: string;
+};
+
+export type TechFinding = {
+  label: string;
+  value: string;
+  version?: string;
+  confidence: TechConfidence;
+  category: 'framework' | 'library' | 'server' | 'cdn' | 'cms' | 'analytics' | 'other';
+  signals: TechSignal[];
 };
 
 export type TechFingerprintData = {
   url?: string;
-  findings?: { label: string; value: string }[];
+  findings?: TechFinding[];
   updatedAt?: number;
+  expandedFinding?: string;
+};
+
+export type RobotsUserAgentGroup = {
+  userAgent: string;
+  rules: { type: 'allow' | 'disallow'; path: string; isHighRisk?: boolean }[];
+  crawlDelay?: number;
 };
 
 export type RobotsViewerData = {
   url?: string;
   content?: string;
+  httpStatus?: number;
+  lastModified?: string;
+  cacheControl?: string;
+  redirectedFrom?: string;
+  sitemaps?: string[];
+  userAgentGroups?: RobotsUserAgentGroup[];
+  highRiskPaths?: string[];
+  selectedUserAgent?: string;
   error?: string;
   updatedAt?: number;
 };
@@ -44,12 +92,37 @@ export type PayloadApplicationResult = {
   fields: PayloadFieldResult[];
 };
 
+export type FieldPayloadMapping = {
+  fieldName: string;
+  payload: string;
+  enabled: boolean;
+};
+
+export type DomMutation = {
+  type: 'attribute' | 'childList' | 'characterData';
+  target: string;
+  attributeName?: string;
+  oldValue?: string;
+  newValue?: string;
+  timestamp: number;
+};
+
+export type FormSubmitResponse = {
+  status?: number;
+  statusText?: string;
+  headers?: { name: string; value: string }[];
+  body?: string;
+  url?: string;
+  error?: string;
+  duration?: number;
+};
+
 export type FormFuzzerData = {
   forms?: {
     index: number;
     action: string;
     method: string;
-    inputs: { name: string; type: string; placeholder: string }[];
+    inputs: { name: string; type: string; placeholder: string; value?: string; isCsrf?: boolean }[];
   }[];
   selectedFormIndex?: number;
   payloads?: string[];
@@ -57,36 +130,101 @@ export type FormFuzzerData = {
   customPayload?: string;
   status?: string;
   lastResult?: PayloadApplicationResult;
+  submitMode?: 'inject' | 'preview' | 'submit';
+  fieldMappings?: FieldPayloadMapping[];
+  preserveCsrf?: boolean;
+  lastResponse?: FormSubmitResponse;
+  domMutations?: DomMutation[];
+  validationErrors?: { field: string; message: string }[];
+  isSubmitting?: boolean;
 };
+
+export type UrlCodecEncodingMode = 'rfc3986' | 'rfc2396' | 'base64url' | 'path';
 
 export type UrlCodecData = {
   input?: string;
   output?: string;
   mode?: 'encode' | 'decode';
+  encodingMode?: UrlCodecEncodingMode;
+  showDiff?: boolean;
+  showHex?: boolean;
   error?: string;
+};
+
+export type ParamTypeHint = 'string' | 'int' | 'uuid' | 'bool' | 'email' | 'date' | 'json' | 'base64' | 'unknown';
+
+export type ParamEntry = {
+  key: string;
+  value: string;
+  decodedValue?: string;
+  typeHint?: ParamTypeHint;
 };
 
 export type ParamAnalyzerData = {
   url?: string;
-  params?: { key: string; value: string }[];
+  params?: ParamEntry[];
+  showDecoded?: boolean;
+  splitView?: boolean;
+  activeTab?: 'params' | 'import' | 'fuzz';
+  importText?: string;
+};
+
+export type LinkSource = 'anchor' | 'onclick' | 'script' | 'router' | 'form' | 'meta' | 'sitemap';
+
+export type ExtractedLink = {
+  url: string;
+  source: LinkSource;
+  context?: string;
+  element?: string;
+  text?: string;
 };
 
 export type LinkExtractorData = {
-  internal?: string[];
-  external?: string[];
+  internal?: ExtractedLink[];
+  external?: ExtractedLink[];
   updatedAt?: number;
+  filterText?: string;
+  filterSource?: LinkSource | 'all';
+  showContext?: boolean;
+};
+
+export type SnapshotEntry = {
+  html: string;
+  timestamp: number;
+  label?: string;
+  raw?: boolean;
+  includeShadowDom?: boolean;
 };
 
 export type DomSnapshotData = {
   html?: string;
   updatedAt?: number;
+  snapshots?: SnapshotEntry[];
+  showRaw?: boolean;
+  includeShadowDom?: boolean;
+  selectedIndex?: number;
+  compareIndex?: number | null;
+  showDiff?: boolean;
+};
+
+export type AssetEntry = {
+  url: string;
+  origin: string;
+  size?: number;
+  type: 'image' | 'script' | 'style' | 'preload' | 'prefetch' | 'inline-script' | 'css-background';
+  sourceElement?: string;
 };
 
 export type AssetMapperData = {
+  assets?: AssetEntry[];
+  filterType?: 'all' | 'image' | 'script' | 'style' | 'preload' | 'prefetch' | 'inline-script' | 'css-background';
+  filterOrigin?: string;
+  groupByOrigin?: boolean;
+  updatedAt?: number;
+  // Legacy fields for backwards compatibility
   images?: string[];
   scripts?: string[];
   styles?: string[];
-  updatedAt?: number;
 };
 
 export type RequestLogEntry = {
@@ -112,12 +250,23 @@ export type RequestLogEntry = {
   nextHopProtocol?: string;
   // Response status (if available)
   responseStatus?: number;
+  // Cache and redirect indicators
+  isCached?: boolean;
+  isRedirect?: boolean;
+  redirectCount?: number;
+  // TTFB (Time to First Byte)
+  ttfb?: number;
+  // Initiator details (for initiator tab)
+  initiatorUrl?: string;
+  initiatorLine?: number;
 };
 
 export type RequestLogData = {
   entries?: RequestLogEntry[];
   filterCategory?: string;
   page?: number;
+  selectedEntryIndex?: number;
+  detailsTab?: 'timing' | 'headers' | 'initiator';
 };
 
 export type PayloadReplayData = {
@@ -125,24 +274,27 @@ export type PayloadReplayData = {
   method?: string;
   headers?: string;
   body?: string;
+  // Session options
+  includeCredentials?: boolean;
+  followRedirects?: boolean;
+  // Response data
   responseStatus?: number;
   responseHeaders?: { name: string; value: string }[];
   responseBody?: string;
   error?: string;
+  // Metrics
+  latencyMs?: number;
+  requestSize?: number;
+  responseSize?: number;
+  // Redirect info
+  redirectCount?: number;
+  finalUrl?: string;
+  // View options
+  showRawRequest?: boolean;
+  responseViewMode?: 'raw' | 'json' | 'headers';
 };
 
-export type CorsCheckData = {
-  url?: string;
-  result?: {
-    status?: number;
-    acao?: string | null;
-    acc?: string | null;
-    methods?: string | null;
-    headers?: string | null;
-  };
-  error?: string;
-  updatedAt?: number;
-};
+// CorsCheckData type was removed - CORS Check tool deprecated due to MV3 limitations
 
 export type JsonMinifierData = {
   input?: string;
