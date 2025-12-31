@@ -23,7 +23,7 @@ Each tool in XCalibr follows a consistent pattern:
 ## Core Mandates & Rules
 
 1.  **Test-First Architecture (TDD):**
-    *   You **MUST** create or update the test file `src/entrypoints/__tests__/tools/<tool-name>.test.ts` **BEFORE** implementing the tool logic.
+    *   You **MUST** create or update the test file `src/entrypoints/content/Tools/__tests__/<tool-name>.test.ts` **BEFORE** implementing the tool logic.
     *   Tests drive the implementation. If the test doesn't fail first, you aren't doing it right.
     *   Use `aiAssertTruthy` for robust assertions.
 

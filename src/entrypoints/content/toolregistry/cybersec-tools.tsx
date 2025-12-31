@@ -210,6 +210,8 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faWaveSquare,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 420,
+    height: 520,
     render: (data, onChange) => (
       <UrlCodecTool.Component data={data as UrlCodecData | undefined} onChange={onChange} />
     )
@@ -221,6 +223,8 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faSliders,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 480,
+    height: 500,
     render: (data, onChange) => (
       <ParamAnalyzerTool.Component
         data={data as ParamAnalyzerData | undefined}
@@ -240,10 +244,11 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     icon: faLink,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
     width: 700,
-    height: 400,
+    height: 560,
     render: (data, onChange) => (
       <LinkExtractorTool.Component
         data={data as LinkExtractorData | undefined}
+        onChange={onChange}
         onRefresh={async () => {
           const links = extractLinksFromDocument();
           onChange({ ...links, updatedAt: Date.now() });
@@ -258,12 +263,17 @@ export const buildCybersecTools = (): ToolRegistryEntry[] => [
     category: 'CyberSec',
     icon: faFileCode,
     hover: 'group-hover:border-emerald-500 group-hover:text-emerald-400',
+    width: 420,
+    height: 480,
     render: (data, onChange) => (
       <DomSnapshotTool.Component
         data={data as DomSnapshotData | undefined}
-        onCapture={async () => {
+        onChange={onChange}
+        onRefresh={async () => {
+          const typedData = data as DomSnapshotData | undefined;
           const raw = document.documentElement.outerHTML;
-          onChange({ html: sanitizeHtmlSnapshot(raw), updatedAt: Date.now() });
+          const html = typedData?.showRaw ? raw : sanitizeHtmlSnapshot(raw);
+          onChange({ ...typedData, html, updatedAt: Date.now() });
         }}
       />
     )

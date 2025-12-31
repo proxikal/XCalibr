@@ -242,12 +242,16 @@ export const buildUrlWithParams = (url: string, params: { key: string; value: st
 };
 
 export const extractLinksFromDocument = () => {
-  const anchors = Array.from(document.querySelectorAll('a[href]'));
-  const internal: string[] = [];
-  const external: string[] = [];
+  type LinkSource = 'anchor' | 'onclick' | 'script' | 'router' | 'form' | 'meta' | 'sitemap';
+  type ExtractedLink = { url: string; source: LinkSource; context?: string; text?: string };
+
+  const internal: ExtractedLink[] = [];
+  const external: ExtractedLink[] = [];
   const origin = window.location.origin;
   const seen = new Set<string>();
-  anchors.forEach((anchor) => {
+
+  // Extract from anchor tags
+  document.querySelectorAll('a[href]').forEach((anchor) => {
     const href = anchor.getAttribute('href');
     if (!href) return;
     let absolute: string;
@@ -258,12 +262,59 @@ export const extractLinksFromDocument = () => {
     }
     if (seen.has(absolute)) return;
     seen.add(absolute);
+    const link: ExtractedLink = {
+      url: absolute,
+      source: 'anchor',
+      text: (anchor as HTMLAnchorElement).textContent?.trim().slice(0, 100) || undefined
+    };
     if (absolute.startsWith(origin)) {
-      internal.push(absolute);
+      internal.push(link);
     } else {
-      external.push(absolute);
+      external.push(link);
     }
   });
+
+  // Extract from form actions
+  document.querySelectorAll('form[action]').forEach((form) => {
+    const action = form.getAttribute('action');
+    if (!action) return;
+    let absolute: string;
+    try {
+      absolute = new URL(action, origin).toString();
+    } catch {
+      return;
+    }
+    if (seen.has(absolute)) return;
+    seen.add(absolute);
+    const link: ExtractedLink = { url: absolute, source: 'form' };
+    if (absolute.startsWith(origin)) {
+      internal.push(link);
+    } else {
+      external.push(link);
+    }
+  });
+
+  // Extract from meta refresh/redirects
+  document.querySelectorAll('meta[http-equiv="refresh"]').forEach((meta) => {
+    const content = meta.getAttribute('content');
+    const match = content?.match(/url=(.+)/i);
+    if (!match) return;
+    let absolute: string;
+    try {
+      absolute = new URL(match[1].trim(), origin).toString();
+    } catch {
+      return;
+    }
+    if (seen.has(absolute)) return;
+    seen.add(absolute);
+    const link: ExtractedLink = { url: absolute, source: 'meta' };
+    if (absolute.startsWith(origin)) {
+      internal.push(link);
+    } else {
+      external.push(link);
+    }
+  });
+
   return { internal, external };
 };
 

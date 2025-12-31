@@ -139,27 +139,72 @@ export type FormFuzzerData = {
   isSubmitting?: boolean;
 };
 
+export type UrlCodecEncodingMode = 'rfc3986' | 'rfc2396' | 'base64url' | 'path';
+
 export type UrlCodecData = {
   input?: string;
   output?: string;
   mode?: 'encode' | 'decode';
+  encodingMode?: UrlCodecEncodingMode;
+  showDiff?: boolean;
+  showHex?: boolean;
   error?: string;
+};
+
+export type ParamTypeHint = 'string' | 'int' | 'uuid' | 'bool' | 'email' | 'date' | 'json' | 'base64' | 'unknown';
+
+export type ParamEntry = {
+  key: string;
+  value: string;
+  decodedValue?: string;
+  typeHint?: ParamTypeHint;
 };
 
 export type ParamAnalyzerData = {
   url?: string;
-  params?: { key: string; value: string }[];
+  params?: ParamEntry[];
+  showDecoded?: boolean;
+  splitView?: boolean;
+  activeTab?: 'params' | 'import' | 'fuzz';
+  importText?: string;
+};
+
+export type LinkSource = 'anchor' | 'onclick' | 'script' | 'router' | 'form' | 'meta' | 'sitemap';
+
+export type ExtractedLink = {
+  url: string;
+  source: LinkSource;
+  context?: string;
+  element?: string;
+  text?: string;
 };
 
 export type LinkExtractorData = {
-  internal?: string[];
-  external?: string[];
+  internal?: ExtractedLink[];
+  external?: ExtractedLink[];
   updatedAt?: number;
+  filterText?: string;
+  filterSource?: LinkSource | 'all';
+  showContext?: boolean;
+};
+
+export type SnapshotEntry = {
+  html: string;
+  timestamp: number;
+  label?: string;
+  raw?: boolean;
+  includeShadowDom?: boolean;
 };
 
 export type DomSnapshotData = {
   html?: string;
   updatedAt?: number;
+  snapshots?: SnapshotEntry[];
+  showRaw?: boolean;
+  includeShadowDom?: boolean;
+  selectedIndex?: number;
+  compareIndex?: number | null;
+  showDiff?: boolean;
 };
 
 export type AssetMapperData = {
