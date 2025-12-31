@@ -1362,3 +1362,444 @@ export type DirectoryBusterData = {
   progress?: number;
   delay?: number;
 };
+
+// === BATCH B: Red Team Tools #11-17 ===
+
+export type ProtoPollutionFuzzerData = {
+  selectedPayload?: string;
+  customPayload?: string;
+  results?: {
+    payload: string;
+    vulnerable: boolean;
+    propertyChecked: string;
+    error?: string;
+  }[];
+  isRunning?: boolean;
+};
+
+export type OpenRedirectTesterData = {
+  targetUrl?: string;
+  paramName?: string;
+  results?: {
+    payload: string;
+    testUrl: string;
+    vulnerable: boolean;
+  }[];
+  isRunning?: boolean;
+};
+
+export type ApiEndpoint = {
+  url: string;
+  method?: string;
+  source: 'script' | 'fetch' | 'xhr' | 'inline' | 'attribute';
+};
+
+export type ApiEndpointScraperData = {
+  endpoints?: ApiEndpoint[];
+  filter?: string;
+  showMethods?: boolean;
+  scannedAt?: number;
+};
+
+export type FormInfo = {
+  index: number;
+  action: string;
+  method: string;
+  fields: { name: string; type: string; value: string }[];
+};
+
+export type CsrfPocGeneratorData = {
+  forms?: FormInfo[];
+  selectedFormIndex?: number;
+  output?: string;
+  autoSubmit?: boolean;
+  customAction?: string;
+};
+
+export type WafSignature = {
+  name: string;
+  detected: boolean;
+  indicators: string[];
+};
+
+export type WafDetectorData = {
+  url?: string;
+  signatures?: WafSignature[];
+  detectedWaf?: string | null;
+  isScanning?: boolean;
+  scannedAt?: number;
+  error?: string;
+};
+
+export type TakeoverResult = {
+  subdomain: string;
+  cname?: string;
+  vulnerable: boolean;
+  service?: string;
+  fingerprint?: string;
+  error?: string;
+};
+
+export type SubdomainTakeoverCheckerData = {
+  subdomains?: string;
+  results?: TakeoverResult[];
+  isChecking?: boolean;
+  checkedAt?: number;
+};
+
+export type PostMessageEntry = {
+  id: string;
+  timestamp: number;
+  origin: string;
+  data: string;
+  dataType: string;
+  source: string;
+};
+
+export type PostMessageLoggerData = {
+  isListening?: boolean;
+  messages?: PostMessageEntry[];
+  filter?: string;
+  expandedId?: string | null;
+};
+
+// === BATCH C: Red Team Tools #18-23 ===
+
+export type SourceMapEntry = {
+  url: string;
+  scriptUrl: string;
+  size?: number;
+  accessible?: boolean;
+};
+
+export type SourceMapDetectorData = {
+  sourceMaps?: SourceMapEntry[];
+  scannedAt?: number;
+  isScanning?: boolean;
+  error?: string;
+};
+
+export type AdminPathResult = {
+  path: string;
+  status: number;
+  exists: boolean;
+  redirectUrl?: string;
+};
+
+export type AdminPanelFinderData = {
+  baseUrl?: string;
+  results?: AdminPathResult[];
+  isRunning?: boolean;
+  progress?: number;
+  scannedAt?: number;
+  customPaths?: string;
+  delay?: number;
+};
+
+export type HttpMethodResult = {
+  method: string;
+  status: number;
+  allowed: boolean;
+  headers?: Record<string, string>;
+  error?: string;
+};
+
+export type HttpMethodTesterData = {
+  url?: string;
+  results?: HttpMethodResult[];
+  testedAt?: number;
+  isTesting?: boolean;
+  error?: string;
+};
+
+export type DefaultCredential = {
+  vendor: string;
+  product: string;
+  username: string;
+  password: string;
+  port?: number;
+  notes?: string;
+};
+
+export type DefaultCredentialCheckerData = {
+  selectedCategory?: string;
+  search?: string;
+};
+
+export type GraphqlIntrospectionSchema = {
+  types?: string[];
+  queryFields?: string[];
+  mutationFields?: string[];
+  subscriptionFields?: string[];
+};
+
+export type GraphqlIntrospectionTesterData = {
+  url?: string;
+  isEnabled?: boolean;
+  schema?: GraphqlIntrospectionSchema;
+  rawResponse?: string;
+  testedAt?: number;
+  isTesting?: boolean;
+  error?: string;
+};
+
+export type CorsExploitType =
+  | 'reflected-origin'
+  | 'null-origin'
+  | 'wildcard-subdomain'
+  | 'prefix-match'
+  | 'suffix-match';
+
+export type CorsExploitGeneratorData = {
+  targetUrl?: string;
+  exploitType?: CorsExploitType;
+  generatedCode?: string;
+  withCredentials?: boolean;
+  customOrigin?: string;
+};
+
+// === BATCH A: Red Team Tools #4-10 ===
+
+export type CommentEntry = {
+  type: 'html' | 'script';
+  content: string;
+  location?: string;
+};
+
+export type SecretEntry = {
+  type: string;
+  value: string;
+  source: string;
+  line?: number;
+};
+
+export type CommentSecretScraperData = {
+  comments?: CommentEntry[];
+  secrets?: SecretEntry[];
+  scannedAt?: number;
+  error?: string;
+};
+
+export type HiddenField = {
+  name: string;
+  value: string;
+  formIndex: number;
+  formAction?: string;
+  id?: string;
+};
+
+export type HiddenFieldRevealerData = {
+  fields?: HiddenField[];
+  scannedAt?: number;
+  error?: string;
+};
+
+export type S3Bucket = {
+  url: string;
+  bucketName: string;
+  region?: string;
+  source: string;
+};
+
+export type S3BucketFinderData = {
+  buckets?: S3Bucket[];
+  scannedAt?: number;
+  error?: string;
+};
+
+export type GitCheckResult = {
+  path: string;
+  status: number;
+  accessible: boolean;
+  contentType?: string;
+};
+
+export type GitExposureCheckerData = {
+  checked?: boolean;
+  exposed?: boolean;
+  results?: GitCheckResult[];
+  domain?: string;
+  scannedAt?: number;
+  error?: string;
+};
+
+export type VulnerableLink = {
+  href: string;
+  text: string;
+  hasNoopener: boolean;
+  hasNoreferrer: boolean;
+  element?: string;
+};
+
+export type TargetBlankAuditorData = {
+  vulnerableLinks?: VulnerableLink[];
+  totalLinks?: number;
+  totalBlankLinks?: number;
+  scannedAt?: number;
+  error?: string;
+};
+
+export type StorageFinding = {
+  storage: 'localStorage' | 'sessionStorage';
+  key: string;
+  value: string;
+  secretType: string;
+  confidence: 'high' | 'medium' | 'low';
+};
+
+export type StorageSecretHunterData = {
+  findings?: StorageFinding[];
+  totalLocalItems?: number;
+  totalSessionItems?: number;
+  scannedAt?: number;
+  error?: string;
+};
+
+export type MetafileResult = {
+  file: string;
+  path: string;
+  status: number;
+  found: boolean;
+  contentPreview?: string;
+  contentType?: string;
+  size?: number;
+};
+
+export type MetafileScannerData = {
+  results?: MetafileResult[];
+  domain?: string;
+  scannedAt?: number;
+  scanning?: boolean;
+  error?: string;
+};
+
+// === BATCH D: Red Team Tools #24-30 ===
+
+export type CookieAuditResult = {
+  name: string;
+  value: string;
+  domain?: string;
+  path?: string;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'Strict' | 'Lax' | 'None' | 'Unknown';
+  expires?: string;
+  issues: string[];
+};
+
+export type CookieSecurityAuditorData = {
+  cookies?: CookieAuditResult[];
+  scannedAt?: number;
+  error?: string;
+};
+
+export type LinkCheckResult = {
+  url: string;
+  domain: string;
+  status: 'checking' | 'active' | 'expired' | 'error' | 'potential';
+  statusCode?: number;
+  message?: string;
+};
+
+export type BrokenLinkHijackerData = {
+  links?: LinkCheckResult[];
+  scannedAt?: number;
+  isScanning?: boolean;
+  progress?: { checked: number; total: number };
+  error?: string;
+};
+
+export type SpfAnalysis = {
+  valid: boolean;
+  version?: string;
+  mechanisms: string[];
+  modifiers: string[];
+  includes: string[];
+  allQualifier?: string;
+  warnings: string[];
+};
+
+export type DmarcAnalysis = {
+  valid: boolean;
+  version?: string;
+  policy?: string;
+  subdomainPolicy?: string;
+  percentage?: number;
+  reportUri?: string;
+  reportUriAggregate?: string;
+  warnings: string[];
+};
+
+export type SpfDmarcAnalyzerData = {
+  domain?: string;
+  spfRecord?: string;
+  dmarcRecord?: string;
+  spfAnalysis?: SpfAnalysis;
+  dmarcAnalysis?: DmarcAnalysis;
+  loading?: boolean;
+  error?: string;
+  analyzedAt?: number;
+};
+
+export type EnvFinding = {
+  key: string;
+  value: string;
+  source: 'window' | 'meta' | 'script' | 'data-attr';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description?: string;
+};
+
+export type EnvVariableScannerData = {
+  findings?: EnvFinding[];
+  scannedAt?: number;
+  error?: string;
+};
+
+export type XxeCategory = 'basic' | 'file-read' | 'ssrf' | 'oob' | 'blind' | 'parameter-entity';
+
+export type XxePayloadGeneratorData = {
+  category?: XxeCategory;
+  selectedPayload?: string;
+  customTarget?: string;
+  output?: string;
+  copiedPayload?: string;
+};
+
+export type CmdCategory = 'basic' | 'chained' | 'blind' | 'time-based' | 'oob' | 'filter-bypass';
+export type OsType = 'unix' | 'windows' | 'both';
+
+export type CommandInjectionPayloadData = {
+  category?: CmdCategory;
+  osType?: OsType;
+  selectedPayload?: string;
+  customCommand?: string;
+  output?: string;
+};
+
+export type JwtHeader = {
+  alg?: string;
+  typ?: string;
+  kid?: string;
+  jku?: string;
+  x5u?: string;
+  x5c?: string[];
+  [key: string]: unknown;
+};
+
+export type JwtAttack = {
+  name: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description: string;
+  payload?: string;
+  applicable: boolean;
+  reason?: string;
+};
+
+export type JwtAttackAdvisorData = {
+  token?: string;
+  header?: JwtHeader;
+  payload?: Record<string, unknown>;
+  attacks?: JwtAttack[];
+  analyzedAt?: number;
+  error?: string;
+};

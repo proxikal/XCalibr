@@ -224,6 +224,68 @@ export const baseMenuBarItems: MenuBarItem[] = [
     ]
   },
   {
+    label: 'Red Team',
+    items: [
+      {
+        label: 'Discovery',
+        items: [
+          { label: 'Comment & Secret Scraper', toolId: 'commentSecretScraper' },
+          { label: 'Hidden Field Revealer', toolId: 'hiddenFieldRevealer' },
+          { label: 'S3 Bucket Finder', toolId: 's3BucketFinder' },
+          { label: 'Git Exposure Checker', toolId: 'gitExposureChecker' },
+          { label: 'Source Map Detector', toolId: 'sourceMapDetector' },
+          { label: 'API Endpoint Scraper', toolId: 'apiEndpointScraper' },
+          { label: 'Admin Panel Finder', toolId: 'adminPanelFinder' },
+          { label: 'Metafile Scanner', toolId: 'metafileScanner' }
+        ]
+      },
+      {
+        label: 'Storage & Secrets',
+        items: [
+          { label: 'Storage Secret Hunter', toolId: 'storageSecretHunter' },
+          { label: 'Cookie Security Auditor', toolId: 'cookieSecurityAuditor' },
+          { label: 'Env Variable Scanner', toolId: 'envVariableScanner' },
+          { label: 'Default Credential Checker', toolId: 'defaultCredentialChecker' }
+        ]
+      },
+      {
+        label: 'Vulnerability Testing',
+        items: [
+          { label: 'Target="_blank" Auditor', toolId: 'targetBlankAuditor' },
+          { label: 'Proto-Pollution Fuzzer', toolId: 'protoPollutionFuzzer' },
+          { label: 'Open Redirect Tester', toolId: 'openRedirectTester' },
+          { label: 'HTTP Method Tester', toolId: 'httpMethodTester' },
+          { label: 'Subdomain Takeover Checker', toolId: 'subdomainTakeoverChecker' },
+          { label: 'Broken Link Hijacker', toolId: 'brokenLinkHijacker' },
+          { label: 'GraphQL Introspection Tester', toolId: 'graphqlIntrospectionTester' },
+          { label: 'WAF Detector', toolId: 'wafDetector' }
+        ]
+      },
+      {
+        label: 'Exploit Generation',
+        items: [
+          { label: 'CSRF PoC Generator', toolId: 'csrfPocGenerator' },
+          { label: 'CORS Exploit Generator', toolId: 'corsExploitGenerator' },
+          { label: 'XXE Payload Generator', toolId: 'xxePayloadGenerator' },
+          { label: 'Command Injection Payload', toolId: 'commandInjectionPayload' }
+        ]
+      },
+      {
+        label: 'Token & Auth',
+        items: [
+          { label: 'JWT Attack Advisor', toolId: 'jwtAttackAdvisor' },
+          { label: 'PostMessage Logger', toolId: 'postMessageLogger' }
+        ]
+      },
+      {
+        label: 'Email Security',
+        items: [
+          { label: 'SPF/DMARC Analyzer', toolId: 'spfDmarcAnalyzer' }
+        ]
+      }
+    ]
+  },
+  {
     label: 'Data & Text',
     items: [
       {

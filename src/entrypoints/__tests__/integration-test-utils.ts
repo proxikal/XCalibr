@@ -212,7 +212,30 @@ export const TOOL_TITLES: Record<string, string> = {
   visualGridBuilder: 'Visual Grid Builder',
   clickjackingTester: 'Clickjacking Tester',
   idorIterator: 'IDOR Iterator',
-  directoryBuster: 'Directory Buster'
+  directoryBuster: 'Directory Buster',
+  // === BATCH B: Red Team Tools #11-17 ===
+  protoPollutionFuzzer: 'Proto-Pollution Fuzzer',
+  openRedirectTester: 'Open Redirect Tester',
+  apiEndpointScraper: 'API Endpoint Scraper',
+  csrfPocGenerator: 'CSRF PoC Generator',
+  wafDetector: 'WAF Detector',
+  subdomainTakeoverChecker: 'Subdomain Takeover Checker',
+  postMessageLogger: 'PostMessage Logger',
+  // === BATCH C: Red Team Tools #18-23 ===
+  sourceMapDetector: 'Source Map Detector',
+  adminPanelFinder: 'Admin Panel Finder',
+  httpMethodTester: 'HTTP Method Tester',
+  defaultCredentialChecker: 'Default Credentials',
+  graphqlIntrospectionTester: 'GraphQL Introspection',
+  corsExploitGenerator: 'CORS Exploit Generator',
+  // === BATCH A: Red Team Tools #4-10 ===
+  commentSecretScraper: 'Comment & Secret Scraper',
+  hiddenFieldRevealer: 'Hidden Field Revealer',
+  s3BucketFinder: 'S3 Bucket Finder',
+  gitExposureChecker: 'Git Exposure Checker',
+  targetBlankAuditor: 'Target Blank Auditor',
+  storageSecretHunter: 'Storage Secret Hunter',
+  metafileScanner: 'Metafile Scanner'
 };
 
 export const mountContent = async () => {
