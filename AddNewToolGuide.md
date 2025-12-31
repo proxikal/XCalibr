@@ -23,7 +23,7 @@ Each tool in XCalibr follows a consistent pattern:
 ## Core Mandates & Rules
 
 1.  **Test-First Architecture (TDD):**
-    *   You **MUST** create or update the test file `src/entrypoints/content/Tools/__tests__/<tool-name>.test.ts` **BEFORE** implementing the tool logic.
+    *   You **MUST** create or update the test file `src/entrypoints/content/Tools/__tests__/<ToolName>Tool.test.ts` **BEFORE** implementing the tool logic.
     *   Tests drive the implementation. If the test doesn't fail first, you aren't doing it right.
     *   Use `aiAssertTruthy` for robust assertions.
 
@@ -41,7 +41,7 @@ Each tool in XCalibr follows a consistent pattern:
 4.  **Filesystem & Structure:**
     *   **Tools:** `src/entrypoints/content/Tools/`
     *   **Registry:** `src/entrypoints/content/toolregistry/`
-    *   **Tests:** `src/entrypoints/__tests__/tools/`
+    *   **Tests:** `src/entrypoints/content/Tools/__tests__`
 
 ## Development Workflow
 
@@ -51,7 +51,7 @@ Follow this cycle for every new feature or tool.
 
 1.  **Define Requirements:** Understand what the tool needs to do.
 2.  **Create Test File:**
-    *   Create `src/entrypoints/__tests__/tools/<tool-kebab-case>.test.ts`.
+    *   Create `src/entrypoints/content/Tools/__tests__/<ToolName>Tool.test.ts`.
     *   Import `mountWithTool` and `resetChrome`.
     *   Write tests for: Rendering, Input existence, and Output verification.
     *   *Example:*
@@ -88,7 +88,7 @@ Follow this cycle for every new feature or tool.
 ### Phase 3: Verification (The "Refactor" Phase)
 
 6.  **Run Tests:**
-    *   Execute `npx vitest src/entrypoints/__tests__/tools/<tool-kebab-case>.test.ts`.
+    *   Execute `npx vitest src/entrypoints/content/Tools/__tests__/<ToolName>Tool.test.ts`.
     *   Ensure all tests pass.
 
 7.  **Type Check:**
@@ -112,9 +112,9 @@ Use this checklist to ensure no step is missed.
 
 | Step | Action | File Path / Pattern |
 | :--- | :--- | :--- |
-| **01** | **Create Test** | `src/entrypoints/__tests__/tools/<tool-name>.test.ts` |
+| **01** | **Create Test** | `src/entrypoints/content/Tools/__tests__/<ToolName>Tool.test.ts` |
 | **02** | **Define Types** | `src/entrypoints/content/Tools/tool-types.ts` |
 | **03** | **Create Component** | `src/entrypoints/content/Tools/<ToolName>Tool.tsx` |
 | **04** | **Register Tool** | `src/entrypoints/content/toolregistry/<category>-tools.tsx` |
-| **05** | **Verify Tests** | `npx vitest <tool-name>` |
+| **05** | **Verify Tests** | `npx vitest <ToolName>Tool` |
 | **06** | **Verify Types** | `npm run typecheck` |
